@@ -80,17 +80,40 @@ export default function Home() {
     setYtError("");
     setYtInfo(null);
     try {
-      // Use yt-dlp API with cookies for all platforms
-      const res = await fetch("/api/youtube", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: ytUrl }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setYtError(data.error || "Something went wrong.");
+      // Use Cobalt API for YouTube (no cookies needed)
+      if (selectedPlatform === "YouTube") {
+        const res = await fetch("/api/youtube-cobalt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: ytUrl }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setYtError(data.error || "Could not fetch video info.");
+        } else {
+          // Parse video ID from URL for thumbnail
+          const urlObj = new URL(ytUrl);
+          const videoId = urlObj.searchParams.get("v") || urlObj.pathname.slice(1);
+          setYtInfo({
+            title: data.filename?.replace(/\.(mp3|mp4)$/i, "") || `youtube_${videoId}`,
+            author: "YouTube",
+            lengthSeconds: "0",
+            thumbnail: `https://img.youtube.com/vi/${videoId}/0.jpg`,
+          });
+        }
       } else {
-        setYtInfo(data);
+        // Use yt-dlp API for other platforms
+        const res = await fetch("/api/youtube", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: ytUrl }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setYtError(data.error || "Something went wrong.");
+        } else {
+          setYtInfo(data);
+        }
       }
     } catch {
       setYtError("Network error. Please try again.");
@@ -102,19 +125,45 @@ export default function Home() {
   async function handleDownload(format: "mp3" | "mp4") {
     setYtDownloading(format);
     try {
-      // Use yt-dlp API with cookies for all platforms
-      const res = await fetch(`/api/youtube?url=${encodeURIComponent(ytUrl)}&format=${format}`);
-      if (!res.ok) {
+      if (selectedPlatform === "YouTube") {
+        // Use Cobalt API for YouTube downloads (no cookies needed)
+        const res = await fetch("/api/youtube-cobalt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            url: ytUrl,
+            downloadMode: format === "mp3" ? "audio" : "auto",
+          }),
+        });
+        
+        if (!res.ok) {
+          const data = await res.json();
+          setYtError(data.error || "Download failed.");
+          return;
+        }
+        
         const data = await res.json();
-        setYtError(data.error || "Download failed.");
-        return;
+        if (data.downloadUrl) {
+          // Redirect to Cobalt download URL
+          window.location.href = data.downloadUrl;
+        } else {
+          setYtError("Download link not available.");
+        }
+      } else {
+        // Use yt-dlp API for other platforms
+        const res = await fetch(`/api/youtube?url=${encodeURIComponent(ytUrl)}&format=${format}`);
+        if (!res.ok) {
+          const data = await res.json();
+          setYtError(data.error || "Download failed.");
+          return;
+        }
+        const blob = await res.blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `${ytInfo?.title || "download"}.${format}`;
+        a.click();
+        URL.revokeObjectURL(a.href);
       }
-      const blob = await res.blob();
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${ytInfo?.title || "download"}.${format}`;
-      a.click();
-      URL.revokeObjectURL(a.href);
     } catch {
       setYtError("Download failed. Please try again.");
     } finally {
