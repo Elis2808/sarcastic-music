@@ -242,8 +242,12 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
           ffmpeg.on("close", (code) => {
             // Clean up temp audio file
             try { unlinkSync(audioTempPath); } catch {}
-            if (code === 0) resolve();
-            else reject(new Error(`ffmpeg failed (code ${code}): ${ffmpegError}`));
+            if (code === 0) {
+              resolve();
+            } else {
+              console.log(`[YouTube] ffmpeg failed (code ${code}): ${ffmpegError.slice(0, 100)}`);
+              reject(new Error(`ffmpeg failed (code ${code}): ${ffmpegError}`));
+            }
           });
         });
         
@@ -274,8 +278,9 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
         console.log(`[YouTube] Video downloaded with strategy: ${strategy.name}`);
         return;
       }
-    } catch (err) {
-      console.log(`[YouTube] Download strategy ${strategy.name} failed`);
+    } catch (err: any) {
+      const errMsg = err?.message || err?.stderr || String(err);
+      console.log(`[YouTube] Download strategy ${strategy.name} failed: ${errMsg.slice(0, 100)}`);
       continue;
     }
   }
