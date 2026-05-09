@@ -80,40 +80,17 @@ export default function Home() {
     setYtError("");
     setYtInfo(null);
     try {
-      // Use Cobalt API for YouTube
-      if (selectedPlatform === "YouTube") {
-        const res = await fetch("/api/youtube-cobalt", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: ytUrl }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setYtError(data.error || "Could not fetch video info.");
-        } else {
-          // Cobalt returns downloadUrl, we need to parse URL for title
-          const urlObj = new URL(ytUrl);
-          const videoId = urlObj.searchParams.get("v") || urlObj.pathname.slice(1);
-          setYtInfo({
-            title: data.filename?.replace(/\.(mp3|mp4)$/i, "") || `youtube_${videoId}`,
-            author: "YouTube",
-            lengthSeconds: "0",
-            thumbnail: `https://img.youtube.com/vi/${videoId}/0.jpg`,
-          });
-        }
+      // Use yt-dlp API with cookies for all platforms
+      const res = await fetch("/api/youtube", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: ytUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setYtError(data.error || "Something went wrong.");
       } else {
-        // Use original yt-dlp API for other platforms
-        const res = await fetch("/api/youtube", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: ytUrl }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setYtError(data.error || "Something went wrong.");
-        } else {
-          setYtInfo(data);
-        }
+        setYtInfo(data);
       }
     } catch {
       setYtError("Network error. Please try again.");
@@ -125,45 +102,19 @@ export default function Home() {
   async function handleDownload(format: "mp3" | "mp4") {
     setYtDownloading(format);
     try {
-      if (selectedPlatform === "YouTube") {
-        // Use Cobalt API for YouTube downloads
-        const res = await fetch("/api/youtube-cobalt", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            url: ytUrl,
-            downloadMode: format === "mp3" ? "audio" : "auto",
-          }),
-        });
-        
-        if (!res.ok) {
-          const data = await res.json();
-          setYtError(data.error || "Download failed.");
-          return;
-        }
-        
+      // Use yt-dlp API with cookies for all platforms
+      const res = await fetch(`/api/youtube?url=${encodeURIComponent(ytUrl)}&format=${format}`);
+      if (!res.ok) {
         const data = await res.json();
-        if (data.downloadUrl) {
-          // Open Cobalt download URL in new tab or redirect
-          window.location.href = data.downloadUrl;
-        } else {
-          setYtError("Download link not available.");
-        }
-      } else {
-        // Use original yt-dlp API for other platforms
-        const res = await fetch(`/api/youtube?url=${encodeURIComponent(ytUrl)}&format=${format}`);
-        if (!res.ok) {
-          const data = await res.json();
-          setYtError(data.error || "Download failed.");
-          return;
-        }
-        const blob = await res.blob();
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `${ytInfo?.title || "download"}.${format}`;
-        a.click();
-        URL.revokeObjectURL(a.href);
+        setYtError(data.error || "Download failed.");
+        return;
       }
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${ytInfo?.title || "download"}.${format}`;
+      a.click();
+      URL.revokeObjectURL(a.href);
     } catch {
       setYtError("Download failed. Please try again.");
     } finally {

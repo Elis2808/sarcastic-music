@@ -14,6 +14,9 @@ COPY package*.json ./
 
 RUN npm install
 
+# Copy cookies.txt for YouTube authentication
+COPY app/cookies.txt /app/cookies.txt
+
 COPY . .
 
 RUN npm run build
