@@ -205,20 +205,25 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
       if (format === "mp3") {
         // First download audio to temp file
         const audioTempPath = `${tempPath}.audio`;
-        const { stderr } = await execFileAsync(YTDLP, [
-          ...strategy.flags,
-          "-f", "bestaudio",
-          "--no-part",
-          "-o", audioTempPath,
-          url,
-        ], { 
-          encoding: "utf-8",
-          timeout: 30000, // 30 seconds per strategy
-        });
-        
-        if (stderr && (stderr.includes("Sign in to confirm") || stderr.includes("bot"))) {
-          lastError = stderr;
-          throw new Error("Bot detection");
+        try {
+          await execFileAsync(YTDLP, [
+            ...strategy.flags,
+            "-f", "bestaudio",
+            "--no-part",
+            "-o", audioTempPath,
+            url,
+          ], { 
+            encoding: "utf-8",
+            timeout: 30000, // 30 seconds per strategy
+          });
+        } catch (err: any) {
+          // Check stderr in error object
+          const errStr = err.stderr || err.message || "";
+          if (errStr.includes("Sign in to confirm") || errStr.includes("bot")) {
+            lastError = errStr;
+            console.log(`[YouTube] Proxy blocked, trying next...`);
+          }
+          throw err; // Re-throw to trigger strategy fallback
         }
         
         // Convert to mp3 using ffmpeg
@@ -245,20 +250,25 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
         console.log(`[YouTube] Audio converted to MP3 with strategy: ${strategy.name}`);
         return;
       } else {
-        const { stderr } = await execFileAsync(YTDLP, [
-          ...strategy.flags,
-          "-f", "best[ext=mp4]/best",
-          "--no-part",
-          "-o", tempPath,
-          url,
-        ], { 
-          encoding: "utf-8",
-          timeout: 60000, // 60 seconds per strategy
-        });
-        
-        if (stderr && (stderr.includes("Sign in to confirm") || stderr.includes("bot"))) {
-          lastError = stderr;
-          throw new Error("Bot detection");
+        try {
+          await execFileAsync(YTDLP, [
+            ...strategy.flags,
+            "-f", "best[ext=mp4]/best",
+            "--no-part",
+            "-o", tempPath,
+            url,
+          ], { 
+            encoding: "utf-8",
+            timeout: 60000, // 60 seconds per strategy
+          });
+        } catch (err: any) {
+          // Check stderr in error object
+          const errStr = err.stderr || err.message || "";
+          if (errStr.includes("Sign in to confirm") || errStr.includes("bot")) {
+            lastError = errStr;
+            console.log(`[YouTube] Proxy blocked, trying next...`);
+          }
+          throw err; // Re-throw to trigger strategy fallback
         }
         
         console.log(`[YouTube] Video downloaded with strategy: ${strategy.name}`);
