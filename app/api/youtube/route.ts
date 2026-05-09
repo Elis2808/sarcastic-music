@@ -13,11 +13,26 @@ const execFileAsync = promisify(execFile);
 const YTDLP = "/usr/local/bin/yt-dlp";
 const FFMPEG = "/usr/bin/ffmpeg";
 
-// Proxy support for bypassing IP blocks
-const PROXY_URL = process.env.PROXY_URL;
-const PROXY_FLAGS = PROXY_URL ? ["--proxy", PROXY_URL] : [];
-if (PROXY_URL) {
-  console.log(`[YouTube] Using proxy: ${PROXY_URL.replace(/:\/\/.*@/, "://***@")}`);
+// Multi-proxy rotating support
+function getProxyList(): string[] {
+  const proxies = [];
+  // Check for PROXY_URL (single proxy) or PROXY_URL_1 through PROXY_URL_5 (multiple)
+  if (process.env.PROXY_URL) {
+    proxies.push(process.env.PROXY_URL);
+  }
+  for (let i = 1; i <= 5; i++) {
+    const proxy = process.env[`PROXY_URL_${i}`];
+    if (proxy) proxies.push(proxy);
+  }
+  return proxies;
+}
+
+const PROXY_LIST = getProxyList();
+if (PROXY_LIST.length > 0) {
+  console.log(`[YouTube] Loaded ${PROXY_LIST.length} proxy(s)`);
+  PROXY_LIST.forEach((p, i) => {
+    console.log(`[YouTube] Proxy ${i + 1}: ${p.replace(/:\/\/.*@/, "://***@")}`);
+  });
 }
 
 const SUPPORTED_PLATFORMS = [
@@ -61,7 +76,6 @@ const BASE_FLAGS = [
   "--socket-timeout", "10",
   "--retries", "2",
   "--js-runtimes", "deno",
-  ...(PROXY_URL ? ["--proxy", PROXY_URL] : []),
 ];
 
 // Get YouTube-specific flags to bypass bot detection
@@ -97,35 +111,35 @@ async function runYtDlpText(args: string[]): Promise<string> {
   });
 }
 
-// Try multiple strategies to get video info (free tier approach)
+// Build proxy flags for a specific proxy
+function getProxyFlags(proxyUrl: string | null): string[] {
+  return proxyUrl ? ["--proxy", proxyUrl] : [];
+}
+
+// Try multiple proxies and strategies to get video info
 async function getVideoInfoWithFallback(url: string): Promise<{ title: string; author: string; lengthSeconds: string; thumbnail: string }> {
-  const strategies = [
-    // Strategy 1: With proxy + android client
-    {
-      name: "proxy+android",
-      flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=android"],
-    },
-    // Strategy 2: Proxy only, android client
-    {
-      name: "proxy-only+android",
-      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", ...PROXY_FLAGS, "--extractor-args", "youtube:player_client=android"],
-    },
-    // Strategy 3: Proxy + web embedded
-    {
-      name: "proxy+web",
-      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", ...PROXY_FLAGS, "--extractor-args", "youtube:player_client=web_embedded"],
-    },
-    // Strategy 4: Proxy + TV client
-    {
-      name: "proxy+tv",
-      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", ...PROXY_FLAGS, "--extractor-args", "youtube:player_client=tv_embedded"],
-    },
-    // Strategy 5: Proxy only (bare minimum)
-    {
-      name: "proxy-only",
-      flags: ["--no-playlist", "--socket-timeout", "15", ...PROXY_FLAGS],
-    },
-  ];
+  // Generate all proxy+strategy combinations
+  const strategies: { name: string; flags: string[] }[] = [];
+  
+  // If we have proxies, try each one with different clients
+  if (PROXY_LIST.length > 0) {
+    for (let i = 0; i < PROXY_LIST.length; i++) {
+      const proxy = PROXY_LIST[i];
+      const proxyFlags = getProxyFlags(proxy);
+      
+      strategies.push(
+        { name: `proxy${i + 1}+android`, flags: [...BASE_FLAGS, ...proxyFlags, "--extractor-args", "youtube:player_client=android"] },
+        { name: `proxy${i + 1}+web`, flags: [...BASE_FLAGS, ...proxyFlags, "--extractor-args", "youtube:player_client=web_embedded"] },
+        { name: `proxy${i + 1}+ios`, flags: [...BASE_FLAGS, ...proxyFlags, "--extractor-args", "youtube:player_client=ios"] },
+      );
+    }
+  } else {
+    // No proxies, try without
+    strategies.push(
+      { name: "no-proxy+android", flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=android"] },
+      { name: "no-proxy+web", flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=web_embedded"] },
+    );
+  }
 
   for (const strategy of strategies) {
     try {
@@ -157,15 +171,30 @@ async function getVideoInfo(url: string): Promise<{ title: string; author: strin
   return getVideoInfoWithFallback(url);
 }
 
-// Download with fallback strategies
+// Download with fallback strategies (rotating through all proxies)
 async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath: string): Promise<void> {
-  const strategies = [
-    { name: "cookies+android", flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=android"] },
-    { name: "no-cookies+android", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", ...PROXY_FLAGS, "--extractor-args", "youtube:player_client=android"] },
-    { name: "web+embedded", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", ...PROXY_FLAGS, "--extractor-args", "youtube:player_client=web_embedded"] },
-    { name: "tv", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", ...PROXY_FLAGS, "--extractor-args", "youtube:player_client=tv_embedded"] },
-    { name: "minimal", flags: ["--no-playlist", "--socket-timeout", "15", ...PROXY_FLAGS] },
-  ];
+  // Generate all proxy+strategy combinations
+  const strategies: { name: string; flags: string[] }[] = [];
+  
+  // If we have proxies, try each one with different clients
+  if (PROXY_LIST.length > 0) {
+    for (let i = 0; i < PROXY_LIST.length; i++) {
+      const proxy = PROXY_LIST[i];
+      const proxyFlags = getProxyFlags(proxy);
+      
+      strategies.push(
+        { name: `proxy${i + 1}+android`, flags: [...BASE_FLAGS, ...proxyFlags, "--extractor-args", "youtube:player_client=android"] },
+        { name: `proxy${i + 1}+web`, flags: [...BASE_FLAGS, ...proxyFlags, "--extractor-args", "youtube:player_client=web_embedded"] },
+        { name: `proxy${i + 1}+ios`, flags: [...BASE_FLAGS, ...proxyFlags, "--extractor-args", "youtube:player_client=ios"] },
+      );
+    }
+  } else {
+    // No proxies, try without
+    strategies.push(
+      { name: "no-proxy+android", flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=android"] },
+      { name: "no-proxy+web", flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=web_embedded"] },
+    );
+  }
 
   let lastError = "";
   
