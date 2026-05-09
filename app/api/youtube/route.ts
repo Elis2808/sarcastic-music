@@ -1,8 +1,14 @@
 import { NextRequest } from "next/server";
-import { spawn } from "child_process";
+import { spawn, execFile } from "child_process";
+import { promisify } from "util";
 import { Readable } from "stream";
+import { mkdtemp, unlink, rmdir } from "fs/promises";
+import { createReadStream } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 
 export const runtime = "nodejs";
+const execFileAsync = promisify(execFile);
 
 const YTDLP = process.env.YTDLP_PATH || "yt-dlp";
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
@@ -45,17 +51,65 @@ function runYtDlpText(args: string[]): Promise<string> {
   });
 }
 
-function nodeStreamToWeb(nodeStream: Readable): ReadableStream<Uint8Array> {
-  return new ReadableStream({
-    start(controller) {
-      nodeStream.on("data", (chunk) => controller.enqueue(new Uint8Array(chunk)));
-      nodeStream.on("end", () => controller.close());
-      nodeStream.on("error", (err) => controller.error(err));
-    },
-    cancel() {
-      nodeStream.destroy();
-    },
-  });
+async function downloadToTemp(url: string, format: "mp3" | "mp4"): Promise<{ tempPath: string; safeTitle: string; cleanup: () => Promise<void> }> {
+  const tempDir = await mkdtemp(join(tmpdir(), "yt-"));
+  const info = await getVideoInfo(url);
+  const safeTitle = info.title.replace(/[^\w\s-]/g, "").trim() || "download";
+  const tempPath = join(tempDir, `download.${format}`);
+
+  if (format === "mp3") {
+    // Download audio and convert to mp3
+    await execFileAsync(YTDLP, [
+      ...FAST_FLAGS,
+      "-f", "bestaudio",
+      "--no-part",
+      "-o", "-",
+      url,
+    ], { 
+      maxBuffer: 50 * 1024 * 1024,
+      timeout: 120000 
+    }).then(({ stdout }) => {
+      // Pipe to ffmpeg
+      return new Promise<void>((resolve, reject) => {
+        const ffmpeg = spawn(FFMPEG, [
+          "-i", "pipe:0",
+          "-f", "mp3",
+          "-ab", "192k",
+          "-vn",
+          tempPath,
+        ]);
+        
+        ffmpeg.stdin.write(stdout);
+        ffmpeg.stdin.end();
+        
+        let errorOutput = "";
+        ffmpeg.stderr.on("data", (d) => { errorOutput += d.toString(); });
+        
+        ffmpeg.on("close", (code) => {
+          if (code === 0) resolve();
+          else reject(new Error(`ffmpeg exited ${code}: ${errorOutput}`));
+        });
+      });
+    });
+  } else {
+    // Download video
+    await execFileAsync(YTDLP, [
+      ...FAST_FLAGS,
+      "-f", "best[ext=mp4]/best",
+      "--no-part",
+      "-o", tempPath,
+      url,
+    ], { timeout: 120000 });
+  }
+
+  const cleanup = async () => {
+    try {
+      await unlink(tempPath);
+      await rmdir(tempDir);
+    } catch {}
+  };
+
+  return { tempPath, safeTitle, cleanup };
 }
 
 type VideoInfo = { title: string; author: string; lengthSeconds: string; thumbnail: string };
@@ -101,67 +155,52 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/youtube?url=...&format=mp3|mp4 — direct stream, no temp file
+// GET /api/youtube?url=...&format=mp3|mp4 — download to temp then stream
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const url = searchParams.get("url");
-  const format = searchParams.get("format") || "mp3";
+  const format = (searchParams.get("format") || "mp3") as "mp3" | "mp4";
 
   if (!url || !isValidUrl(url)) {
     return Response.json({ error: "Invalid URL. Supported: YouTube, TikTok, Instagram, Facebook, Twitter/X, SoundCloud, Vimeo, Twitch" }, { status: 400 });
   }
 
+  let cleanup: (() => Promise<void>) | undefined;
+
   try {
-    // Use cached info if available — no extra yt-dlp call needed
-    const info = await getVideoInfo(url);
-    const safeTitle = info.title.replace(/[^\w\s-]/g, "").trim() || "download";
+    console.log(`[YouTube] Starting download: ${url} (${format})`);
+    const { tempPath, safeTitle, cleanup: doCleanup } = await downloadToTemp(url, format);
+    cleanup = doCleanup;
 
-    let outputStream: Readable;
-
-    if (format === "mp3") {
-      // yt-dlp pipes raw audio → ffmpeg encodes to mp3 on the fly → streamed to browser
-      const ytdlp = spawn(YTDLP, [
-        ...FAST_FLAGS,
-        "-f", "bestaudio",
-        "--no-part",
-        "-o", "-",
-        url,
-      ]);
-      const ffmpeg = spawn(FFMPEG, [
-        "-i", "pipe:0",
-        "-f", "mp3",
-        "-ab", "320k",
-        "-vn",
-        "pipe:1",
-      ]);
-      ytdlp.stdout.pipe(ffmpeg.stdin);
-      ytdlp.stderr.on("data", () => {});
-      ffmpeg.stderr.on("data", () => {});
-      outputStream = ffmpeg.stdout;
-    } else {
-      // Stream best mp4 directly — no re-encoding needed
-      const ytdlp = spawn(YTDLP, [
-        ...FAST_FLAGS,
-        "-f", "best[ext=mp4]/best",
-        "--no-part",
-        "-o", "-",
-        url,
-      ]);
-      ytdlp.stderr.on("data", () => {});
-      outputStream = ytdlp.stdout;
-    }
+    console.log(`[YouTube] Downloaded to ${tempPath}, streaming...`);
 
     const contentType = format === "mp3" ? "audio/mpeg" : "video/mp4";
-    return new Response(nodeStreamToWeb(outputStream), {
+    const fileStream = createReadStream(tempPath);
+
+    return new Response(fileStream as unknown as ReadableStream, {
       headers: {
         "Content-Type": contentType,
         "Content-Disposition": `attachment; filename="${safeTitle}.${format}"`,
-        "Transfer-Encoding": "chunked",
         "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (error) {
-    console.error("yt-dlp stream error:", error);
-    return Response.json({ error: "Download failed. Video may be restricted or unavailable." }, { status: 500 });
+    console.error("[YouTube] Download error:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    
+    // Check for common errors
+    if (message.includes("Command failed") || message.includes("exited")) {
+      return Response.json({ 
+        error: "Download failed. This video may be restricted, age-restricted, or unavailable.",
+        details: message.slice(0, 200)
+      }, { status: 500 });
+    }
+    
+    return Response.json({ error: "Download failed. Please try again." }, { status: 500 });
+  } finally {
+    // Cleanup after a delay (allow download to start)
+    if (cleanup) {
+      setTimeout(() => cleanup!().catch(() => {}), 30000);
+    }
   }
 }
