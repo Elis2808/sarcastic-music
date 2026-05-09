@@ -17,6 +17,6 @@ fi
 
 echo "Python audio server started on port 5001 (PID: $PYTHON_PID)"
 
-# Start Next.js
+# Start Next.js with PORT from environment
 cd /app
-exec npm start
+exec next start -p ${PORT:-3000}
