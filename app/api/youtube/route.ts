@@ -203,36 +203,36 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
       console.log(`[YouTube] Trying download strategy: ${strategy.name}`);
       
       if (format === "mp3") {
-        // First download audio to temp file
-        const audioTempPath = `${tempPath}.audio`;
+        // Download video first, then extract audio (avoids YouTube's audio-only blocking)
+        const videoTempPath = `${tempPath}.video`;
         try {
           await execFileAsync(YTDLP, [
             ...strategy.flags,
-            "-f", "bestaudio",
+            "-f", "best[ext=mp4]/best",
             "--no-part",
-            "-o", audioTempPath,
+            "-o", videoTempPath,
             url,
           ], { 
             encoding: "utf-8",
-            timeout: 30000, // 30 seconds per strategy
+            timeout: 60000, // 60 seconds per strategy
           });
         } catch (err: any) {
-          // Check stderr in error object
           const errStr = err.stderr || err.message || "";
           if (errStr.includes("Sign in to confirm") || errStr.includes("bot")) {
             lastError = errStr;
             console.log(`[YouTube] Proxy blocked, trying next...`);
           }
-          throw err; // Re-throw to trigger strategy fallback
+          throw err;
         }
         
-        // Convert to mp3 using ffmpeg
+        // Extract audio to mp3 using ffmpeg
         await new Promise<void>((resolve, reject) => {
           const ffmpeg = spawn(FFMPEG, [
-            "-i", audioTempPath,
+            "-i", videoTempPath,
             "-f", "mp3",
             "-ab", "192k",
             "-vn",
+            "-y",
             tempPath,
           ]);
           
@@ -240,8 +240,8 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
           ffmpeg.stderr.on("data", (d) => { ffmpegError += d.toString(); });
           
           ffmpeg.on("close", (code) => {
-            // Clean up temp audio file
-            try { unlinkSync(audioTempPath); } catch {}
+            // Clean up temp video file
+            try { unlinkSync(videoTempPath); } catch {}
             if (code === 0) {
               resolve();
             } else {
@@ -251,7 +251,7 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
           });
         });
         
-        console.log(`[YouTube] Audio converted to MP3 with strategy: ${strategy.name}`);
+        console.log(`[YouTube] Audio extracted to MP3 with strategy: ${strategy.name}`);
         return;
       } else {
         try {
