@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip3 install --break-system-packages yt-dlp
 
 # Upgrade pip
-RUN pip3 install --no-cache-dir --upgrade pip
+RUN pip3 install --no-cache-dir --upgrade pip --break-system-packages
 
 COPY package*.json ./
 
