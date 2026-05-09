@@ -10,8 +10,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install yt-dlp
+# Install yt-dlp and add to PATH
 RUN pip3 install yt-dlp --break-system-packages || pip3 install yt-dlp
+ENV PATH="/opt/render/.local/bin:$PATH"
 
 # Set working directory
 WORKDIR /app
