@@ -18,6 +18,12 @@ const COOKIES_PATH = "/app/cookies.txt";
 const hasCookies = existsSync(COOKIES_PATH);
 console.log(`[YouTube] Cookies file ${hasCookies ? "found" : "NOT found"} at ${COOKIES_PATH}`);
 
+// Proxy support for bypassing IP blocks
+const PROXY_URL = process.env.PROXY_URL;
+if (PROXY_URL) {
+  console.log(`[YouTube] Using proxy: ${PROXY_URL.replace(/:\/\/.*@/, "://***@")}`);
+}
+
 const SUPPORTED_PLATFORMS = [
   { host: "youtube.com", name: "YouTube" },
   { host: "youtu.be", name: "YouTube" },
@@ -60,6 +66,7 @@ const BASE_FLAGS = [
   "--retries", "2",
   "--js-runtimes", "node",
   ...(hasCookies ? ["--cookies", COOKIES_PATH] : []),
+  ...(PROXY_URL ? ["--proxy", PROXY_URL] : []),
 ];
 
 // Get YouTube-specific flags to bypass bot detection
@@ -95,23 +102,154 @@ async function runYtDlpText(args: string[]): Promise<string> {
   });
 }
 
-// Get video info with proper escaping and error handling
-async function getVideoInfo(url: string): Promise<{ title: string; author: string; lengthSeconds: string; thumbnail: string }> {
-  const flags = [...BASE_FLAGS, ...getYouTubeFlags(url)];
-  const args = [
-    ...flags,
-    "--print", "%(title)s\n%(uploader)s\n%(duration)s\n%(thumbnail)s",
-    url,
+// Try multiple strategies to get video info (free tier approach)
+async function getVideoInfoWithFallback(url: string): Promise<{ title: string; author: string; lengthSeconds: string; thumbnail: string }> {
+  const strategies = [
+    // Strategy 1: With cookies + android client
+    {
+      name: "cookies+android",
+      flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=android"],
+    },
+    // Strategy 2: No cookies, android client
+    {
+      name: "no-cookies+android",
+      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=android"],
+    },
+    // Strategy 3: Web client with embedded player
+    {
+      name: "web+embedded",
+      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=web_embedded"],
+    },
+    // Strategy 4: TV client (sometimes works when others don't)
+    {
+      name: "tv",
+      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=tv_embedded"],
+    },
+    // Strategy 5: Bare minimum
+    {
+      name: "minimal",
+      flags: ["--no-playlist", "--socket-timeout", "15"],
+    },
   ];
+
+  for (const strategy of strategies) {
+    try {
+      console.log(`[YouTube] Trying strategy: ${strategy.name}`);
+      const args = [
+        ...strategy.flags,
+        "--print", "%(title)s\n%(uploader)s\n%(duration)s\n%(thumbnail)s",
+        url,
+      ];
+      
+      const raw = await runYtDlpText(args);
+      const [title, author, lengthSeconds, thumbnail] = raw.split("\n");
+      
+      if (title) {
+        console.log(`[YouTube] Success with strategy: ${strategy.name}`);
+        return { title, author, lengthSeconds, thumbnail };
+      }
+    } catch (err) {
+      console.log(`[YouTube] Strategy ${strategy.name} failed: ${err}`);
+      continue;
+    }
+  }
+
+  throw new Error("All download strategies failed. YouTube is blocking this server IP. Consider using a proxy service (Webshare, BrightData, etc.)");
+}
+
+// Legacy wrapper for compatibility
+async function getVideoInfo(url: string): Promise<{ title: string; author: string; lengthSeconds: string; thumbnail: string }> {
+  return getVideoInfoWithFallback(url);
+}
+
+// Download with fallback strategies
+async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath: string): Promise<void> {
+  const strategies = [
+    { name: "cookies+android", flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=android"] },
+    { name: "no-cookies+android", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=android"] },
+    { name: "web+embedded", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=web_embedded"] },
+    { name: "tv", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=tv_embedded"] },
+    { name: "minimal", flags: ["--no-playlist", "--socket-timeout", "15"] },
+  ];
+
+  let lastError = "";
   
-  const raw = await runYtDlpText(args);
-  const [title, author, lengthSeconds, thumbnail] = raw.split("\n");
-  
-  if (!title) {
-    throw new Error("Could not extract video title");
+  for (const strategy of strategies) {
+    try {
+      console.log(`[YouTube] Trying download strategy: ${strategy.name}`);
+      
+      if (format === "mp3") {
+        const { stdout, stderr } = await execFileAsync(YTDLP, [
+          ...strategy.flags,
+          "-f", "bestaudio",
+          "--no-part",
+          "-o", "-",
+          url,
+        ], { 
+          encoding: "buffer",
+          maxBuffer: 100 * 1024 * 1024,
+          timeout: 180000,
+        });
+        
+        if (stderr) {
+          const errText = stderr.toString();
+          if (errText.includes("Sign in to confirm") || errText.includes("bot")) {
+            lastError = errText;
+            throw new Error("Bot detection");
+          }
+        }
+        
+        // Convert to mp3 using ffmpeg
+        await new Promise<void>((resolve, reject) => {
+          const ffmpeg = spawn(FFMPEG, [
+            "-i", "pipe:0",
+            "-f", "mp3",
+            "-ab", "192k",
+            "-vn",
+            tempPath,
+          ]);
+          
+          ffmpeg.stdin.write(stdout);
+          ffmpeg.stdin.end();
+          
+          let ffmpegError = "";
+          ffmpeg.stderr.on("data", (d) => { ffmpegError += d.toString(); });
+          
+          ffmpeg.on("close", (code) => {
+            if (code === 0) resolve();
+            else reject(new Error(`ffmpeg failed (code ${code}): ${ffmpegError}`));
+          });
+        });
+        
+        console.log(`[YouTube] Audio converted to MP3 with strategy: ${strategy.name}`);
+        return;
+      } else {
+        const { stderr } = await execFileAsync(YTDLP, [
+          ...strategy.flags,
+          "-f", "best[ext=mp4]/best",
+          "--no-part",
+          "-o", tempPath,
+          url,
+        ], { 
+          encoding: "utf-8",
+          timeout: 180000,
+        });
+        
+        if (stderr && (stderr.includes("Sign in to confirm") || stderr.includes("bot"))) {
+          lastError = stderr;
+          throw new Error("Bot detection");
+        }
+        
+        console.log(`[YouTube] Video downloaded with strategy: ${strategy.name}`);
+        return;
+      }
+    } catch (err) {
+      console.log(`[YouTube] Download strategy ${strategy.name} failed`);
+      continue;
+    }
   }
   
-  return { title, author, lengthSeconds, thumbnail };
+  throw new Error(`All download strategies failed. ${lastError?.slice(0, 200) || ""}`);
 }
 
 // Download video/audio to temp file
@@ -121,75 +259,7 @@ async function downloadToTemp(url: string, format: "mp3" | "mp4"): Promise<{ tem
   const safeTitle = info.title.replace(/[^\w\s-]/g, "").trim() || "download";
   const tempPath = join(tempDir, `download.${format}`);
   
-  const flags = [...BASE_FLAGS, ...getYouTubeFlags(url)];
-
-  if (format === "mp3") {
-    // Download audio and convert to mp3
-    console.log(`[YouTube] Downloading audio for: ${url}`);
-    
-    const { stdout, stderr } = await execFileAsync(YTDLP, [
-      ...flags,
-      "-f", "bestaudio",
-      "--no-part",
-      "-o", "-",
-      url,
-    ], { 
-      encoding: "buffer",
-      maxBuffer: 100 * 1024 * 1024,
-      timeout: 180000,
-    });
-    
-    if (stderr) {
-      const errText = stderr.toString();
-      if (errText.includes("Sign in to confirm") || errText.includes("bot")) {
-        throw new Error("YouTube bot detection triggered. Try a different video or wait a few minutes.");
-      }
-    }
-    
-    // Convert to mp3 using ffmpeg
-    await new Promise<void>((resolve, reject) => {
-      const ffmpeg = spawn(FFMPEG, [
-        "-i", "pipe:0",
-        "-f", "mp3",
-        "-ab", "192k",
-        "-vn",
-        tempPath,
-      ]);
-      
-      ffmpeg.stdin.write(stdout);
-      ffmpeg.stdin.end();
-      
-      let ffmpegError = "";
-      ffmpeg.stderr.on("data", (d) => { ffmpegError += d.toString(); });
-      
-      ffmpeg.on("close", (code) => {
-        if (code === 0) resolve();
-        else reject(new Error(`ffmpeg failed (code ${code}): ${ffmpegError}`));
-      });
-    });
-    
-    console.log(`[YouTube] Audio converted to MP3: ${tempPath}`);
-  } else {
-    // Download video
-    console.log(`[YouTube] Downloading video for: ${url}`);
-    
-    const { stderr } = await execFileAsync(YTDLP, [
-      ...flags,
-      "-f", "best[ext=mp4]/best",
-      "--no-part",
-      "-o", tempPath,
-      url,
-    ], { 
-      encoding: "utf-8",
-      timeout: 180000,
-    });
-    
-    if (stderr && (stderr.includes("Sign in to confirm") || stderr.includes("bot"))) {
-      throw new Error("YouTube bot detection triggered. Try a different video or wait a few minutes.");
-    }
-    
-    console.log(`[YouTube] Video downloaded: ${tempPath}`);
-  }
+  await downloadWithFallback(url, format, tempPath);
 
   const cleanup = async () => {
     try {

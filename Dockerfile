@@ -15,11 +15,9 @@ RUN pip3 install --no-cache-dir --upgrade pip --break-system-packages
 
 COPY package*.json ./
 COPY requirements.txt ./
+COPY app/cookies.txt /app/cookies.txt
 
 RUN npm install
-
-# Copy cookies.txt for YouTube authentication
-COPY app/cookies.txt /app/cookies.txt
 
 # Install CPU-only PyTorch first (prevents CUDA packages)
 RUN pip3 install --no-cache-dir \
