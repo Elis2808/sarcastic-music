@@ -22,7 +22,6 @@ COPY app/cookies.txt /app/cookies.txt
 
 # Install Python dependencies with CPU-only PyTorch
 RUN pip3 install --no-cache-dir \
-    --index-url https://download.pytorch.org/whl/cpu \
     -r requirements.txt \
     --break-system-packages
 

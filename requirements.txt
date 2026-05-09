@@ -1,9 +1,11 @@
+--index-url https://download.pytorch.org/whl/cpu
+
+torch==2.7.1+cpu
+torchaudio==2.7.1+cpu
+
 flask>=2.3.0
 gunicorn>=21.0.0
 librosa>=0.10.0
 numpy>=1.24.0
 essentia>=2.1b6.dev374
 demucs>=4.0.0
---index-url https://download.pytorch.org/whl/cpu
-torch==2.7.1+cpu
-torchaudio==2.7.1+cpu
