@@ -10,9 +10,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install yt-dlp system-wide
-RUN pip3 install yt-dlp --break-system-packages && \
-    ln -sf $(which yt-dlp) /usr/local/bin/yt-dlp
+# Install yt-dlp via official release (more reliable than pip)
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
+    chmod a+rx /usr/local/bin/yt-dlp && \
+    /usr/local/bin/yt-dlp --version
 
 # Set working directory
 WORKDIR /app
