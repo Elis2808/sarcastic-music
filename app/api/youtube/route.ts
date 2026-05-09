@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { spawn, execFile } from "child_process";
 import { promisify } from "util";
 import { mkdtemp, unlink, rmdir } from "fs/promises";
-import { createReadStream, existsSync } from "fs";
+import { createReadStream, existsSync, unlinkSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
@@ -203,43 +203,40 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
       console.log(`[YouTube] Trying download strategy: ${strategy.name}`);
       
       if (format === "mp3") {
-        const { stdout, stderr } = await execFileAsync(YTDLP, [
+        // First download audio to temp file
+        const audioTempPath = `${tempPath}.audio`;
+        const { stderr } = await execFileAsync(YTDLP, [
           ...strategy.flags,
           "-f", "bestaudio",
           "--no-part",
-          "-o", "-",
+          "-o", audioTempPath,
           url,
         ], { 
-          encoding: "buffer",
-          maxBuffer: 100 * 1024 * 1024,
-          timeout: 180000,
+          encoding: "utf-8",
+          timeout: 30000, // 30 seconds per strategy
         });
         
-        if (stderr) {
-          const errText = stderr.toString();
-          if (errText.includes("Sign in to confirm") || errText.includes("bot")) {
-            lastError = errText;
-            throw new Error("Bot detection");
-          }
+        if (stderr && (stderr.includes("Sign in to confirm") || stderr.includes("bot"))) {
+          lastError = stderr;
+          throw new Error("Bot detection");
         }
         
         // Convert to mp3 using ffmpeg
         await new Promise<void>((resolve, reject) => {
           const ffmpeg = spawn(FFMPEG, [
-            "-i", "pipe:0",
+            "-i", audioTempPath,
             "-f", "mp3",
             "-ab", "192k",
             "-vn",
             tempPath,
           ]);
           
-          ffmpeg.stdin.write(stdout);
-          ffmpeg.stdin.end();
-          
           let ffmpegError = "";
           ffmpeg.stderr.on("data", (d) => { ffmpegError += d.toString(); });
           
           ffmpeg.on("close", (code) => {
+            // Clean up temp audio file
+            try { unlinkSync(audioTempPath); } catch {}
             if (code === 0) resolve();
             else reject(new Error(`ffmpeg failed (code ${code}): ${ffmpegError}`));
           });
@@ -256,7 +253,7 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
           url,
         ], { 
           encoding: "utf-8",
-          timeout: 180000,
+          timeout: 60000, // 60 seconds per strategy
         });
         
         if (stderr && (stderr.includes("Sign in to confirm") || stderr.includes("bot"))) {
