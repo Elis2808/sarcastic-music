@@ -14,6 +14,7 @@ RUN pip3 install --break-system-packages yt-dlp
 RUN pip3 install --no-cache-dir --upgrade pip --break-system-packages
 
 COPY package*.json ./
+COPY requirements.txt ./
 
 RUN npm install
 
