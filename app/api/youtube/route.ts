@@ -13,13 +13,9 @@ const execFileAsync = promisify(execFile);
 const YTDLP = "/usr/local/bin/yt-dlp";
 const FFMPEG = "/usr/bin/ffmpeg";
 
-// Check for cookies.txt (for authenticated YouTube requests)
-const COOKIES_PATH = "/app/cookies.txt";
-const hasCookies = existsSync(COOKIES_PATH);
-console.log(`[YouTube] Cookies file ${hasCookies ? "found" : "NOT found"} at ${COOKIES_PATH}`);
-
 // Proxy support for bypassing IP blocks
 const PROXY_URL = process.env.PROXY_URL;
+const PROXY_FLAGS = PROXY_URL ? ["--proxy", PROXY_URL] : [];
 if (PROXY_URL) {
   console.log(`[YouTube] Using proxy: ${PROXY_URL.replace(/:\/\/.*@/, "://***@")}`);
 }
@@ -65,7 +61,6 @@ const BASE_FLAGS = [
   "--socket-timeout", "10",
   "--retries", "2",
   "--js-runtimes", "deno",
-  ...(hasCookies ? ["--cookies", COOKIES_PATH] : []),
   ...(PROXY_URL ? ["--proxy", PROXY_URL] : []),
 ];
 
@@ -105,30 +100,30 @@ async function runYtDlpText(args: string[]): Promise<string> {
 // Try multiple strategies to get video info (free tier approach)
 async function getVideoInfoWithFallback(url: string): Promise<{ title: string; author: string; lengthSeconds: string; thumbnail: string }> {
   const strategies = [
-    // Strategy 1: With cookies + android client
+    // Strategy 1: With proxy + android client
     {
-      name: "cookies+android",
+      name: "proxy+android",
       flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=android"],
     },
-    // Strategy 2: No cookies, android client
+    // Strategy 2: Proxy only, android client
     {
-      name: "no-cookies+android",
-      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", "--extractor-args", "youtube:player_client=android"],
+      name: "proxy-only+android",
+      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", ...PROXY_FLAGS, "--extractor-args", "youtube:player_client=android"],
     },
-    // Strategy 3: Web client with embedded player
+    // Strategy 3: Proxy + web embedded
     {
-      name: "web+embedded",
-      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", "--extractor-args", "youtube:player_client=web_embedded"],
+      name: "proxy+web",
+      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", ...PROXY_FLAGS, "--extractor-args", "youtube:player_client=web_embedded"],
     },
-    // Strategy 4: TV client (sometimes works when others don't)
+    // Strategy 4: Proxy + TV client
     {
-      name: "tv",
-      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", "--extractor-args", "youtube:player_client=tv_embedded"],
+      name: "proxy+tv",
+      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", ...PROXY_FLAGS, "--extractor-args", "youtube:player_client=tv_embedded"],
     },
-    // Strategy 5: Bare minimum
+    // Strategy 5: Proxy only (bare minimum)
     {
-      name: "minimal",
-      flags: ["--no-playlist", "--socket-timeout", "15"],
+      name: "proxy-only",
+      flags: ["--no-playlist", "--socket-timeout", "15", ...PROXY_FLAGS],
     },
   ];
 
@@ -166,10 +161,10 @@ async function getVideoInfo(url: string): Promise<{ title: string; author: strin
 async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath: string): Promise<void> {
   const strategies = [
     { name: "cookies+android", flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=android"] },
-    { name: "no-cookies+android", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", "--extractor-args", "youtube:player_client=android"] },
-    { name: "web+embedded", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", "--extractor-args", "youtube:player_client=web_embedded"] },
-    { name: "tv", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", "--extractor-args", "youtube:player_client=tv_embedded"] },
-    { name: "minimal", flags: ["--no-playlist", "--socket-timeout", "15"] },
+    { name: "no-cookies+android", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", ...PROXY_FLAGS, "--extractor-args", "youtube:player_client=android"] },
+    { name: "web+embedded", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", ...PROXY_FLAGS, "--extractor-args", "youtube:player_client=web_embedded"] },
+    { name: "tv", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", ...PROXY_FLAGS, "--extractor-args", "youtube:player_client=tv_embedded"] },
+    { name: "minimal", flags: ["--no-playlist", "--socket-timeout", "15", ...PROXY_FLAGS] },
   ];
 
   let lastError = "";
