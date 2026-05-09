@@ -10,9 +10,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install yt-dlp and add to PATH
-RUN pip3 install yt-dlp --break-system-packages || pip3 install yt-dlp
-ENV PATH="/opt/render/.local/bin:$PATH"
+# Install yt-dlp system-wide
+RUN pip3 install yt-dlp --break-system-packages && \
+    ln -sf $(which yt-dlp) /usr/local/bin/yt-dlp
 
 # Set working directory
 WORKDIR /app
@@ -23,7 +23,7 @@ RUN npm install
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt ./
-RUN pip3 install -r requirements.txt --break-system-packages || pip3 install -r requirements.txt
+RUN pip3 install -r requirements.txt --break-system-packages
 
 # Copy the rest of the application
 COPY . .
