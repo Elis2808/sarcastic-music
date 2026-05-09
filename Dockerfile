@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip3 install --break-system-packages yt-dlp
 
-# Upgrade pip and install CPU-only PyTorch
+# Upgrade pip
 RUN pip3 install --no-cache-dir --upgrade pip
 
 COPY package*.json ./
@@ -20,7 +20,13 @@ RUN npm install
 # Copy cookies.txt for YouTube authentication
 COPY app/cookies.txt /app/cookies.txt
 
-# Install Python dependencies with CPU-only PyTorch
+# Install CPU-only PyTorch first (prevents CUDA packages)
+RUN pip3 install --no-cache-dir \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch==2.7.1+cpu torchaudio==2.7.1+cpu \
+    --break-system-packages
+
+# Install remaining Python dependencies
 RUN pip3 install --no-cache-dir \
     -r requirements.txt \
     --break-system-packages
