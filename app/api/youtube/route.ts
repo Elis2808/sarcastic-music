@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import { spawn, execFile } from "child_process";
 import { promisify } from "util";
-import { Readable } from "stream";
 import { mkdtemp, unlink, rmdir } from "fs/promises";
 import { createReadStream } from "fs";
 import { tmpdir } from "os";
@@ -10,8 +9,9 @@ import { join } from "path";
 export const runtime = "nodejs";
 const execFileAsync = promisify(execFile);
 
-const YTDLP = process.env.YTDLP_PATH || "yt-dlp";
-const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
+// Hardcoded paths for Docker deployment
+const YTDLP = "/usr/local/bin/yt-dlp";
+const FFMPEG = "/usr/bin/ffmpeg";
 
 const SUPPORTED_PLATFORMS = [
   { host: "youtube.com", name: "YouTube" },
@@ -37,69 +37,152 @@ function isValidUrl(url: string): boolean {
   }
 }
 
-function runYtDlpText(args: string[]): Promise<string> {
+function isYouTubeUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    return host === "youtube.com" || host === "youtu.be";
+  } catch {
+    return false;
+  }
+}
+
+// Base flags for all yt-dlp operations
+const BASE_FLAGS = [
+  "--no-playlist",
+  "--no-cache-dir",
+  "--socket-timeout", "10",
+  "--retries", "2",
+  "--js-runtimes", "node",
+];
+
+// Get YouTube-specific flags to bypass bot detection
+function getYouTubeFlags(url: string): string[] {
+  if (!isYouTubeUrl(url)) return [];
+  return ["--extractor-args", "youtube:player_client=android"];
+}
+
+// Run yt-dlp and return stdout, with detailed error logging
+async function runYtDlpText(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    const proc = spawn(YTDLP, args);
+    console.log(`[yt-dlp] Running: ${YTDLP} ${args.join(" ")}`);
+    const proc = spawn(YTDLP, args, { shell: false });
     let stdout = "";
     let stderr = "";
+    
     proc.stdout.on("data", (d) => (stdout += d.toString()));
     proc.stderr.on("data", (d) => (stderr += d.toString()));
+    
     proc.on("close", (code) => {
-      if (code === 0) resolve(stdout.trim());
-      else reject(new Error(stderr || `yt-dlp exited with code ${code}`));
+      if (code === 0) {
+        resolve(stdout.trim());
+      } else {
+        console.error(`[yt-dlp] Exit code ${code}, stderr: ${stderr}`);
+        reject(new Error(`yt-dlp failed (code ${code}): ${stderr || "Unknown error"}`));
+      }
+    });
+    
+    proc.on("error", (err) => {
+      console.error(`[yt-dlp] Process error:`, err);
+      reject(new Error(`yt-dlp process error: ${err.message}`));
     });
   });
 }
 
+// Get video info with proper escaping and error handling
+async function getVideoInfo(url: string): Promise<{ title: string; author: string; lengthSeconds: string; thumbnail: string }> {
+  const flags = [...BASE_FLAGS, ...getYouTubeFlags(url)];
+  const args = [
+    ...flags,
+    "--print", "%(title)s\n%(uploader)s\n%(duration)s\n%(thumbnail)s",
+    url,
+  ];
+  
+  const raw = await runYtDlpText(args);
+  const [title, author, lengthSeconds, thumbnail] = raw.split("\n");
+  
+  if (!title) {
+    throw new Error("Could not extract video title");
+  }
+  
+  return { title, author, lengthSeconds, thumbnail };
+}
+
+// Download video/audio to temp file
 async function downloadToTemp(url: string, format: "mp3" | "mp4"): Promise<{ tempPath: string; safeTitle: string; cleanup: () => Promise<void> }> {
   const tempDir = await mkdtemp(join(tmpdir(), "yt-"));
   const info = await getVideoInfo(url);
   const safeTitle = info.title.replace(/[^\w\s-]/g, "").trim() || "download";
   const tempPath = join(tempDir, `download.${format}`);
+  
+  const flags = [...BASE_FLAGS, ...getYouTubeFlags(url)];
 
   if (format === "mp3") {
     // Download audio and convert to mp3
-    await execFileAsync(YTDLP, [
-      ...FAST_FLAGS,
+    console.log(`[YouTube] Downloading audio for: ${url}`);
+    
+    const { stdout, stderr } = await execFileAsync(YTDLP, [
+      ...flags,
       "-f", "bestaudio",
       "--no-part",
       "-o", "-",
       url,
     ], { 
-      maxBuffer: 50 * 1024 * 1024,
-      timeout: 120000 
-    }).then(({ stdout }) => {
-      // Pipe to ffmpeg
-      return new Promise<void>((resolve, reject) => {
-        const ffmpeg = spawn(FFMPEG, [
-          "-i", "pipe:0",
-          "-f", "mp3",
-          "-ab", "192k",
-          "-vn",
-          tempPath,
-        ]);
-        
-        ffmpeg.stdin.write(stdout);
-        ffmpeg.stdin.end();
-        
-        let errorOutput = "";
-        ffmpeg.stderr.on("data", (d) => { errorOutput += d.toString(); });
-        
-        ffmpeg.on("close", (code) => {
-          if (code === 0) resolve();
-          else reject(new Error(`ffmpeg exited ${code}: ${errorOutput}`));
-        });
+      encoding: "buffer",
+      maxBuffer: 100 * 1024 * 1024,
+      timeout: 180000,
+    });
+    
+    if (stderr) {
+      const errText = stderr.toString();
+      if (errText.includes("Sign in to confirm") || errText.includes("bot")) {
+        throw new Error("YouTube bot detection triggered. Try a different video or wait a few minutes.");
+      }
+    }
+    
+    // Convert to mp3 using ffmpeg
+    await new Promise<void>((resolve, reject) => {
+      const ffmpeg = spawn(FFMPEG, [
+        "-i", "pipe:0",
+        "-f", "mp3",
+        "-ab", "192k",
+        "-vn",
+        tempPath,
+      ]);
+      
+      ffmpeg.stdin.write(stdout);
+      ffmpeg.stdin.end();
+      
+      let ffmpegError = "";
+      ffmpeg.stderr.on("data", (d) => { ffmpegError += d.toString(); });
+      
+      ffmpeg.on("close", (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`ffmpeg failed (code ${code}): ${ffmpegError}`));
       });
     });
+    
+    console.log(`[YouTube] Audio converted to MP3: ${tempPath}`);
   } else {
     // Download video
-    await execFileAsync(YTDLP, [
-      ...FAST_FLAGS,
+    console.log(`[YouTube] Downloading video for: ${url}`);
+    
+    const { stderr } = await execFileAsync(YTDLP, [
+      ...flags,
       "-f", "best[ext=mp4]/best",
       "--no-part",
       "-o", tempPath,
       url,
-    ], { timeout: 120000 });
+    ], { 
+      encoding: "utf-8",
+      timeout: 180000,
+    });
+    
+    if (stderr && (stderr.includes("Sign in to confirm") || stderr.includes("bot"))) {
+      throw new Error("YouTube bot detection triggered. Try a different video or wait a few minutes.");
+    }
+    
+    console.log(`[YouTube] Video downloaded: ${tempPath}`);
   }
 
   const cleanup = async () => {
@@ -112,46 +195,26 @@ async function downloadToTemp(url: string, format: "mp3" | "mp4"): Promise<{ tem
   return { tempPath, safeTitle, cleanup };
 }
 
-type VideoInfo = { title: string; author: string; lengthSeconds: string; thumbnail: string };
-const infoCache = new Map<string, { data: VideoInfo; ts: number }>();
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
-const FAST_FLAGS = [
-  "--no-playlist",
-  "--no-cache-dir",
-  "--socket-timeout", "10",
-  "--retries", "2",
-];
-
-async function getVideoInfo(url: string): Promise<VideoInfo> {
-  const cached = infoCache.get(url);
-  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
-
-  const raw = await runYtDlpText([
-    ...FAST_FLAGS,
-    "--print", "%(title)s\n%(uploader)s\n%(duration)s\n%(thumbnail)s",
-    url,
-  ]);
-  const [title, author, lengthSeconds, thumbnail] = raw.split("\n");
-  const data = { title, author, lengthSeconds, thumbnail };
-  infoCache.set(url, { data, ts: Date.now() });
-  return data;
-}
-
 // POST /api/youtube — fetch video info
 export async function POST(request: NextRequest) {
   const { url } = await request.json();
 
   if (!url || !isValidUrl(url)) {
-    return Response.json({ error: "Invalid URL. Supported: YouTube, TikTok, Instagram, Facebook, Twitter/X, SoundCloud, Vimeo, Twitch" }, { status: 400 });
+    return Response.json({ 
+      error: "Invalid URL. Supported: YouTube, TikTok, Instagram, Facebook, Twitter/X, SoundCloud, Vimeo, Twitch" 
+    }, { status: 400 });
   }
 
   try {
     const data = await getVideoInfo(url);
     return Response.json(data);
   } catch (error) {
-    console.error("yt-dlp info error:", error);
-    return Response.json({ error: "Could not fetch video info. Video may be unavailable or private." }, { status: 500 });
+    console.error("[YouTube] Info error:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    return Response.json({ 
+      error: "Could not fetch video info", 
+      details: message.slice(0, 500)
+    }, { status: 500 });
   }
 }
 
@@ -162,7 +225,9 @@ export async function GET(request: NextRequest) {
   const format = (searchParams.get("format") || "mp3") as "mp3" | "mp4";
 
   if (!url || !isValidUrl(url)) {
-    return Response.json({ error: "Invalid URL. Supported: YouTube, TikTok, Instagram, Facebook, Twitter/X, SoundCloud, Vimeo, Twitch" }, { status: 400 });
+    return Response.json({ 
+      error: "Invalid URL. Supported: YouTube, TikTok, Instagram, Facebook, Twitter/X, SoundCloud, Vimeo, Twitch" 
+    }, { status: 400 });
   }
 
   let cleanup: (() => Promise<void>) | undefined;
@@ -188,15 +253,11 @@ export async function GET(request: NextRequest) {
     console.error("[YouTube] Download error:", error);
     const message = error instanceof Error ? error.message : String(error);
     
-    // Check for common errors
-    if (message.includes("Command failed") || message.includes("exited")) {
-      return Response.json({ 
-        error: "Download failed. This video may be restricted, age-restricted, or unavailable.",
-        details: message.slice(0, 200)
-      }, { status: 500 });
-    }
-    
-    return Response.json({ error: "Download failed. Please try again." }, { status: 500 });
+    // Return detailed error to help debugging
+    return Response.json({ 
+      error: "Download failed", 
+      details: message.slice(0, 500)
+    }, { status: 500 });
   } finally {
     // Cleanup after a delay (allow download to start)
     if (cleanup) {
