@@ -6,7 +6,12 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     ffmpeg \
-    curl
+    curl \
+    unzip
+
+# Install Deno (yt-dlp's preferred JavaScript runtime)
+RUN curl -fsSL https://deno.land/install.sh | sh && \
+    mv /root/.deno/bin/deno /usr/local/bin/deno
 
 RUN pip3 install --break-system-packages yt-dlp
 

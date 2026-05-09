@@ -58,13 +58,13 @@ function isYouTubeUrl(url: string): boolean {
   }
 }
 
-// Base flags for all yt-dlp operations
+// Base flags for all yt-dlp operations (using Deno as JS runtime)
 const BASE_FLAGS = [
   "--no-playlist",
   "--no-cache-dir",
   "--socket-timeout", "10",
   "--retries", "2",
-  "--js-runtimes", "node",
+  "--js-runtimes", "deno",
   ...(hasCookies ? ["--cookies", COOKIES_PATH] : []),
   ...(PROXY_URL ? ["--proxy", PROXY_URL] : []),
 ];
@@ -113,17 +113,17 @@ async function getVideoInfoWithFallback(url: string): Promise<{ title: string; a
     // Strategy 2: No cookies, android client
     {
       name: "no-cookies+android",
-      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=android"],
+      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", "--extractor-args", "youtube:player_client=android"],
     },
     // Strategy 3: Web client with embedded player
     {
       name: "web+embedded",
-      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=web_embedded"],
+      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", "--extractor-args", "youtube:player_client=web_embedded"],
     },
     // Strategy 4: TV client (sometimes works when others don't)
     {
       name: "tv",
-      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=tv_embedded"],
+      flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", "--extractor-args", "youtube:player_client=tv_embedded"],
     },
     // Strategy 5: Bare minimum
     {
@@ -166,9 +166,9 @@ async function getVideoInfo(url: string): Promise<{ title: string; author: strin
 async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath: string): Promise<void> {
   const strategies = [
     { name: "cookies+android", flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=android"] },
-    { name: "no-cookies+android", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=android"] },
-    { name: "web+embedded", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=web_embedded"] },
-    { name: "tv", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=tv_embedded"] },
+    { name: "no-cookies+android", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", "--extractor-args", "youtube:player_client=android"] },
+    { name: "web+embedded", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", "--extractor-args", "youtube:player_client=web_embedded"] },
+    { name: "tv", flags: ["--no-playlist", "--no-cache-dir", "--socket-timeout", "10", "--retries", "2", "--js-runtimes", "deno", "--extractor-args", "youtube:player_client=tv_embedded"] },
     { name: "minimal", flags: ["--no-playlist", "--socket-timeout", "15"] },
   ];
 
@@ -249,7 +249,7 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
     }
   }
   
-  throw new Error(`All download strategies failed. ${lastError?.slice(0, 200) || ""}`);
+  throw new Error(`YouTube has blocked this server IP. The video cannot be downloaded without a residential proxy. Options: 1) Buy a proxy from Webshare/BrightData (~$5-10/month) and set PROXY_URL env var, 2) Self-host on a home server, 3) Use y2mate.is instead. Error: ${lastError?.slice(0, 100) || ""}`);
 }
 
 // Download video/audio to temp file
