@@ -1,0 +1,505 @@
+"use client";
+
+import { useState, useRef, useCallback } from "react";
+
+export default function FileConverter() {
+  const [activeCategory, setActiveCategory] = useState<"images" | "documents" | "audio" | "video">("images");
+  const [activeConversion, setActiveConversion] = useState<string>("img-to-pdf");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const [converting, setConverting] = useState(false);
+  const [error, setError] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const CATEGORIES = {
+    images: {
+      label: "Images",
+      conversions: [
+        { id: "img-to-pdf", label: "Photos to PDF Album", accept: "image/*" },
+        { id: "pdf-to-img", label: "PDF to Photos", accept: ".pdf" },
+        { id: "jpg-png", label: "JPG to PNG (Transparent)", accept: ".jpg,.jpeg" },
+        { id: "png-jpg", label: "PNG to JPG (Smaller)", accept: ".png" },
+        { id: "webp-png", label: "WebP → PNG", accept: ".webp" },
+        { id: "webp-jpg", label: "WebP → JPG", accept: ".webp" },
+        { id: "png-webp", label: "PNG → WebP", accept: ".png" },
+        { id: "jpg-webp", label: "JPG → WebP", accept: ".jpg,.jpeg" },
+        { id: "gif-convert", label: "GIF to Video/Image", accept: ".gif" },
+      ]
+    },
+    documents: {
+      label: "Documents",
+      conversions: [
+        { id: "doc-pdf", label: "Word to PDF", accept: ".doc,.docx" },
+        { id: "pdf-doc", label: "PDF to Word (Editable)", accept: ".pdf" },
+        { id: "txt-pdf", label: "Text File to PDF", accept: ".txt" },
+        { id: "md-pdf", label: "Markdown to PDF", accept: ".md" },
+        { id: "html-pdf", label: "HTML to PDF", accept: ".html,.htm" },
+        { id: "csv-xlsx", label: "CSV to Excel", accept: ".csv" },
+        { id: "xlsx-csv", label: "Excel to CSV", accept: ".xlsx,.xls" },
+      ]
+    },
+    audio: {
+      label: "Audio",
+      conversions: [
+        { id: "mp3-wav", label: "MP3 to WAV (Quality)", accept: ".mp3" },
+        { id: "wav-mp3", label: "WAV to MP3 (Smaller)", accept: ".wav" },
+        { id: "m4a-mp3", label: "M4A to MP3", accept: ".m4a" },
+        { id: "flac-mp3", label: "FLAC to MP3", accept: ".flac" },
+        { id: "ogg-mp3", label: "OGG to MP3", accept: ".ogg" },
+        { id: "any-mp3", label: "Any Audio to MP3", accept: "audio/*" },
+        { id: "compress-mp3", label: "Compress Audio", accept: "audio/*" },
+        { id: "extract-audio", label: "Extract from Video", accept: "video/*" },
+      ]
+    },
+    video: {
+      label: "Video",
+      conversions: [
+        { id: "mp4-gif", label: "Video to GIF", accept: ".mp4,.mov,.avi" },
+        { id: "gif-mp4", label: "GIF to Video", accept: ".gif" },
+        { id: "mp4-mov", label: "MP4 to MOV", accept: ".mp4" },
+        { id: "mov-mp4", label: "MOV to MP4", accept: ".mov" },
+        { id: "avi-mp4", label: "AVI to MP4", accept: ".avi" },
+        { id: "wmv-mp4", label: "WMV to MP4", accept: ".wmv" },
+        { id: "video-mp3", label: "Video to Audio Only", accept: "video/*" },
+        { id: "compress-video", label: "Compress Video", accept: "video/*" },
+      ]
+    },
+  };
+
+  const currentCategory = CATEGORIES[activeCategory];
+  const currentConversion = currentCategory.conversions.find(c => c.id === activeConversion) || currentCategory.conversions[0];
+
+  const handleFile = useCallback((newFiles: FileList | null) => {
+    if (!newFiles) return;
+    const accept = currentConversion.accept;
+    const validFiles = Array.from(newFiles).filter(f => {
+      if (accept === "image/*") return f.type.startsWith("image/");
+      if (accept === "audio/*") return f.type.startsWith("audio/");
+      if (accept === "video/*") return f.type.startsWith("video/");
+      const extensions = accept.split(",");
+      return extensions.some(ext => f.name.toLowerCase().endsWith(ext.replace(".", "")));
+    });
+    if (validFiles.length === 0) {
+      setError(`Please upload valid files for ${currentConversion.label}`);
+      return;
+    }
+    setFiles(prev => [...prev, ...validFiles]);
+    setError("");
+  }, [currentConversion]);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    handleFile(e.dataTransfer.files);
+  }, [handleFile]);
+
+  const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFile(e.target.files);
+    e.target.value = "";
+  }, [handleFile]);
+
+  const removeFile = useCallback((index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const moveFile = useCallback((index: number, direction: "up" | "down") => {
+    setFiles(prev => {
+      const newFiles = [...prev];
+      if (direction === "up" && index > 0) {
+        [newFiles[index], newFiles[index - 1]] = [newFiles[index - 1], newFiles[index]];
+      } else if (direction === "down" && index < newFiles.length - 1) {
+        [newFiles[index], newFiles[index + 1]] = [newFiles[index + 1], newFiles[index]];
+      }
+      return newFiles;
+    });
+  }, []);
+
+  const convertFiles = useCallback(async () => {
+    if (files.length === 0) return;
+    setConverting(true);
+    setError("");
+    
+    try {
+      // ========== IMAGES ==========
+      
+      // Images to PDF
+      if (activeConversion === "img-to-pdf") {
+        const jsPDF = (await import("jspdf")).default;
+        const pdf = new jsPDF();
+        
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const img = await createImageBitmap(file);
+          
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d")!;
+          ctx.drawImage(img, 0, 0);
+          
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+          const imgWidth = pdf.internal.pageSize.getWidth();
+          const imgHeight = (img.height * imgWidth) / img.width;
+          
+          if (i > 0) pdf.addPage();
+          pdf.addImage(dataUrl, "JPEG", 0, 0, imgWidth, imgHeight);
+        }
+        
+        pdf.save("photos-album.pdf");
+      }
+      
+      // PDF to Images
+      else if (activeConversion === "pdf-to-img") {
+        const pdfjs = await import("pdfjs-dist");
+        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+        
+        for (const file of files) {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+          
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 2 });
+            
+            const canvas = document.createElement("canvas");
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext("2d")!;
+            
+            await page.render({ canvasContext: ctx, viewport, canvas: canvas as unknown as HTMLCanvasElement }).promise;
+            
+            const blob = await new Promise<Blob>((resolve) => {
+              canvas.toBlob((b) => resolve(b!), "image/png");
+            });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${file.name.replace(/\.pdf$/i, "")}_page${pageNum}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }
+        }
+      }
+      
+      // Image format conversions
+      else if (["jpg-png", "png-jpg", "webp-png", "webp-jpg", "png-webp", "jpg-webp", "gif-convert"].includes(activeConversion)) {
+        const outputFormat: Record<string, string> = {
+          "jpg-png": "image/png",
+          "webp-png": "image/png",
+          "png-jpg": "image/jpeg",
+          "webp-jpg": "image/jpeg",
+          "png-webp": "image/webp",
+          "jpg-webp": "image/webp",
+          "gif-convert": "image/png",
+        };
+        const ext: Record<string, string> = {
+          "jpg-png": "png",
+          "webp-png": "png",
+          "png-jpg": "jpg",
+          "webp-jpg": "jpg",
+          "png-webp": "webp",
+          "jpg-webp": "webp",
+          "gif-convert": "png",
+        };
+        
+        for (const file of files) {
+          const img = await createImageBitmap(file);
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d")!;
+          ctx.drawImage(img, 0, 0);
+          
+          const blob = await new Promise<Blob>((resolve) => {
+            canvas.toBlob((b) => resolve(b!), outputFormat[activeConversion], 0.95);
+          });
+          
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = file.name.replace(/\.[^/.]+$/, `.${ext[activeConversion]}`);
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      }
+      
+      // ========== DOCUMENTS ==========
+      
+      // Text/Markdown to PDF
+      else if (activeConversion === "txt-pdf" || activeConversion === "md-pdf") {
+        const jsPDF = (await import("jspdf")).default;
+        const pdf = new jsPDF();
+        
+        for (const file of files) {
+          const text = await file.text();
+          let content = text;
+          
+          if (activeConversion === "md-pdf") {
+            const { marked } = await import("marked");
+            content = await marked(text);
+            // Strip HTML tags for simple text output
+            content = content.replace(/<[^>]*>/g, " ");
+          }
+          
+          const lines = pdf.splitTextToSize(content, 180);
+          let y = 20;
+          
+          for (let i = 0; i < lines.length; i++) {
+            if (y > 280) {
+              pdf.addPage();
+              y = 20;
+            }
+            pdf.text(lines[i], 15, y);
+            y += 7;
+          }
+          
+          pdf.save(`${file.name.replace(/\.[^/.]+$/, "")}.pdf`);
+        }
+      }
+      
+      // CSV to Excel
+      else if (activeConversion === "csv-xlsx") {
+        const XLSX = await import("xlsx");
+        
+        for (const file of files) {
+          const text = await file.text();
+          const rows = text.split("\n").map(row => row.split(","));
+          
+          const ws = XLSX.utils.aoa_to_sheet(rows);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+          
+          const blob = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+          const url = URL.createObjectURL(new Blob([blob], { type: "application/octet-stream" }));
+          
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = file.name.replace(/\.csv$/i, ".xlsx");
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      }
+      
+      // Excel to CSV
+      else if (activeConversion === "xlsx-csv") {
+        const XLSX = await import("xlsx");
+        
+        for (const file of files) {
+          const arrayBuffer = await file.arrayBuffer();
+          const data = new Uint8Array(arrayBuffer);
+          const workbook = XLSX.read(data, { type: "array" });
+          
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const csv = XLSX.utils.sheet_to_csv(firstSheet);
+          
+          const blob = new Blob([csv], { type: "text/csv" });
+          const url = URL.createObjectURL(blob);
+          
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = file.name.replace(/\.xlsx?$/i, ".csv");
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      }
+      
+      // ========== SERVER-SIDE CONVERSIONS ==========
+      
+      // Word to PDF, HTML to PDF, and all Audio/Video conversions
+      else {
+        const formData = new FormData();
+        files.forEach(file => formData.append("files", file));
+        formData.append("conversion", activeConversion);
+        
+        const res = await fetch("/api/convert-file", {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          // If ffmpeg is required, show helpful message
+          if (res.status === 501 && data.command) {
+            throw new Error(`${data.message}\n\nTo convert locally, run:\n${data.command}\n\n${data.note}`);
+          }
+          throw new Error(data.error || "Conversion failed");
+        }
+        
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        
+        // Determine extension based on conversion type
+        let ext = "zip";
+        if (activeConversion.includes("pdf")) ext = "pdf";
+        else if (activeConversion.includes("mp3")) ext = "mp3";
+        else if (activeConversion.includes("wav")) ext = "wav";
+        else if (activeConversion.includes("mp4")) ext = "mp4";
+        else if (activeConversion.includes("gif")) ext = "gif";
+        else if (activeConversion.includes("doc")) ext = "docx";
+        
+        a.download = `converted.${ext}`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Conversion failed");
+    } finally {
+      setConverting(false);
+    }
+  }, [files, activeConversion, currentConversion]);
+
+  const clearAll = useCallback(() => {
+    setFiles([]);
+    setError("");
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center w-full pt-8 px-4 select-none max-sm:pt-6 max-sm:px-3">
+      <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">File Converter</h1>
+
+      {/* Main Category Tabs */}
+      <div className="flex gap-2 mb-4 justify-center flex-wrap max-sm:px-4">
+        {(Object.keys(CATEGORIES) as Array<keyof typeof CATEGORIES>).map((cat) => (
+          <button
+            key={cat}
+            onClick={() => {
+              setActiveCategory(cat);
+              setActiveConversion(CATEGORIES[cat].conversions[0].id);
+              setFiles([]);
+              setError("");
+            }}
+            className={`px-4 py-2 rounded-xl transition-all duration-200 text-sm outline-none ${
+              activeCategory === cat
+                ? "bg-black text-[#C9A84C] border border-[#C9A84C] shadow-[0_0_10px_rgba(201,168,76,0.5)]"
+                : "bg-gray-800 text-gray-300 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 border border-transparent"
+            }`}
+          >
+            {CATEGORIES[cat].label}
+          </button>
+        ))}
+      </div>
+
+      {/* Conversion Dropdown */}
+      <div className="relative mb-6 mx-auto" ref={dropdownRef}>
+        <button
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+          className="w-64 max-sm:w-full max-sm:max-w-xs flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-black border border-[#C9A84C] text-[#C9A84C] hover:bg-gray-900 transition-all duration-200"
+        >
+          <span className="truncate text-center">{currentConversion.label}</span>
+          <svg 
+            className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        
+        {dropdownOpen && (
+          <div className="absolute top-full left-0 mt-2 w-64 bg-black border border-[#C9A84C] rounded-xl shadow-lg shadow-[#C9A84C]/20 z-50 max-h-64 overflow-y-auto">
+            {currentCategory.conversions.map((conv) => (
+              <button
+                key={conv.id}
+                onClick={() => {
+                  setActiveConversion(conv.id);
+                  setFiles([]);
+                  setError("");
+                  setDropdownOpen(false);
+                }}
+                className={`w-full px-4 py-3 text-left text-sm transition-all duration-200 border-b border-gray-800 last:border-b-0 ${
+                  activeConversion === conv.id
+                    ? "bg-[#C9A84C]/20 text-[#C9A84C]"
+                    : "text-gray-300 hover:bg-[#C9A84C]/10 hover:text-[#C9A84C]"
+                }`}
+              >
+                {conv.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Drop Zone */}
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        onClick={() => inputRef.current?.click()}
+        className={`w-full max-w-xl max-sm:h-32 h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 ${
+          dragging
+            ? "border-[#C9A84C] bg-[#C9A84C]/10 scale-[1.02]"
+            : "border-gray-600 bg-gray-900 hover:border-[#C9A84C] hover:bg-black"
+        }`}
+      >
+        <svg className={`w-8 h-8 transition-colors ${dragging ? "text-[#C9A84C]" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        <p className="text-gray-400 text-sm text-center px-4">
+          {dragging ? "Drop Files Here!" : `Drop ${currentConversion.label.split(" → ")[0]} files or click to select`}
+        </p>
+        <input ref={inputRef} type="file" accept={currentConversion.accept} multiple className="hidden" onChange={onFileChange} />
+      </div>
+
+      {/* Error */}
+      {error && <p className="mt-4 text-red-400 text-sm text-center max-w-md">{error}</p>}
+
+      {/* File List */}
+      {files.length > 0 && (
+        <div className="mt-6 w-full max-w-xl">
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-gray-400 text-sm">{files.length} file(s) selected</p>
+            <button onClick={clearAll} className="text-red-400 text-xs hover:text-red-300 transition-colors">Clear All</button>
+          </div>
+          
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {files.map((file, index) => (
+              <div key={index} className="flex items-center gap-3 bg-gray-900 rounded-xl p-3">
+                <span className="text-gray-500 text-xs w-6">{index + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm truncate">{file.name}</p>
+                  <p className="text-gray-500 text-xs">{(file.size / 1024).toFixed(1)} KB</p>
+                </div>
+                <div className="flex gap-1">
+                  <button onClick={() => moveFile(index, "up")} disabled={index === 0} className="p-1 rounded hover:bg-gray-800 disabled:opacity-30 transition-colors">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                  </button>
+                  <button onClick={() => moveFile(index, "down")} disabled={index === files.length - 1} className="p-1 rounded hover:bg-gray-800 disabled:opacity-30 transition-colors">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                  <button onClick={() => removeFile(index)} className="p-1 rounded hover:bg-red-900/30 transition-colors">
+                    <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Convert Button */}
+          <button
+            onClick={convertFiles}
+            disabled={converting || files.length === 0}
+            className="w-full mt-6 px-6 py-4 rounded-xl bg-black border border-[#C9A84C] hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all duration-200 shadow-lg hover:shadow-[#C9A84C]/30 flex items-center justify-center gap-3 outline-none focus:ring-2 focus:ring-[#C9A84C]"
+          >
+            {converting ? (
+              <>
+                <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                Converting...
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5 text-[#C9A84C]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                Convert to {currentConversion.label.split(" → ")[1] || "Output"}
+              </>
+            )}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
