@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { spawn, execFile } from "child_process";
 import { promisify } from "util";
 import { mkdtemp, unlink, rmdir } from "fs/promises";
-import { createReadStream } from "fs";
+import { createReadStream, existsSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
@@ -12,6 +12,11 @@ const execFileAsync = promisify(execFile);
 // Hardcoded paths for Docker deployment
 const YTDLP = "/usr/local/bin/yt-dlp";
 const FFMPEG = "/usr/bin/ffmpeg";
+
+// Check for cookies.txt (for authenticated YouTube requests)
+const COOKIES_PATH = "/app/cookies.txt";
+const hasCookies = existsSync(COOKIES_PATH);
+console.log(`[YouTube] Cookies file ${hasCookies ? "found" : "NOT found"} at ${COOKIES_PATH}`);
 
 const SUPPORTED_PLATFORMS = [
   { host: "youtube.com", name: "YouTube" },
@@ -54,6 +59,7 @@ const BASE_FLAGS = [
   "--socket-timeout", "10",
   "--retries", "2",
   "--js-runtimes", "node",
+  ...(hasCookies ? ["--cookies", COOKIES_PATH] : []),
 ];
 
 // Get YouTube-specific flags to bypass bot detection
