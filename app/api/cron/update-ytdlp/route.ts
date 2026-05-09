@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 const execFileAsync = promisify(execFile);
 
-const YTDLP = "/opt/homebrew/bin/yt-dlp";
+const YTDLP = process.env.YTDLP_PATH || "yt-dlp";
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: NextRequest) {

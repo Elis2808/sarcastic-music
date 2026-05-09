@@ -4,8 +4,8 @@ import { Readable } from "stream";
 
 export const runtime = "nodejs";
 
-const YTDLP = "/opt/homebrew/bin/yt-dlp";
-const FFMPEG = "/opt/homebrew/bin/ffmpeg";
+const YTDLP = process.env.YTDLP_PATH || "yt-dlp";
+const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
 
 const SUPPORTED_PLATFORMS = [
   { host: "youtube.com", name: "YouTube" },

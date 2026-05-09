@@ -1,0 +1,13 @@
+services:
+  # Single service running both Node.js and Python
+  - type: web
+    name: sarcastic-music
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PYTHON_API_URL
+        value: http://localhost:5001
+      - key: NODE_ENV
+        value: production
+      - key: CRON_SECRET
+        generateValue: true

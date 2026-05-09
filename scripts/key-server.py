@@ -136,7 +136,7 @@ def handle_separate():
         cpu_count = str(multiprocessing.cpu_count())
         result = subprocess.run(
             [
-                "/Users/elisagy/Library/Python/3.9/bin/demucs",
+                os.environ.get("DEMUXS_PATH", "demucs"),
                 "-n", model,
                 "--two-stems", "vocals",
                 "--jobs", cpu_count,
@@ -177,5 +177,7 @@ def health():
     return "ok"
 
 if __name__ == "__main__":
-    print("Audio analysis server running on http://localhost:5001")
-    app.run(host="127.0.0.1", port=5001)
+    port = int(os.environ.get("PORT", 5001))
+    host = os.environ.get("HOST", "127.0.0.1")
+    print(f"Audio analysis server running on http://{host}:{port}")
+    app.run(host=host, port=port)

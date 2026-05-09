@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     pythonForm.append("file", file);
     pythonForm.append("stem", stem as string);
 
-    const res = await fetch("http://127.0.0.1:5001/separate", {
+    const res = await fetch(`${process.env.PYTHON_API_URL || "http://127.0.0.1:5001"}/separate`, {
       method: "POST",
       body: pythonForm,
     });

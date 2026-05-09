@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const pythonForm = new FormData();
     pythonForm.append("file", file);
 
-    const res = await fetch("http://127.0.0.1:5001/detect-bpm", {
+    const res = await fetch(`${process.env.PYTHON_API_URL || "http://127.0.0.1:5001"}/detect-bpm`, {
       method: "POST",
       body: pythonForm,
     });
