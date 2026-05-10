@@ -51,7 +51,7 @@ def detect_key():
         f.save(tmp.name)
         tmp.close()
         y, sr = librosa.load(tmp.name, sr=22050, mono=True, duration=30)
-        chroma = librosa.feature.chroma_cqt(y=y, sr=sr, bins_per_octave=36)
+        chroma = librosa.feature.chroma_stft(y=y, sr=sr, n_fft=4096, hop_length=2048)
         mean_chroma = np.mean(chroma, axis=1)
         mean_chroma = mean_chroma / mean_chroma.max()
         best_key, best_scale, best_corr = 0, "major", -np.inf
