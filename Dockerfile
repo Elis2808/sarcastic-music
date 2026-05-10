@@ -40,17 +40,17 @@ RUN pip3 install --no-cache-dir \
     --break-system-packages
 
 # Pre-download htdemucs model weights at build time (prevents runtime download timeout/crash)
-RUN python3 -c "
-import os, sys
-os.environ['OMP_NUM_THREADS'] = '1'
-os.environ['MKL_NUM_THREADS'] = '1'
-try:
-    from demucs.pretrained import get_model
-    get_model('htdemucs')
-    print('htdemucs model downloaded successfully')
-except Exception as e:
-    print(f'Warning: model pre-download failed: {e}', file=sys.stderr)
-"
+RUN printf '%s\n' \
+    'import os' \
+    'os.environ["OMP_NUM_THREADS"] = "1"' \
+    'os.environ["MKL_NUM_THREADS"] = "1"' \
+    'try:' \
+    '    from demucs.pretrained import get_model' \
+    '    get_model("htdemucs")' \
+    '    print("htdemucs model downloaded successfully")' \
+    'except Exception as e:' \
+    '    print("Warning: model pre-download failed:", e)' \
+    > /tmp/preload_model.py && python3 /tmp/preload_model.py
 
 # Memory optimization env vars
 ENV PYTORCH_ENABLE_MPS_FALLBACK=1
