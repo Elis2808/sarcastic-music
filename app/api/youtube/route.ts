@@ -32,7 +32,6 @@ function getCookieFlags(): string[] {
 // Multi-proxy rotating support
 function getProxyList(): string[] {
   const proxies = [];
-  // Check for PROXY_URL (single proxy) or PROXY_URL_1 through PROXY_URL_5 (multiple)
   if (process.env.PROXY_URL) {
     proxies.push(process.env.PROXY_URL);
   }
@@ -79,295 +78,203 @@ function isYouTubeUrl(url: string): boolean {
   try {
     const u = new URL(url);
     const host = u.hostname.replace(/^www\./, "");
-    return host === "youtube.com" || host === "youtu.be";
+    return host.includes("youtube.com") || host.includes("youtu.be");
   } catch {
     return false;
   }
 }
 
-// Base flags for all yt-dlp operations (optimized for speed)
+function getPlatform(url: string): string {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    const platform = SUPPORTED_PLATFORMS.find(p => host.includes(p.host));
+    return platform?.name || "Unknown";
+  } catch {
+    return "Unknown";
+  }
+}
+
+// Base flags optimized for speed
 const BASE_FLAGS = [
   "--no-playlist",
   "--no-cache-dir",
-  "--socket-timeout", "5",        // Reduced from 10s
-  "--retries", "0",               // No retries for speed
+  "--socket-timeout", "5",
+  "--retries", "0",
   "--js-runtimes", "deno",
-  // Removed sleep flags for speed
 ];
 
-// Rotating User-Agents to avoid fingerprinting
+// Fast flags for non-YouTube platforms
+const FAST_FLAGS = [
+  "--no-playlist",
+  "--no-cache-dir",
+  "--socket-timeout", "3",
+  "--retries", "0",
+];
+
+// Facebook-specific flags
+const FACEBOOK_FLAGS = [
+  "--no-playlist",
+  "--socket-timeout", "5",
+  "--retries", "0",
+  "--extractor-args", "facebook:video_format=direct",
+];
+
+// User-Agent rotation for anti-bot
 const USER_AGENTS = [
   "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
   "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36",
-  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-  "Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Mobile Safari/537.36",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
 ];
 
 function getRandomUserAgent(): string {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
-// Exponential backoff delay
-async function sleep(ms: number): Promise<void> {
+function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Fast flags for non-YouTube platforms (aggressive timeouts for speed)
-const FAST_FLAGS = [
-  "--no-playlist",
-  "--no-cache-dir",
-  "--socket-timeout", "3",        // 3s timeout for fast failure
-  "--retries", "0",
-];
-
-// Ultra-fast flags for Facebook (no proxy, minimal extraction)
-const FACEBOOK_FLAGS = [
-  "--no-playlist",
-  "--socket-timeout", "5",        // Reduced from 8s
-  "--retries", "0",               // No retries for speed
-  "--extractor-args", "facebook:video_format=direct",
-];
-
-// Get YouTube-specific flags to bypass bot detection
-function getYouTubeFlags(url: string): string[] {
-  if (!isYouTubeUrl(url)) return [];
-  return ["--extractor-args", "youtube:player_client=android"];
-}
-
-// Detect platform from URL
-function getPlatform(url: string): string {
-  try {
-    const u = new URL(url);
-    const host = u.hostname.replace(/^www\./, "");
-    if (host.includes("youtube.com") || host.includes("youtu.be")) return "youtube";
-    if (host.includes("instagram.com")) return "instagram";
-    if (host.includes("twitch.tv")) return "twitch";
-    if (host.includes("twitter.com") || host.includes("x.com")) return "twitter";
-    if (host.includes("vimeo.com")) return "vimeo";
-    if (host.includes("tiktok.com")) return "tiktok";
-    if (host.includes("facebook.com") || host.includes("fb.watch")) return "facebook";
-    if (host.includes("soundcloud.com")) return "soundcloud";
-    return "generic";
-  } catch {
-    return "generic";
-  }
-}
-
-// Run yt-dlp and return stdout, with detailed error logging
-async function runYtDlpText(args: string[]): Promise<string> {
+// Run yt-dlp and return text output
+function runYtDlpText(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    console.log(`[yt-dlp] Running: ${YTDLP} ${args.join(" ")}`);
-    const proc = spawn(YTDLP, args, { shell: false });
+    const proc = spawn(YTDLP, args, { stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
-    
-    proc.stdout.on("data", (d) => (stdout += d.toString()));
-    proc.stderr.on("data", (d) => (stderr += d.toString()));
-    
+    proc.stdout.on("data", (d) => { stdout += d.toString(); });
+    proc.stderr.on("data", (d) => { stderr += d.toString(); });
     proc.on("close", (code) => {
       if (code === 0) {
-        resolve(stdout.trim());
+        resolve(stdout);
       } else {
-        console.error(`[yt-dlp] Exit code ${code}, stderr: ${stderr}`);
-        reject(new Error(`yt-dlp failed (code ${code}): ${stderr || "Unknown error"}`));
+        reject(new Error(stderr || `yt-dlp exited with code ${code}`));
       }
     });
-    
-    proc.on("error", (err) => {
-      console.error(`[yt-dlp] Process error:`, err);
-      reject(new Error(`yt-dlp process error: ${err.message}`));
-    });
+    proc.on("error", (err) => reject(err));
   });
 }
 
-// Build proxy flags for a specific proxy
-function getProxyFlags(proxyUrl: string | null): string[] {
-  return proxyUrl ? ["--proxy", proxyUrl] : [];
-}
-
-// Try multiple proxies and strategies to get video info
+// Get video info with parallel strategy racing
 async function getVideoInfoWithFallback(url: string): Promise<{ title: string; author: string; lengthSeconds: string; thumbnail: string }> {
   const platform = getPlatform(url);
-  const isYouTube = platform === "youtube";
+  const isYouTube = platform === "YouTube";
+  const isFacebook = platform === "Facebook";
   
-  // Generate all proxy+strategy combinations
   const strategies: { name: string; flags: string[] }[] = [];
   
-  // Use fast flags for non-YouTube platforms
-  const baseFlags = isYouTube ? BASE_FLAGS : FAST_FLAGS;
+  // Build strategy list
+  const baseFlags = isYouTube ? BASE_FLAGS : isFacebook ? FACEBOOK_FLAGS : FAST_FLAGS;
   
-  // If we have proxies, try each one with appropriate flags
-  if (PROXY_LIST.length > 0) {
+  if (PROXY_LIST.length > 0 && isYouTube) {
+    // Add proxy strategies for YouTube
     for (let i = 0; i < PROXY_LIST.length; i++) {
       const proxy = PROXY_LIST[i];
-      const proxyFlags = getProxyFlags(proxy);
+      const proxyFlags = ["--proxy", proxy];
+      const userAgent = getRandomUserAgent();
+      const cookieFlags = getCookieFlags();
       
-      // YouTube needs special flags - ONLY use android (not iOS - it's heavily blocked)
-      if (isYouTube) {
-        const userAgent = getRandomUserAgent();
-        const cookieFlags = getCookieFlags();
-        strategies.push(
-          { name: `proxy${i + 1}+android`, flags: [...baseFlags, ...proxyFlags, ...cookieFlags, "--extractor-args", "youtube:player_client=android", "--user-agent", userAgent] },
-          { name: `proxy${i + 1}+web`, flags: [...baseFlags, ...proxyFlags, ...cookieFlags, "--extractor-args", "youtube:player_client=web_embedded", "--user-agent", userAgent] },
-        );
-      } else {
-        // Non-YouTube: just use proxy with base flags
-        strategies.push(
-          { name: `proxy${i + 1}+standard`, flags: [...baseFlags, ...proxyFlags] },
-        );
-      }
-    }
-  } else {
-    // No proxies, try without
-    if (isYouTube) {
       strategies.push(
-        { name: "no-proxy+android", flags: [...baseFlags, "--extractor-args", "youtube:player_client=android"] },
-        { name: "no-proxy+web", flags: [...baseFlags, "--extractor-args", "youtube:player_client=web_embedded"] },
-      );
-    } else {
-      strategies.push(
-        { name: "no-proxy+standard", flags: [...baseFlags] },
+        { name: `proxy${i + 1}+android`, flags: [...baseFlags, ...proxyFlags, ...cookieFlags, "--extractor-args", "youtube:player_client=android", "--user-agent", userAgent] },
+        { name: `proxy${i + 1}+web`, flags: [...baseFlags, ...proxyFlags, ...cookieFlags, "--extractor-args", "youtube:player_client=web_embedded", "--user-agent", userAgent] },
       );
     }
   }
-
-  let lastError = "";
   
-  // Try strategies in parallel for speed
+  // Add no-proxy strategies
+  if (isYouTube) {
+    const userAgent = getRandomUserAgent();
+    const cookieFlags = getCookieFlags();
+    strategies.push(
+      { name: "no-proxy+android", flags: [...baseFlags, ...cookieFlags, "--extractor-args", "youtube:player_client=android", "--user-agent", userAgent] },
+      { name: "no-proxy+web", flags: [...baseFlags, ...cookieFlags, "--extractor-args", "youtube:player_client=web_embedded", "--user-agent", userAgent] },
+    );
+  } else {
+    strategies.push({ name: "no-proxy+standard", flags: [...baseFlags] });
+  }
+
+  // Try all strategies in parallel - first to succeed wins
   const attempts = strategies.map(async (strategy) => {
     try {
-      console.log(`[YouTube] Trying download strategy: ${strategy.name}`);
+      console.log(`[YouTube] Trying info strategy: ${strategy.name}`);
+      const args = [...strategy.flags, "--dump-single-json", url];
+      const raw = await runYtDlpText(args);
+      const data = JSON.parse(raw);
       
-      if (format === "mp3") {
-        // Download video first, then extract audio (avoids YouTube's audio-only blocking)
-        const videoTempPath = `${tempPath}.video`;
-        try {
-          await execFileAsync(YTDLP, [
-            ...strategy.flags,
-            "-f", "best[ext=mp4]/best",
-            "--no-part",
-            "-o", videoTempPath,
-            url,
-          ], { 
-            encoding: "utf-8",
-            timeout: 30000, // 30 seconds per strategy (reduced from 60s)
-          });
-        } catch (err: any) {
-          const errStr = err.stderr || err.message || "";
-          if (errStr.includes("Sign in to confirm") || errStr.includes("bot")) {
-            lastError = errStr;
-            console.log(`[YouTube] Proxy blocked, trying next...`);
-          }
-          throw err;
-        }
-        
-        // Extract audio to mp3 using ffmpeg
-        await new Promise<void>((resolve, reject) => {
-          const ffmpeg = spawn(FFMPEG, [
-            "-i", videoTempPath,
-            "-f", "mp3",
-            "-ab", "192k",
-            "-vn",
-            "-y",
-            tempPath,
-          ]);
-          
-          let ffmpegError = "";
-          ffmpeg.stderr.on("data", (d) => { ffmpegError += d.toString(); });
-          
-          ffmpeg.on("close", (code) => {
-            // Clean up temp video file
-            try { unlinkSync(videoTempPath); } catch {}
-            if (code === 0) {
-              resolve();
-            } else {
-              console.log(`[YouTube] ffmpeg failed (code ${code}): ${ffmpegError.slice(0, 100)}`);
+      const title = data.title || "Unknown";
+      const author = data.uploader || data.channel || data.creator || "Unknown";
+      const lengthSeconds = String(data.duration || 0);
+      const thumbnail = data.thumbnail || (data.thumbnails?.[0]?.url) || "";
+      
+      if (title && title !== "Unknown") {
+        console.log(`[YouTube] Info success with strategy: ${strategy.name}`);
+        return { title, author, lengthSeconds, thumbnail };
       }
+      throw new Error("No title found");
     } catch (err) {
-      console.log(`[YouTube] Strategy ${strategy.name} failed: ${err}`);
-      throw err; // Propagate to Promise.any
+      console.log(`[YouTube] Info strategy ${strategy.name} failed: ${err}`);
+      throw err;
     }
   });
 
-  // Race all strategies - first to succeed wins
   try {
     return await Promise.race(attempts);
   } catch {
-    throw new Error("All download strategies failed. YouTube is blocking this server IP. Consider using a proxy service (Webshare, BrightData, etc.)");
+    throw new Error("All info strategies failed. YouTube may be blocking this server.");
   }
 }
 
-// Legacy wrapper for compatibility
-async function getVideoInfo(url: string): Promise<{ title: string; author: string; lengthSeconds: string; thumbnail: string }> {
-  return getVideoInfoWithFallback(url);
-}
-
-// Download with fallback strategies (rotating through all proxies)
+// Download with sequential fallback (to avoid spam detection)
 async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath: string): Promise<void> {
   const platform = getPlatform(url);
-  const isYouTube = platform === "youtube";
+  const isYouTube = platform === "YouTube";
+  const isFacebook = platform === "Facebook";
   
-  // Generate all proxy+strategy combinations
   const strategies: { name: string; flags: string[] }[] = [];
+  const baseFlags = isYouTube ? BASE_FLAGS : isFacebook ? FACEBOOK_FLAGS : FAST_FLAGS;
   
-  // Use fast flags for non-YouTube platforms
-  const baseFlags = isYouTube ? BASE_FLAGS : FAST_FLAGS;
-  
-  // If we have proxies, try each one with appropriate flags
-  if (PROXY_LIST.length > 0) {
-    // For non-YouTube platforms (Facebook, etc), try direct first - no proxy needed
-    if (!isYouTube) {
-      // Facebook: use special fast flags, single attempt (no proxy)
-      if (platform === "facebook") {
-        strategies.push({ name: "facebook+direct", flags: [...FACEBOOK_FLAGS] });
-      } else {
-        // Other non-YouTube: fast flags, direct only
-        strategies.push({ name: "direct+fast", flags: [...baseFlags] });
-      }
-    } else {
-      // YouTube: cycle through all proxies with different clients
-      for (let i = 0; i < PROXY_LIST.length; i++) {
-        const proxy = PROXY_LIST[i];
-        const proxyFlags = getProxyFlags(proxy);
-        strategies.push(
-          { name: `proxy${i + 1}+android`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=android"] },
-          { name: `proxy${i + 1}+web`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=web_embedded"] },
-          { name: `proxy${i + 1}+ios`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=ios"] },
-        );
-      }
+  if (PROXY_LIST.length > 0 && isYouTube) {
+    for (let i = 0; i < PROXY_LIST.length; i++) {
+      const proxy = PROXY_LIST[i];
+      const proxyFlags = ["--proxy", proxy];
+      const userAgent = getRandomUserAgent();
+      const cookieFlags = getCookieFlags();
+      
+      strategies.push(
+        { name: `proxy${i + 1}+android`, flags: [...baseFlags, ...proxyFlags, ...cookieFlags, "--extractor-args", "youtube:player_client=android", "--user-agent", userAgent] },
+        { name: `proxy${i + 1}+web`, flags: [...baseFlags, ...proxyFlags, ...cookieFlags, "--extractor-args", "youtube:player_client=web_embedded", "--user-agent", userAgent] },
+      );
     }
+  }
+  
+  if (isYouTube) {
+    const userAgent = getRandomUserAgent();
+    const cookieFlags = getCookieFlags();
+    strategies.push(
+      { name: "no-proxy+android", flags: [...baseFlags, ...cookieFlags, "--extractor-args", "youtube:player_client=android", "--user-agent", userAgent] },
+      { name: "no-proxy+web", flags: [...baseFlags, ...cookieFlags, "--extractor-args", "youtube:player_client=web_embedded", "--user-agent", userAgent] },
+    );
   } else {
-    // No proxies, try without
-    if (isYouTube) {
-      strategies.push(
-        { name: "no-proxy+android", flags: [...baseFlags, "--extractor-args", "youtube:player_client=android"] },
-        { name: "no-proxy+web", flags: [...baseFlags, "--extractor-args", "youtube:player_client=web_embedded"] },
-      );
-    } else {
-      strategies.push(
-        { name: "no-proxy+standard", flags: [...baseFlags] },
-      );
-    }
+    strategies.push({ name: "no-proxy+standard", flags: [...baseFlags] });
   }
 
   let lastError = "";
   
-  // Try strategies sequentially to avoid spam detection
+  // Try strategies sequentially with small delays to avoid spam detection
   for (let i = 0; i < strategies.length; i++) {
     const strategy = strategies[i];
     
-    // Small delay between attempts (1-3s) to avoid looking like spam
     if (i > 0) {
-      const delay = Math.min(1000 + i * 1000, 3000); // 1s, 2s, 3s max
-      console.log(`[YouTube] Waiting ${delay}ms before next download attempt...`);
+      const delay = Math.min(1000 + i * 500, 3000); // 1s, 1.5s, 2s, 2.5s, 3s max
+      console.log(`[YouTube] Waiting ${delay}ms before next attempt...`);
       await sleep(delay);
     }
     
     try {
-      console.log(`[YouTube] Trying download strategy: ${strategy.name}`);
+      console.log(`[YouTube] Trying download: ${strategy.name}`);
       
       if (format === "mp3") {
-        // Download video first, then extract audio (avoids YouTube's audio-only blocking)
+        // Download video first, then extract audio
         const videoTempPath = `${tempPath}.video`;
         try {
           await execFileAsync(YTDLP, [
@@ -376,20 +283,16 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
             "--no-part",
             "-o", videoTempPath,
             url,
-          ], { 
-            encoding: "utf-8",
-            timeout: 60000, // 60 seconds per strategy
-          });
+          ], { encoding: "utf-8", timeout: 30000 });
         } catch (err: any) {
           const errStr = err.stderr || err.message || "";
           if (errStr.includes("Sign in to confirm") || errStr.includes("bot")) {
             lastError = errStr;
-            console.log(`[YouTube] Proxy blocked, trying next...`);
           }
           throw err;
         }
         
-        // Extract audio to mp3 using ffmpeg
+        // Extract audio with ffmpeg
         await new Promise<void>((resolve, reject) => {
           const ffmpeg = spawn(FFMPEG, [
             "-i", videoTempPath,
@@ -404,20 +307,16 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
           ffmpeg.stderr.on("data", (d) => { ffmpegError += d.toString(); });
           
           ffmpeg.on("close", (code) => {
-            // Clean up temp video file
             try { unlinkSync(videoTempPath); } catch {}
-            if (code === 0) {
-              resolve();
-            } else {
-              console.log(`[YouTube] ffmpeg failed (code ${code}): ${ffmpegError.slice(0, 100)}`);
-              reject(new Error(`ffmpeg failed (code ${code}): ${ffmpegError}`));
-            }
+            if (code === 0) resolve();
+            else reject(new Error(`ffmpeg failed: ${ffmpegError}`));
           });
         });
         
-        console.log(`[YouTube] Audio extracted to MP3 with strategy: ${strategy.name}`);
+        console.log(`[YouTube] MP3 extracted: ${strategy.name}`);
         return;
       } else {
+        // Download video directly
         try {
           await execFileAsync(YTDLP, [
             ...strategy.flags,
@@ -425,119 +324,116 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
             "--no-part",
             "-o", tempPath,
             url,
-          ], { 
-            encoding: "utf-8",
-            timeout: 60000, // 60 seconds per strategy
-          });
+          ], { encoding: "utf-8", timeout: 30000 });
         } catch (err: any) {
-          // Check stderr in error object
           const errStr = err.stderr || err.message || "";
           if (errStr.includes("Sign in to confirm") || errStr.includes("bot")) {
             lastError = errStr;
-            console.log(`[YouTube] Proxy blocked, trying next...`);
           }
-          throw err; // Re-throw to trigger strategy fallback
+          throw err;
         }
         
-        console.log(`[YouTube] Video downloaded with strategy: ${strategy.name}`);
+        console.log(`[YouTube] Video downloaded: ${strategy.name}`);
         return;
       }
     } catch (err: any) {
       const errMsg = err?.message || err?.stderr || String(err);
-      console.log(`[YouTube] Download strategy ${strategy.name} failed: ${errMsg.slice(0, 100)}`);
-      continue;
+      console.log(`[YouTube] Download ${strategy.name} failed: ${errMsg.slice(0, 100)}`);
     }
   }
-  
-  throw new Error(`YouTube has blocked this server IP. The video cannot be downloaded without a residential proxy. Options: 1) Buy a proxy from Webshare/BrightData (~$5-10/month) and set PROXY_URL env var, 2) Self-host on a home server, 3) Use y2mate.is instead. Error: ${lastError?.slice(0, 100) || ""}`);
+
+  throw new Error(`All download strategies failed. ${lastError?.slice(0, 100) || ""}`);
 }
 
-// Download video/audio to temp file
-async function downloadToTemp(url: string, format: "mp3" | "mp4"): Promise<{ tempPath: string; safeTitle: string; cleanup: () => Promise<void> }> {
-  const tempDir = await mkdtemp(join(tmpdir(), "yt-"));
-  const info = await getVideoInfo(url);
-  const safeTitle = info.title.replace(/[^\w\s-]/g, "").trim() || "download";
-  const tempPath = join(tempDir, `download.${format}`);
-  
-  await downloadWithFallback(url, format, tempPath);
+// Info cache to avoid repeated fetches
+const infoCache = new Map<string, { title: string; author: string; lengthSeconds: string; thumbnail: string; ts: number }>();
+const INFO_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-  const cleanup = async () => {
-    try {
-      await unlink(tempPath);
-      await rmdir(tempDir);
-    } catch {}
-  };
-
-  return { tempPath, safeTitle, cleanup };
-}
-
-// POST /api/youtube — fetch video info
-export async function POST(request: NextRequest) {
-  const { url } = await request.json();
-
-  if (!url || !isValidUrl(url)) {
-    return Response.json({ 
-      error: "Invalid URL. Supported: YouTube, TikTok, Instagram, Facebook, Twitter/X, SoundCloud, Vimeo, Twitch" 
-    }, { status: 400 });
-  }
-
-  try {
-    const data = await getVideoInfo(url);
-    return Response.json(data);
-  } catch (error) {
-    console.error("[YouTube] Info error:", error);
-    const message = error instanceof Error ? error.message : String(error);
-    return Response.json({ 
-      error: "Could not fetch video info", 
-      details: message.slice(0, 500)
-    }, { status: 500 });
-  }
-}
-
-// GET /api/youtube?url=...&format=mp3|mp4 — download to temp then stream
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const url = searchParams.get("url");
-  const format = (searchParams.get("format") || "mp3") as "mp3" | "mp4";
-
+  
   if (!url || !isValidUrl(url)) {
-    return Response.json({ 
-      error: "Invalid URL. Supported: YouTube, TikTok, Instagram, Facebook, Twitter/X, SoundCloud, Vimeo, Twitch" 
-    }, { status: 400 });
+    return new Response("Invalid or unsupported URL", { status: 400 });
   }
 
-  let cleanup: (() => Promise<void>) | undefined;
+  // Check cache
+  const cached = infoCache.get(url);
+  if (cached && Date.now() - cached.ts < INFO_CACHE_TTL) {
+    console.log(`[YouTube] Info cache hit for ${url}`);
+    return Response.json(cached);
+  }
 
   try {
-    console.log(`[YouTube] Starting download: ${url} (${format})`);
-    const { tempPath, safeTitle, cleanup: doCleanup } = await downloadToTemp(url, format);
-    cleanup = doCleanup;
+    const info = await getVideoInfoWithFallback(url);
+    infoCache.set(url, { ...info, ts: Date.now() });
+    return Response.json(info);
+  } catch (err: any) {
+    console.error("[YouTube] Info error:", err);
+    return new Response(err.message || "Failed to fetch video info", { status: 500 });
+  }
+}
 
-    console.log(`[YouTube] Downloaded to ${tempPath}, streaming...`);
+export async function POST(request: NextRequest) {
+  let tempDir: string | null = null;
+  
+  try {
+    const body = await request.json();
+    const { url, format } = body;
 
-    const contentType = format === "mp3" ? "audio/mpeg" : "video/mp4";
+    if (!url || !isValidUrl(url)) {
+      return new Response("Invalid or unsupported URL", { status: 400 });
+    }
+    if (!format || (format !== "mp3" && format !== "mp4")) {
+      return new Response("Invalid format (must be mp3 or mp4)", { status: 400 });
+    }
+
+    // Create temp directory
+    tempDir = await mkdtemp(join(tmpdir(), "yt-"));
+    const tempPath = join(tempDir, `download.${format}`);
+
+    // Download the file
+    await downloadWithFallback(url, format, tempPath);
+
+    // Verify file exists and has content
+    if (!existsSync(tempPath)) {
+      throw new Error("Download failed - file not created");
+    }
+
+    const stats = createReadStream(tempPath);
+    
+    // Return file as stream
     const fileStream = createReadStream(tempPath);
+    const platform = getPlatform(url);
+    
+    // Clean up temp file after streaming
+    fileStream.on("close", () => {
+      try {
+        unlinkSync(tempPath);
+        if (tempDir) rmdir(tempDir).catch(() => {});
+      } catch {}
+    });
 
-    return new Response(fileStream as unknown as ReadableStream, {
+    return new Response(fileStream as any, {
       headers: {
-        "Content-Type": contentType,
-        "Content-Disposition": `attachment; filename="${safeTitle}.${format}"`,
-        "X-Content-Type-Options": "nosniff",
+        "Content-Type": format === "mp3" ? "audio/mpeg" : "video/mp4",
+        "Content-Disposition": `attachment; filename="${platform.toLowerCase()}-download.${format}"`,
       },
     });
-  } catch (error) {
-    console.error("[YouTube] Download error:", error);
-    const message = error instanceof Error ? error.message : String(error);
+  } catch (err: any) {
+    console.error("[YouTube] Download error:", err);
     
-    // Return detailed error to help debugging
-    return Response.json({ 
-      error: "Download failed", 
-      details: message.slice(0, 500)
-    }, { status: 500 });
-  } finally {
-    // Cleanup after a delay (allow download to start)
-    if (cleanup) {
-      setTimeout(() => cleanup!().catch(() => {}), 30000);
+    // Clean up on error
+    if (tempDir) {
+      try {
+        const tempPath = join(tempDir, "download.mp3");
+        const videoTempPath = `${tempPath}.video`;
+        if (existsSync(videoTempPath)) unlinkSync(videoTempPath);
+        if (existsSync(tempPath)) unlinkSync(tempPath);
+        rmdir(tempDir).catch(() => {});
+      } catch {}
     }
+    
+    return new Response(err.message || "Download failed", { status: 500 });
   }
 }
