@@ -11,18 +11,24 @@ export const runtime = "nodejs";
 let activeJobs = 0;
 const MAX_JOBS = 2;
 
-// ─── Session memory: remember what worked, skip what bot-blocked ───────────────
-let lastWinner: { proxyArgs: string[]; client: string } | null = null;
-const botBlockedProxies = new Map<string, number>(); // proxy key -> timestamp
-const BOT_BLOCK_TTL = 5 * 60 * 1000; // skip bot-blocked proxy for 5 minutes
+// ─── Proxy scorer: rotate fairly but bias toward what works ────────────────────
+const proxyScores = new Map<string, number>();      // higher = tried first
+const botBlockedUntil = new Map<string, number>();  // proxy key -> unblock timestamp
+const BOT_BLOCK_TTL = 5 * 60 * 1000;
 
 function isProxyBotBlocked(key: string): boolean {
-  const ts = botBlockedProxies.get(key);
-  if (!ts) return false;
-  if (Date.now() - ts > BOT_BLOCK_TTL) { botBlockedProxies.delete(key); return false; }
+  const until = botBlockedUntil.get(key);
+  if (!until) return false;
+  if (Date.now() > until) { botBlockedUntil.delete(key); return false; }
   return true;
 }
-function markBotBlocked(key: string) { botBlockedProxies.set(key, Date.now()); }
+function markBotBlocked(key: string) {
+  botBlockedUntil.set(key, Date.now() + BOT_BLOCK_TTL);
+  proxyScores.set(key, (proxyScores.get(key) ?? 0) - 2);
+}
+function markSuccess(key: string) {
+  proxyScores.set(key, (proxyScores.get(key) ?? 0) + 1);
+}
 
 // ─── Supported hosts ─────────────────────────────────────────────────────────
 const SUPPORTED_HOSTS = ["youtube.com","youtu.be","tiktok.com","instagram.com","facebook.com","fb.watch","twitter.com","x.com","soundcloud.com","vimeo.com","twitch.tv"];
@@ -136,7 +142,7 @@ function isBotBlock(stderr: string): boolean {
   return stderr.includes("Sign in") || stderr.includes("bot") || stderr.includes("cookies are no longer valid");
 }
 
-// ─── GET: race all non-blocked combos, last winner gets head start ────────────
+// ─── GET: race all non-blocked combos, sorted by score (best first) ──────────
 async function runParallel(
   extraArgs: string[],
   timeoutMs = 12000
@@ -149,6 +155,7 @@ async function runParallel(
   const proxyList = [...proxies.map(p => ["--proxy", p] as string[]), [] as string[]];
   const attempts = proxyList
     .filter(pa => !isProxyBotBlocked(pa[1] ?? "direct"))
+    .sort((a, b) => (proxyScores.get(b[1] ?? "direct") ?? 0) - (proxyScores.get(a[1] ?? "direct") ?? 0))
     .flatMap(proxyArgs =>
       CLIENTS.map(client => ({
         label: `${client}${proxyArgs.length ? "+proxy" : "+direct"}`,
@@ -158,12 +165,6 @@ async function runParallel(
         args: [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs],
       }))
     );
-
-  // Bubble last winner to front so it races with a head start, not sequentially
-  if (lastWinner) {
-    const wi = attempts.findIndex(a => a.client === lastWinner!.client && a.proxyKey === (lastWinner!.proxyArgs[1] ?? "direct"));
-    if (wi > 0) { const [w] = attempts.splice(wi, 1); attempts.unshift(w); }
-  }
 
   if (attempts.length === 0) return { stdout: "", stderr: "all proxies bot-blocked", code: 1 };
 
@@ -187,7 +188,7 @@ async function runParallel(
 
         if (!settled && result.code === 0) {
           settled = true;
-          lastWinner = { proxyArgs: attempt.proxyArgs, client: attempt.client };
+          markSuccess(attempt.proxyKey);
           killAll();
           resolve(result);
         } else if (!settled && completed === attempts.length) {
@@ -198,7 +199,7 @@ async function runParallel(
   });
 }
 
-// ─── POST: try last winner first, then sequential with bot-block skip ────────
+// ─── POST: sequential sorted by score, skip bot-blocked proxies ──────────────
 async function runSequential(
   extraArgs: string[],
   outPath: string,
@@ -209,26 +210,12 @@ async function runSequential(
   const cookieArgs = cookieFile ? ["--cookies", cookieFile] : [];
   const poArgs = getPoTokenArgs();
 
-  // Try last known-good combo first
-  if (lastWinner) {
-    const { proxyArgs, client } = lastWinner;
-    const proxyKey = proxyArgs[1] ?? "direct";
-    if (!isProxyBotBlocked(proxyKey)) {
-      console.log(`[YouTube] download: trying last winner ${client}+${proxyKey}`);
-      const args = [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs, "-o", outPath];
-      const result = await spawnToFileWithTimeout(args, timeoutMs);
-      if (result.code === 0) return result;
-      if (isBotBlock(result.stderr)) { markBotBlocked(proxyKey); lastWinner = null; }
-    } else {
-      lastWinner = null;
-    }
-  }
-
-  const proxyList = [...proxies.map(p => ["--proxy", p] as string[]), [] as string[]];
+  const proxyList = [...proxies.map(p => ["--proxy", p] as string[]), [] as string[]]
+    .filter(pa => !isProxyBotBlocked(pa[1] ?? "direct"))
+    .sort((a, b) => (proxyScores.get(b[1] ?? "direct") ?? 0) - (proxyScores.get(a[1] ?? "direct") ?? 0));
 
   for (const proxyArgs of proxyList) {
     const proxyKey = proxyArgs[1] ?? "direct";
-    if (isProxyBotBlocked(proxyKey)) continue;
     for (const client of CLIENTS) {
       const label = `${client}+${proxyKey}`;
       const args = [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs, "-o", outPath];
@@ -238,10 +225,7 @@ async function runSequential(
       console.log(`[YouTube] ${label} exit: ${result.code}`);
       if (result.stderr) console.log(`[YouTube] ${label} stderr:`, result.stderr.slice(0, 300));
 
-      if (result.code === 0) {
-        lastWinner = { proxyArgs, client };
-        return result;
-      }
+      if (result.code === 0) { markSuccess(proxyKey); return result; }
       if (isBotBlock(result.stderr)) { markBotBlocked(proxyKey); break; }
     }
   }
