@@ -193,15 +193,24 @@ async function getVideoInfoWithFallback(url: string): Promise<{ title: string; a
       console.log(`[YouTube] Trying strategy: ${strategy.name}`);
       const args = [
         ...strategy.flags,
-        "--print", "%(title)s\n%(uploader)s\n%(duration)s\n%(thumbnail)s",
+        "--dump-single-json",
         url,
       ];
       
       const raw = await runYtDlpText(args);
-      const [title, author, lengthSeconds, thumbnail] = raw.split("\n");
+      const data = JSON.parse(raw);
       
-      if (title) {
-        console.log(`[YouTube] Success with strategy: ${strategy.name}`);
+      // Extract fields with fallbacks for different platforms
+      const title = data.title || "Unknown";
+      const author = data.uploader || data.channel || data.creator || "Unknown";
+      const lengthSeconds = String(data.duration || 0);
+      // Thumbnail can be in different places depending on platform
+      const thumbnail = data.thumbnail || 
+                        (data.thumbnails && data.thumbnails[0] && data.thumbnails[0].url) || 
+                        "";
+      
+      if (title && title !== "Unknown") {
+        console.log(`[YouTube] Success with strategy: ${strategy.name}, thumbnail: ${thumbnail ? "found" : "missing"}`);
         return { title, author, lengthSeconds, thumbnail };
       }
     } catch (err) {
