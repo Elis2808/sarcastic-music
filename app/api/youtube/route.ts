@@ -86,6 +86,14 @@ const FAST_FLAGS = [
   "--retries", "1",
 ];
 
+// Ultra-fast flags for Facebook (no proxy, minimal extraction)
+const FACEBOOK_FLAGS = [
+  "--no-playlist",
+  "--socket-timeout", "8",
+  "--retries", "1",
+  "--extractor-args", "facebook:video_format=direct",
+];
+
 // Get YouTube-specific flags to bypass bot detection
 function getYouTubeFlags(url: string): string[] {
   if (!isYouTubeUrl(url)) return [];
@@ -243,10 +251,13 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
   if (PROXY_LIST.length > 0) {
     // For non-YouTube platforms (Facebook, etc), try direct first - no proxy needed
     if (!isYouTube) {
-      strategies.push({ name: "direct+fast", flags: [...baseFlags] });
-      // Only try first proxy as fallback for non-YouTube (faster than cycling all 5)
-      const proxyFlags = getProxyFlags(PROXY_LIST[0]);
-      strategies.push({ name: "proxy1+fallback", flags: [...baseFlags, ...proxyFlags] });
+      // Facebook: use special fast flags, single attempt (no proxy)
+      if (platform === "facebook") {
+        strategies.push({ name: "facebook+direct", flags: [...FACEBOOK_FLAGS] });
+      } else {
+        // Other non-YouTube: fast flags, direct only
+        strategies.push({ name: "direct+fast", flags: [...baseFlags] });
+      }
     } else {
       // YouTube: cycle through all proxies with different clients
       for (let i = 0; i < PROXY_LIST.length; i++) {
