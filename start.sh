@@ -1,27 +1,15 @@
 #!/bin/bash
-# Start both Python audio server and Next.js
+# Minimal startup - Next.js only. Python runs on-demand via subprocesses.
 
-echo "=== Starting Sarcastic Music Server ==="
+echo "=== Sarcastic Music Starting ==="
+echo "Date: $(date)"
+echo "Node: $(node --version 2>/dev/null || echo 'not found')"
+echo "Python: $(python3 --version 2>/dev/null || echo 'not found')"
+echo "yt-dlp: $(yt-dlp --version 2>/dev/null || echo 'not found')"
+echo "ffmpeg: $(ffmpeg -version 2>/dev/null | head -1 || echo 'not found')"
+echo "demucs: $(demucs --version 2>/dev/null || python3 -c 'import demucs; print(demucs.__version__)' 2>/dev/null || echo 'not found')"
+echo "RAM: $(free -m 2>/dev/null | awk '/Mem:/{print $2"MB total, "$7"MB available"}' || echo 'unknown')"
+echo "PORT: ${PORT:-3000}"
+echo "================================"
 
-# Start Python audio analysis server in background
-echo "Starting Python audio server on port 5001..."
-cd /app/scripts
-HOST=0.0.0.0 PORT=5001 python3 key-server.py > /tmp/python-server.log 2>&1 &
-PYTHON_PID=$!
-
-# Wait for Python server
-echo "Waiting for Python server..."
-sleep 5
-
-# Check if still running
-if kill -0 $PYTHON_PID 2>/dev/null; then
-    echo "✓ Python audio server running on port 5001"
-else
-    echo "⚠ Python server failed to start, continuing anyway..."
-    cat /tmp/python-server.log 2>/dev/null || true
-fi
-
-# Start Next.js
-echo "Starting Next.js on port ${PORT:-3000}..."
-cd /app
 exec next start -p ${PORT:-3000}
