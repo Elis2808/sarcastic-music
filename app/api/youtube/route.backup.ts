@@ -57,30 +57,24 @@ function getProxies(): string[] {
 }
 
 function getCookieArgs(): string[] {
-  const cookies = process.env.YOUTUBE_COOKIES;
-  if (!cookies) return [];
-  try {
-    const { writeFileSync } = require("fs");
-    const path = join(tmpdir(), "yt-cookies.txt");
-    const decoded = Buffer.from(cookies, "base64").toString("utf-8");
-    writeFileSync(path, decoded);
-    return ["--cookies", path];
-  } catch { return []; }
+  // Cookies disabled - expired cookies cause more harm than good
+  // Re-enable by removing this return when fresh cookies are available
+  return [];
 }
 
-// Strategy sets to try in order - android client bypasses bot detection without cookies
+// Strategy sets to try in order
 const STRATEGIES = [
-  // Android client - most reliable, no cookies needed
-  ["--extractor-args", "youtube:player_client=android", "--user-agent", "com.google.android.youtube/17.36.4 (Linux; U; Android 12) gzip"],
-  // Android VR / YouTube Music - different API endpoint
+  // Android embedded - bypasses bot detection, no sign-in needed
+  ["--extractor-args", "youtube:player_client=android_embedded"],
+  // Android VR - different API path
   ["--extractor-args", "youtube:player_client=android_vr"],
-  // iOS client fallback
-  ["--extractor-args", "youtube:player_client=ios", "--user-agent", "com.google.ios.youtube/19.09.3 (iPhone16,2; U; CPU iOS 17_4_1 like Mac OS X)"],
-  // Web with TV client (no cookies)
-  ["--extractor-args", "youtube:player_client=tv_embedded", "--no-cookies"],
-  // mweb (mobile web)
+  // Android main
+  ["--extractor-args", "youtube:player_client=android", "--user-agent", "com.google.android.youtube/17.36.4 (Linux; U; Android 12) gzip"],
+  // iOS
+  ["--extractor-args", "youtube:player_client=ios"],
+  // mweb (mobile web) 
   ["--extractor-args", "youtube:player_client=mweb"],
-  // Default (no special client)
+  // Default
   [],
 ];
 

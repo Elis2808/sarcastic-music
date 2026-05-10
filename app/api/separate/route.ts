@@ -9,9 +9,15 @@ import { existsSync } from "fs";
 export const runtime = "nodejs";
 const execFileAsync = promisify(execFile);
 
+const SONG_SPLITTER_DISABLED = true;
+
 let _separationBusy = false;
 
 export async function POST(request: NextRequest) {
+  if (SONG_SPLITTER_DISABLED) {
+    return Response.json({ error: "Song splitter is temporarily under maintenance. Please try again later." }, { status: 503 });
+  }
+
   if (_separationBusy) {
     return Response.json({ error: "Server busy processing another request, try again shortly" }, { status: 429 });
   }
