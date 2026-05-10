@@ -40,6 +40,9 @@ RUN pip3 install --no-cache-dir \
     -r requirements.txt \
     --break-system-packages
 
+# Install curl_cffi for yt-dlp browser impersonation (needed for Vimeo etc.)
+RUN pip3 install --no-cache-dir curl_cffi --break-system-packages
+
 # Pre-download htdemucs model weights at build time (prevents runtime download timeout/crash)
 RUN printf '%s\n' \
     'import os' \

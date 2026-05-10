@@ -47,6 +47,11 @@ function isYouTube(url: string): boolean {
   } catch { return false; }
 }
 
+function isVimeo(url: string): boolean {
+  try { return new URL(url).hostname.replace(/^www\./, "") === "vimeo.com"; }
+  catch { return false; }
+}
+
 // ─── Proxies: sorted by score, best first ────────────────────────────────────
 function getProxyList(): string[][] {
   const proxies = [
@@ -138,9 +143,10 @@ async function runYtDlp(
 
   // Non-YouTube: single pass, no client rotation needed
   if (!ytUrl) {
+    const impersonateArgs = isVimeo(url) ? ["--impersonate", "chrome"] : [];
     for (const proxyArgs of proxyList) {
       const proxyKey = proxyArgs[1] ?? "direct";
-      const args = [...BASE_ARGS, ...proxyArgs, ...extraArgs];
+      const args = [...BASE_ARGS, ...impersonateArgs, ...proxyArgs, ...extraArgs];
       console.log(`[yt-dlp] trying ${proxyKey}...`);
       const result = await spawnYtDlp(args, timeoutMs);
       console.log(`[yt-dlp] ${proxyKey} exit: ${result.code}`);
