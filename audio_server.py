@@ -30,7 +30,11 @@ def detect_bpm():
         tmp.close()
         audio = es.MonoLoader(filename=tmp.name, sampleRate=22050)()
         bpm, beats, _, _, _ = es.RhythmExtractor2013(method="degara")(audio)
-        return jsonify({"bpm": round(float(bpm), 1), "timeSignature": "4/4", "beatCount": int(len(beats))})
+        bpm = float(bpm)
+        # Correct half-time detection: double if under 100 BPM
+        if bpm < 100:
+            bpm *= 2
+        return jsonify({"bpm": round(bpm, 1), "timeSignature": "4/4", "beatCount": int(len(beats))})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -47,9 +51,10 @@ def detect_key():
         f.save(tmp.name)
         tmp.close()
         audio = es.MonoLoader(filename=tmp.name, sampleRate=44100)()
-        # Use only first 60s for speed
         audio = audio[:44100 * 60]
-        key, scale, strength = es.KeyExtractor(profileType="temperley")(audio)
+        k1, s1, st1 = es.KeyExtractor(profileType="temperley")(audio)
+        k2, s2, st2 = es.KeyExtractor(profileType="bgate")(audio)
+        key, scale, strength = (k1, s1, st1) if float(st1) >= float(st2) else (k2, s2, st2)
         label = f"{key} {scale}"
         rel = RELATIVE.get(label, (None, None))
         return jsonify({
