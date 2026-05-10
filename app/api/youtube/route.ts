@@ -85,16 +85,14 @@ function isYouTubeUrl(url: string): boolean {
   }
 }
 
-// Base flags for all yt-dlp operations (using Deno as JS runtime)
+// Base flags for all yt-dlp operations (optimized for speed)
 const BASE_FLAGS = [
   "--no-playlist",
   "--no-cache-dir",
-  "--socket-timeout", "10",
-  "--retries", "1",
+  "--socket-timeout", "5",        // Reduced from 10s
+  "--retries", "0",               // No retries for speed
   "--js-runtimes", "deno",
-  "--sleep-requests", "2",
-  "--sleep-interval", "2",
-  "--max-sleep-interval", "6",
+  // Removed sleep flags for speed
 ];
 
 // Rotating User-Agents to avoid fingerprinting
@@ -114,19 +112,19 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Fast flags for non-YouTube platforms (very low timeout for quick failure)
+// Fast flags for non-YouTube platforms (aggressive timeouts for speed)
 const FAST_FLAGS = [
   "--no-playlist",
   "--no-cache-dir",
-  "--socket-timeout", "8",
-  "--retries", "1",
+  "--socket-timeout", "3",        // 3s timeout for fast failure
+  "--retries", "0",
 ];
 
 // Ultra-fast flags for Facebook (no proxy, minimal extraction)
 const FACEBOOK_FLAGS = [
   "--no-playlist",
-  "--socket-timeout", "8",
-  "--retries", "1",
+  "--socket-timeout", "5",        // Reduced from 8s
+  "--retries", "0",               // No retries for speed
   "--extractor-args", "facebook:video_format=direct",
 ];
 
@@ -233,48 +231,70 @@ async function getVideoInfoWithFallback(url: string): Promise<{ title: string; a
     }
   }
 
-  let attemptCount = 0;
-  for (const strategy of strategies) {
-    // Exponential backoff between attempts (only for YouTube)
-    if (isYouTube && attemptCount > 0) {
-      const delay = Math.min(5000 * attemptCount, 15000); // 5s, 10s, 15s max
-      console.log(`[YouTube] Waiting ${delay}ms before next attempt...`);
-      await sleep(delay);
-    }
-    attemptCount++;
-    
+  let lastError = "";
+  
+  // Try strategies in parallel for speed
+  const attempts = strategies.map(async (strategy) => {
     try {
-      console.log(`[YouTube] Trying strategy: ${strategy.name}`);
-      const args = [
-        ...strategy.flags,
-        "--dump-single-json",
-        url,
-      ];
+      console.log(`[YouTube] Trying download strategy: ${strategy.name}`);
       
-      const raw = await runYtDlpText(args);
-      const data = JSON.parse(raw);
-      
-      // Extract fields with fallbacks for different platforms
-      const title = data.title || "Unknown";
-      const author = data.uploader || data.channel || data.creator || "Unknown";
-      const lengthSeconds = String(data.duration || 0);
-      // Thumbnail can be in different places depending on platform
-      const thumbnail = data.thumbnail || 
-                        (data.thumbnails && data.thumbnails[0] && data.thumbnails[0].url) || 
-                        "";
-      
-      if (title && title !== "Unknown") {
-        console.log(`[YouTube] Success with strategy: ${strategy.name}`);
-        console.log(`[YouTube] Thumbnail URL: ${thumbnail?.substring(0, 80)}...`);
-        return { title, author, lengthSeconds, thumbnail };
+      if (format === "mp3") {
+        // Download video first, then extract audio (avoids YouTube's audio-only blocking)
+        const videoTempPath = `${tempPath}.video`;
+        try {
+          await execFileAsync(YTDLP, [
+            ...strategy.flags,
+            "-f", "best[ext=mp4]/best",
+            "--no-part",
+            "-o", videoTempPath,
+            url,
+          ], { 
+            encoding: "utf-8",
+            timeout: 30000, // 30 seconds per strategy (reduced from 60s)
+          });
+        } catch (err: any) {
+          const errStr = err.stderr || err.message || "";
+          if (errStr.includes("Sign in to confirm") || errStr.includes("bot")) {
+            lastError = errStr;
+            console.log(`[YouTube] Proxy blocked, trying next...`);
+          }
+          throw err;
+        }
+        
+        // Extract audio to mp3 using ffmpeg
+        await new Promise<void>((resolve, reject) => {
+          const ffmpeg = spawn(FFMPEG, [
+            "-i", videoTempPath,
+            "-f", "mp3",
+            "-ab", "192k",
+            "-vn",
+            "-y",
+            tempPath,
+          ]);
+          
+          let ffmpegError = "";
+          ffmpeg.stderr.on("data", (d) => { ffmpegError += d.toString(); });
+          
+          ffmpeg.on("close", (code) => {
+            // Clean up temp video file
+            try { unlinkSync(videoTempPath); } catch {}
+            if (code === 0) {
+              resolve();
+            } else {
+              console.log(`[YouTube] ffmpeg failed (code ${code}): ${ffmpegError.slice(0, 100)}`);
       }
     } catch (err) {
       console.log(`[YouTube] Strategy ${strategy.name} failed: ${err}`);
-      continue;
+      throw err; // Propagate to Promise.any
     }
-  }
+  });
 
-  throw new Error("All download strategies failed. YouTube is blocking this server IP. Consider using a proxy service (Webshare, BrightData, etc.)");
+  // Race all strategies - first to succeed wins
+  try {
+    return await Promise.race(attempts);
+  } catch {
+    throw new Error("All download strategies failed. YouTube is blocking this server IP. Consider using a proxy service (Webshare, BrightData, etc.)");
+  }
 }
 
 // Legacy wrapper for compatibility
