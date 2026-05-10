@@ -121,7 +121,7 @@ function spawnToFileWithTimeout(
 // ─── Player clients to try per proxy ─────────────────────────────────────────
 const CLIENTS = ["android", "ios", "mweb"];
 
-const BASE_ARGS = ["--no-playlist", "--no-cache-dir", "--socket-timeout", "8", "--retries", "1"];
+const BASE_ARGS = ["--no-playlist", "--no-cache-dir", "--socket-timeout", "4", "--retries", "0"];
 
 function getPoTokenArgs(): string[] {
   const po = process.env.YOUTUBE_PO_TOKEN;
@@ -139,7 +139,7 @@ function isBotBlock(stderr: string): boolean {
 // ─── GET: race all non-blocked combos, last winner gets head start ────────────
 async function runParallel(
   extraArgs: string[],
-  timeoutMs = 20000
+  timeoutMs = 12000
 ): Promise<{ stdout: string; stderr: string; code: number }> {
   const proxies = getProxies();
   const cookieFile = await getCookieFile();
