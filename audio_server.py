@@ -1,26 +1,22 @@
-import os, sys, json, tempfile
+import os, json, tempfile
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-print("[audio_server] Loading librosa...", flush=True)
-import numpy as np
-import librosa
 print("[audio_server] Loading essentia...", flush=True)
 import essentia.standard as es
 print("[audio_server] Ready.", flush=True)
 
-MAJOR_KEY_NAMES = ["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"]
-MINOR_KEY_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","Bb","B"]
-MAJOR_PROFILE = [6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88]
-MINOR_PROFILE = [6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17]
-
-def key_name(i, scale):
-    return MAJOR_KEY_NAMES[i] if scale == "major" else MINOR_KEY_NAMES[i]
-
-def pearson(a, b):
-    a, b = np.array(a), np.array(b)
-    return float(np.corrcoef(a, b)[0, 1])
+RELATIVE = {
+    "C major": ("A", "minor"), "G major": ("E", "minor"), "D major": ("B", "minor"),
+    "A major": ("F#", "minor"), "E major": ("C#", "minor"), "B major": ("G#", "minor"),
+    "F# major": ("D#", "minor"), "Db major": ("Bb", "minor"), "Ab major": ("F", "minor"),
+    "Eb major": ("C", "minor"), "Bb major": ("G", "minor"), "F major": ("D", "minor"),
+    "A minor": ("C", "major"), "E minor": ("G", "major"), "B minor": ("D", "major"),
+    "F# minor": ("A", "major"), "C# minor": ("E", "major"), "G# minor": ("B", "major"),
+    "D# minor": ("F#", "major"), "Bb minor": ("Db", "major"), "F minor": ("Ab", "major"),
+    "C minor": ("Eb", "major"), "G minor": ("Bb", "major"), "D minor": ("F", "major"),
+}
 
 @app.route("/bpm", methods=["POST"])
 def detect_bpm():
@@ -50,25 +46,18 @@ def detect_key():
     try:
         f.save(tmp.name)
         tmp.close()
-        y, sr = librosa.load(tmp.name, sr=22050, mono=True, duration=30)
-        chroma = librosa.feature.chroma_stft(y=y, sr=sr, n_fft=4096, hop_length=2048)
-        mean_chroma = np.mean(chroma, axis=1)
-        mean_chroma = mean_chroma / mean_chroma.max()
-        best_key, best_scale, best_corr = 0, "major", -np.inf
-        for i in range(12):
-            maj = pearson(mean_chroma, np.roll(MAJOR_PROFILE, i))
-            min_ = pearson(mean_chroma, np.roll(MINOR_PROFILE, i))
-            if maj > best_corr: best_corr, best_key, best_scale = maj, i, "major"
-            if min_ > best_corr: best_corr, best_key, best_scale = min_, i, "minor"
-        strength = float(np.clip((best_corr + 1) / 2, 0, 1))
-        rel_idx = (best_key + 9) % 12 if best_scale == "major" else (best_key + 3) % 12
-        rel_scale = "minor" if best_scale == "major" else "major"
+        audio = es.MonoLoader(filename=tmp.name, sampleRate=44100)()
+        # Use only first 60s for speed
+        audio = audio[:44100 * 60]
+        key, scale, strength = es.KeyExtractor(profileType="temperley")(audio)
+        label = f"{key} {scale}"
+        rel = RELATIVE.get(label, (None, None))
         return jsonify({
-            "key": key_name(best_key, best_scale),
-            "scale": best_scale,
-            "strength": round(strength, 3),
-            "relativeKey": key_name(rel_idx, rel_scale),
-            "relativeScale": rel_scale,
+            "key": key,
+            "scale": scale,
+            "strength": round(float(strength), 3),
+            "relativeKey": rel[0] or "",
+            "relativeScale": rel[1] or "",
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
