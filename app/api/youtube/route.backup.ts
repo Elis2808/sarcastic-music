@@ -40,6 +40,13 @@ function isValidUrl(url: string): boolean {
   } catch { return false; }
 }
 
+function isYouTube(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return host === "youtube.com" || host === "youtu.be";
+  } catch { return false; }
+}
+
 // ─── Proxies: sorted by score, best first ────────────────────────────────────
 function getProxyList(): string[][] {
   const proxies = [
@@ -122,12 +129,29 @@ function spawnYtDlp(
 // ─── Core: try proxies in score order, skip bot-blocked, move on fast ─────────
 async function runYtDlp(
   extraArgs: string[],
-  timeoutMs: number
+  timeoutMs: number,
+  url: string
 ): Promise<{ stdout: string; stderr: string; code: number }> {
   const proxyList = getProxyList();
   const cookieArgs = await getCookieArgs();
-  const poArgs = getPoTokenArgs();
+  const ytUrl = isYouTube(url);
 
+  // Non-YouTube: single pass, no client rotation needed
+  if (!ytUrl) {
+    for (const proxyArgs of proxyList) {
+      const proxyKey = proxyArgs[1] ?? "direct";
+      const args = [...BASE_ARGS, ...proxyArgs, ...extraArgs];
+      console.log(`[yt-dlp] trying ${proxyKey}...`);
+      const result = await spawnYtDlp(args, timeoutMs);
+      console.log(`[yt-dlp] ${proxyKey} exit: ${result.code}`);
+      if (result.stderr) console.log(`[yt-dlp] ${proxyKey} stderr:`, result.stderr.slice(0, 200));
+      if (result.code === 0) { markSuccess(proxyKey); return result; }
+    }
+    return { stdout: "", stderr: "all strategies exhausted", code: 1 };
+  }
+
+  // YouTube: rotate clients + UA + PO token
+  const poArgs = getPoTokenArgs();
   for (const proxyArgs of proxyList) {
     const proxyKey = proxyArgs[1] ?? "direct";
     for (const { name, ua } of CLIENTS) {
@@ -156,7 +180,7 @@ export async function GET(request: NextRequest) {
 
   console.log("[YouTube] GET info:", url);
 
-  const { stdout, stderr, code } = await runYtDlp(["--dump-single-json", url], 20000);
+  const { stdout, stderr, code } = await runYtDlp(["--dump-single-json", url], 20000, url);
 
   if (code !== 0) {
     return Response.json({ error: `yt-dlp failed: ${stderr.slice(0, 300)}` }, { status: 500 });
@@ -205,7 +229,7 @@ export async function POST(request: NextRequest) {
       url,
     ];
 
-    const { stderr, code } = await runYtDlp([...dlArgs, "-o", outPath], 120000);
+    const { stderr, code } = await runYtDlp([...dlArgs, "-o", outPath], 120000, url);
 
     // Find the output file (yt-dlp may change the extension)
     let resolvedPath = finalPath;
