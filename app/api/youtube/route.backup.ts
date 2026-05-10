@@ -72,10 +72,14 @@ function getCookieArgs(): string[] {
 const STRATEGIES = [
   // Android client - most reliable, no cookies needed
   ["--extractor-args", "youtube:player_client=android", "--user-agent", "com.google.android.youtube/17.36.4 (Linux; U; Android 12) gzip"],
+  // Android VR / YouTube Music - different API endpoint
+  ["--extractor-args", "youtube:player_client=android_vr"],
   // iOS client fallback
   ["--extractor-args", "youtube:player_client=ios", "--user-agent", "com.google.ios.youtube/19.09.3 (iPhone16,2; U; CPU iOS 17_4_1 like Mac OS X)"],
-  // Web with TV client
-  ["--extractor-args", "youtube:player_client=tv_embedded"],
+  // Web with TV client (no cookies)
+  ["--extractor-args", "youtube:player_client=tv_embedded", "--no-cookies"],
+  // mweb (mobile web)
+  ["--extractor-args", "youtube:player_client=mweb"],
   // Default (no special client)
   [],
 ];
@@ -98,7 +102,7 @@ async function runWithFallback(args: string[]): Promise<{ stdout: string; stderr
       const result = await spawnPromise("yt-dlp", fullArgs);
       console.log(`[YouTube] ${label} exit code: ${result.code}`);
       if (result.code === 0) return result;
-      const errSnip = result.stderr.slice(0, 150);
+      const errSnip = result.stderr.slice(0, 500);
       if (result.stderr) console.log(`[YouTube] ${label} stderr:`, errSnip);
       // If bot detection, try next strategy immediately (don't try more proxies with same strategy)
       if (errSnip.includes("Sign in") || errSnip.includes("bot") || errSnip.includes("cookies are no longer valid")) break;
@@ -176,7 +180,10 @@ export async function POST(request: NextRequest) {
           break outer;
         }
         lastErr = stderr;
-        if (stderr.includes("Sign in") || stderr.includes("bot") || stderr.includes("cookies are no longer valid")) break;
+        if (stderr.includes("Sign in") || stderr.includes("bot") || stderr.includes("cookies are no longer valid")) {
+          console.log(`[YouTube] bot detection on ${label}, skipping remaining proxies for this strategy`);
+          break;
+        }
       }
     }
 
