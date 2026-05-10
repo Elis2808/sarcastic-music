@@ -54,7 +54,22 @@ def detect_key():
         audio = audio[:44100 * 60]
         k1, s1, st1 = es.KeyExtractor(profileType="temperley")(audio)
         k2, s2, st2 = es.KeyExtractor(profileType="bgate")(audio)
-        key, scale, strength = (k1, s1, st1) if float(st1) >= float(st2) else (k2, s2, st2)
+        k3, s3, st3 = es.KeyExtractor(profileType="edma")(audio)
+        candidates = [(k1,s1,float(st1)), (k2,s2,float(st2)), (k3,s3,float(st3))]
+        # Count votes per (key, scale)
+        votes: dict = {}
+        for k, s, st in candidates:
+            label = f"{k} {s}"
+            if label not in votes or st > votes[label][2]:
+                votes[label] = (k, s, st)
+        # Prefer minor if it appears in any profile and its strength is within 15% of the best
+        best = max(votes.values(), key=lambda x: x[2])
+        minor_candidates = [(k,s,st) for k,s,st in votes.values() if s == "minor"]
+        if minor_candidates:
+            best_minor = max(minor_candidates, key=lambda x: x[2])
+            if best_minor[2] >= best[2] * 0.85:
+                best = best_minor
+        key, scale, strength = best
         label = f"{key} {scale}"
         rel = RELATIVE.get(label, (None, None))
         return jsonify({
