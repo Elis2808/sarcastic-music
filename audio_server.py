@@ -81,4 +81,9 @@ def health():
 
 if __name__ == "__main__":
     port = int(os.environ.get("AUDIO_SERVER_PORT", "5001"))
-    app.run(host="0.0.0.0", port=port, threaded=True)
+    try:
+        from waitress import serve
+        print(f"[audio_server] Serving on port {port} (waitress)", flush=True)
+        serve(app, host="0.0.0.0", port=port, threads=4)
+    except ImportError:
+        app.run(host="0.0.0.0", port=port, threaded=True)

@@ -1,4 +1,5 @@
 flask>=2.3.0
+waitress>=3.0.0
 librosa>=0.10.0
 numpy>=1.24.0,<2.0.0
 essentia>=2.1b6.dev374
