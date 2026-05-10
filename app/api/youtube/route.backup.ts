@@ -62,10 +62,23 @@ function getCookieArgs(): string[] {
   try {
     const { writeFileSync } = require("fs");
     const path = join(tmpdir(), "yt-cookies.txt");
-    writeFileSync(path, Buffer.from(cookies, "base64").toString("utf-8"));
+    const decoded = Buffer.from(cookies, "base64").toString("utf-8");
+    writeFileSync(path, decoded);
     return ["--cookies", path];
   } catch { return []; }
 }
+
+// Strategy sets to try in order - android client bypasses bot detection without cookies
+const STRATEGIES = [
+  // Android client - most reliable, no cookies needed
+  ["--extractor-args", "youtube:player_client=android", "--user-agent", "com.google.android.youtube/17.36.4 (Linux; U; Android 12) gzip"],
+  // iOS client fallback
+  ["--extractor-args", "youtube:player_client=ios", "--user-agent", "com.google.ios.youtube/19.09.3 (iPhone16,2; U; CPU iOS 17_4_1 like Mac OS X)"],
+  // Web with TV client
+  ["--extractor-args", "youtube:player_client=tv_embedded"],
+  // Default (no special client)
+  [],
+];
 
 const BASE_ARGS = ["--no-playlist", "--no-cache-dir", "--socket-timeout", "15", "--retries", "1"];
 
@@ -73,15 +86,23 @@ async function runWithFallback(args: string[]): Promise<{ stdout: string; stderr
   const proxies = getProxies();
   const cookieArgs = getCookieArgs();
 
-  for (let i = 0; i <= proxies.length; i++) {
-    const proxyArgs = i < proxies.length ? ["--proxy", proxies[i]] : [];
-    const label = i < proxies.length ? `proxy${i + 1}` : "direct";
-    const fullArgs = [...BASE_ARGS, ...proxyArgs, ...cookieArgs, ...args];
-    console.log(`[YouTube] trying ${label}...`);
-    const result = await spawnPromise("yt-dlp", fullArgs);
-    console.log(`[YouTube] ${label} exit code: ${result.code}`);
-    if (result.code === 0) return result;
-    if (result.stderr) console.log(`[YouTube] ${label} stderr:`, result.stderr.slice(0, 300));
+  // Build all combinations: each strategy × (each proxy + direct)
+  for (const strategy of STRATEGIES) {
+    for (let i = 0; i <= proxies.length; i++) {
+      const proxyArgs = i < proxies.length ? ["--proxy", proxies[i]] : [];
+      const label = `${strategy[1] || "default"}${i < proxies.length ? `+proxy${i + 1}` : "+direct"}`;
+      // Only use cookies if they exist AND we're not on a strategy that conflicts
+      const useCookies = cookieArgs.length > 0 && !strategy.join("").includes("android") && !strategy.join("").includes("ios");
+      const fullArgs = [...BASE_ARGS, ...strategy, ...proxyArgs, ...(useCookies ? cookieArgs : []), ...args];
+      console.log(`[YouTube] trying ${label}...`);
+      const result = await spawnPromise("yt-dlp", fullArgs);
+      console.log(`[YouTube] ${label} exit code: ${result.code}`);
+      if (result.code === 0) return result;
+      const errSnip = result.stderr.slice(0, 150);
+      if (result.stderr) console.log(`[YouTube] ${label} stderr:`, errSnip);
+      // If bot detection, try next strategy immediately (don't try more proxies with same strategy)
+      if (errSnip.includes("Sign in") || errSnip.includes("bot") || errSnip.includes("cookies are no longer valid")) break;
+    }
   }
   return { stdout: "", stderr: "all strategies failed", code: 1 };
 }
@@ -130,30 +151,33 @@ export async function POST(request: NextRequest) {
   try {
     const proxies = getProxies();
     const cookieArgs = getCookieArgs();
+    const formatArg = format === "mp3" ? "bestaudio/best" : "best[ext=mp4]/best";
 
     let success = false;
     let lastErr = "";
 
-    for (let i = 0; i <= proxies.length; i++) {
-      const proxyArgs = i < proxies.length ? ["--proxy", proxies[i]] : [];
-      const label = i < proxies.length ? `proxy${i + 1}` : "direct";
-      const dlArgs = [
-        ...BASE_ARGS, ...proxyArgs, ...cookieArgs,
-        "-f", format === "mp3" ? "bestaudio/best" : "best[ext=mp4]/best",
-        "--no-part", "-o", outPath,
-        url,
-      ];
+    outer: for (const strategy of STRATEGIES) {
+      for (let i = 0; i <= proxies.length; i++) {
+        const proxyArgs = i < proxies.length ? ["--proxy", proxies[i]] : [];
+        const label = `${strategy[1] || "default"}${i < proxies.length ? `+proxy${i + 1}` : "+direct"}`;
+        const useCookies = cookieArgs.length > 0 && !strategy.join("").includes("android") && !strategy.join("").includes("ios");
+        const dlArgs = [
+          ...BASE_ARGS, ...strategy, ...proxyArgs, ...(useCookies ? cookieArgs : []),
+          "-f", formatArg, "--no-part", "-o", outPath, url,
+        ];
 
-      console.log(`[YouTube] download with ${label}...`);
-      const { stderr, code } = await spawnToFile("yt-dlp", dlArgs, outPath);
-      console.log(`[YouTube] ${label} code: ${code}`);
-      if (stderr) console.log(`[YouTube] ${label} stderr:`, stderr.slice(0, 300));
+        console.log(`[YouTube] download with ${label}...`);
+        const { stderr, code } = await spawnToFile("yt-dlp", dlArgs, outPath);
+        console.log(`[YouTube] ${label} code: ${code}`);
+        if (stderr) console.log(`[YouTube] ${label} stderr:`, stderr.slice(0, 200));
 
-      if (code === 0 && existsSync(outPath)) {
-        success = true;
-        break;
+        if (code === 0 && existsSync(outPath)) {
+          success = true;
+          break outer;
+        }
+        lastErr = stderr;
+        if (stderr.includes("Sign in") || stderr.includes("bot") || stderr.includes("cookies are no longer valid")) break;
       }
-      lastErr = stderr;
     }
 
     if (!success) {
