@@ -136,7 +136,7 @@ function isBotBlock(stderr: string): boolean {
   return stderr.includes("Sign in") || stderr.includes("bot") || stderr.includes("cookies are no longer valid");
 }
 
-// ─── GET: try last winner first, then race remaining non-blocked combos ────────
+// ─── GET: race all non-blocked combos, last winner gets head start ────────────
 async function runParallel(
   extraArgs: string[],
   timeoutMs = 20000
@@ -146,26 +146,9 @@ async function runParallel(
   const cookieArgs = cookieFile ? ["--cookies", cookieFile] : [];
   const poArgs = getPoTokenArgs();
 
-  // Try last known-good combo first (fast path)
-  if (lastWinner) {
-    const { proxyArgs, client } = lastWinner;
-    const proxyKey = proxyArgs[1] ?? "direct";
-    if (!isProxyBotBlocked(proxyKey)) {
-      console.log(`[YouTube] trying last winner: ${client}+${proxyKey}`);
-      const args = [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs];
-      const result = await spawnTracked(args, timeoutMs).promise;
-      console.log(`[YouTube] last winner exit: ${result.code}`);
-      if (result.code === 0) return result;
-      if (isBotBlock(result.stderr)) { markBotBlocked(proxyKey); lastWinner = null; }
-    } else {
-      lastWinner = null;
-    }
-  }
-
-  // Build remaining attempts, skipping bot-blocked proxies
   const proxyList = [...proxies.map(p => ["--proxy", p] as string[]), [] as string[]];
   const attempts = proxyList
-    .filter(proxyArgs => !isProxyBotBlocked(proxyArgs[1] ?? "direct"))
+    .filter(pa => !isProxyBotBlocked(pa[1] ?? "direct"))
     .flatMap(proxyArgs =>
       CLIENTS.map(client => ({
         label: `${client}${proxyArgs.length ? "+proxy" : "+direct"}`,
@@ -176,17 +159,21 @@ async function runParallel(
       }))
     );
 
+  // Bubble last winner to front so it races with a head start, not sequentially
+  if (lastWinner) {
+    const wi = attempts.findIndex(a => a.client === lastWinner!.client && a.proxyKey === (lastWinner!.proxyArgs[1] ?? "direct"));
+    if (wi > 0) { const [w] = attempts.splice(wi, 1); attempts.unshift(w); }
+  }
+
   if (attempts.length === 0) return { stdout: "", stderr: "all proxies bot-blocked", code: 1 };
 
   return new Promise((resolve) => {
     let settled = false;
     let completed = 0;
     const trackers: Array<{ kill: () => void }> = [];
-
     const killAll = () => trackers.forEach(t => t.kill());
 
     for (const attempt of attempts) {
-      if (settled) break;
       console.log(`[YouTube] racing ${attempt.label}...`);
       const tracked = spawnTracked(attempt.args, timeoutMs);
       trackers.push(tracked);
