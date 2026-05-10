@@ -7,16 +7,18 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     ffmpeg \
     curl \
-    unzip
+    unzip \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Deno (yt-dlp's preferred JavaScript runtime)
+# Install yt-dlp as standalone binary (most reliable method)
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
+    && chmod +x /usr/local/bin/yt-dlp \
+    && yt-dlp --version
+
+# Install Deno (used by yt-dlp for JS extraction)
 RUN curl -fsSL https://deno.land/install.sh | sh && \
     mv /root/.deno/bin/deno /usr/local/bin/deno
-
-RUN pip3 install --break-system-packages yt-dlp
-
-# Make yt-dlp executable
-RUN chmod +x /usr/local/bin/yt-dlp
 
 # Upgrade pip
 RUN pip3 install --no-cache-dir --upgrade pip --break-system-packages
@@ -37,8 +39,11 @@ RUN pip3 install --no-cache-dir \
     -r requirements.txt \
     --break-system-packages
 
-# Enable MPS fallback for PyTorch
+# Memory optimization env vars
 ENV PYTORCH_ENABLE_MPS_FALLBACK=1
+ENV OMP_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
+ENV MALLOC_TRIM_THRESHOLD_=100000
 
 COPY . .
 
