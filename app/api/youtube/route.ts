@@ -143,17 +143,21 @@ async function runYtDlp(
 
   // Non-YouTube: single pass, no client rotation needed
   if (!ytUrl) {
-    const impersonateArgs = isVimeo(url) ? ["--impersonate", "chrome"] : [];
+    const vimeo = isVimeo(url);
     let lastErr = "";
-    for (const proxyArgs of proxyList) {
-      const proxyKey = proxyArgs[1] ?? "direct";
-      const args = [...BASE_ARGS, ...impersonateArgs, ...proxyArgs, ...extraArgs];
-      console.log(`[yt-dlp] trying ${proxyKey}...`);
-      const result = await spawnYtDlp(args, timeoutMs);
-      console.log(`[yt-dlp] ${proxyKey} exit: ${result.code}`);
-      if (result.stderr) console.log(`[yt-dlp] ${proxyKey} stderr:`, result.stderr.slice(0, 200));
-      if (result.code === 0) { markSuccess(proxyKey); return result; }
-      lastErr = result.stderr;
+    for (const impersonateArgs of (vimeo ? [["--impersonate", "chrome"], []] : [[]])) {
+      for (const proxyArgs of proxyList) {
+        const proxyKey = proxyArgs[1] ?? "direct";
+        const args = [...BASE_ARGS, ...impersonateArgs, ...proxyArgs, ...extraArgs];
+        console.log(`[yt-dlp] trying ${proxyKey}${impersonateArgs.length ? " +impersonate" : ""}...`);
+        const result = await spawnYtDlp(args, timeoutMs);
+        console.log(`[yt-dlp] ${proxyKey} exit: ${result.code}`);
+        if (result.stderr) console.log(`[yt-dlp] ${proxyKey} stderr:`, result.stderr.slice(0, 200));
+        if (result.code === 0) { markSuccess(proxyKey); return result; }
+        lastErr = result.stderr;
+        // If impersonation itself crashed (no curl_cffi), skip remaining proxies and try without it
+        if (impersonateArgs.length && result.stderr.includes("Traceback")) break;
+      }
     }
     return { stdout: "", stderr: lastErr || "all strategies exhausted", code: 1 };
   }
