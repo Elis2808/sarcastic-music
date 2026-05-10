@@ -124,10 +124,14 @@ function spawnToFileWithTimeout(
   });
 }
 
-// ─── Player clients to try per proxy ─────────────────────────────────────────
-const CLIENTS = ["android", "ios", "mweb"];
+// ─── Player clients with matching User-Agents ─────────────────────────────────
+const CLIENTS: Array<{ name: string; ua: string }> = [
+  { name: "android", ua: "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip" },
+  { name: "ios",     ua: "com.google.ios.youtube/19.09.3 (iPhone16,2; U; CPU iOS 17_4 like Mac OS X)" },
+  { name: "mweb",    ua: "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36" },
+];
 
-const BASE_ARGS = ["--no-playlist", "--no-cache-dir", "--socket-timeout", "4", "--retries", "0"];
+const BASE_ARGS = ["--no-playlist", "--no-cache-dir", "--socket-timeout", "4", "--retries", "0", "--sleep-requests", "1"];
 
 function getPoTokenArgs(): string[] {
   const po = process.env.YOUTUBE_PO_TOKEN;
@@ -157,12 +161,12 @@ async function runParallel(
     .filter(pa => !isProxyBotBlocked(pa[1] ?? "direct"))
     .sort((a, b) => (proxyScores.get(b[1] ?? "direct") ?? 0) - (proxyScores.get(a[1] ?? "direct") ?? 0))
     .flatMap(proxyArgs =>
-      CLIENTS.map(client => ({
-        label: `${client}${proxyArgs.length ? "+proxy" : "+direct"}`,
+      CLIENTS.map(({ name, ua }) => ({
+        label: `${name}${proxyArgs.length ? "+proxy" : "+direct"}`,
         proxyKey: proxyArgs[1] ?? "direct",
         proxyArgs,
-        client,
-        args: [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs],
+        client: name,
+        args: [...BASE_ARGS, "--extractor-args", `youtube:player_client=${name}`, "--user-agent", ua, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs],
       }))
     );
 
@@ -216,9 +220,9 @@ async function runSequential(
 
   for (const proxyArgs of proxyList) {
     const proxyKey = proxyArgs[1] ?? "direct";
-    for (const client of CLIENTS) {
-      const label = `${client}+${proxyKey}`;
-      const args = [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs, "-o", outPath];
+    for (const { name, ua } of CLIENTS) {
+      const label = `${name}+${proxyKey}`;
+      const args = [...BASE_ARGS, "--extractor-args", `youtube:player_client=${name}`, "--user-agent", ua, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs, "-o", outPath];
 
       console.log(`[YouTube] download ${label}...`);
       const result = await spawnToFileWithTimeout(args, timeoutMs);
