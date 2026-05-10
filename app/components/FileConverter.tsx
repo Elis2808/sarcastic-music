@@ -10,6 +10,8 @@ export default function FileConverter() {
   const [dragging, setDragging] = useState(false);
   const [converting, setConverting] = useState(false);
   const [error, setError] = useState("");
+  const [pdfPageRange, setPdfPageRange] = useState("");
+  const [pdfTotalPages, setPdfTotalPages] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -71,7 +73,7 @@ export default function FileConverter() {
   const currentCategory = CATEGORIES[activeCategory];
   const currentConversion = currentCategory.conversions.find(c => c.id === activeConversion) || currentCategory.conversions[0];
 
-  const handleFile = useCallback((newFiles: FileList | null) => {
+  const handleFile = useCallback(async (newFiles: FileList | null) => {
     if (!newFiles) return;
     const accept = currentConversion.accept;
     const validFiles = Array.from(newFiles).filter(f => {
@@ -87,7 +89,16 @@ export default function FileConverter() {
     }
     setFiles(prev => [...prev, ...validFiles]);
     setError("");
-  }, [currentConversion]);
+    setPdfTotalPages(null);
+    setPdfPageRange("");
+    if (activeConversion === "pdf-to-img" && validFiles.length > 0) {
+      const ab = await validFiles[0].arrayBuffer();
+      const pdfjs = await import("pdfjs-dist");
+      pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+      const doc = await pdfjs.getDocument({ data: ab }).promise;
+      setPdfTotalPages(doc.numPages);
+    }
+  }, [currentConversion, activeConversion]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -158,8 +169,31 @@ export default function FileConverter() {
         for (const file of files) {
           const arrayBuffer = await file.arrayBuffer();
           const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-          
-          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const total = pdf.numPages;
+
+          // Parse page range: e.g. "1,3,5-8" or empty = all
+          let pagesToConvert: number[];
+          if (pdfPageRange.trim()) {
+            const selected = new Set<number>();
+            for (const part of pdfPageRange.split(",")) {
+              const trimmed = part.trim();
+              const rangeMatch = trimmed.match(/^(\d+)-(\d+)$/);
+              if (rangeMatch) {
+                const from = Math.max(1, parseInt(rangeMatch[1]));
+                const to = Math.min(total, parseInt(rangeMatch[2]));
+                for (let p = from; p <= to; p++) selected.add(p);
+              } else {
+                const n = parseInt(trimmed);
+                if (!isNaN(n) && n >= 1 && n <= total) selected.add(n);
+              }
+            }
+            pagesToConvert = [...selected].sort((a, b) => a - b);
+            if (pagesToConvert.length === 0) throw new Error(`No valid pages in range "${pdfPageRange}" (PDF has ${total} pages)`);
+          } else {
+            pagesToConvert = Array.from({ length: total }, (_, i) => i + 1);
+          }
+
+          for (const pageNum of pagesToConvert) {
             const page = await pdf.getPage(pageNum);
             const viewport = page.getViewport({ scale: 2 });
             
@@ -410,6 +444,8 @@ export default function FileConverter() {
                   setActiveConversion(conv.id);
                   setFiles([]);
                   setError("");
+                  setPdfPageRange("");
+                  setPdfTotalPages(null);
                   setDropdownOpen(false);
                 }}
                 className={`w-full px-4 py-3 text-left text-sm transition-all duration-200 border-b border-gray-800 last:border-b-0 ${
@@ -479,6 +515,26 @@ export default function FileConverter() {
               </div>
             ))}
           </div>
+
+          {/* PDF Page Range Selector */}
+          {activeConversion === "pdf-to-img" && (
+            <div className="mt-4 bg-gray-900 rounded-xl p-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-gray-400 text-sm">Pages to convert</label>
+                {pdfTotalPages && (
+                  <span className="text-gray-500 text-xs">{pdfTotalPages} pages total</span>
+                )}
+              </div>
+              <input
+                type="text"
+                value={pdfPageRange}
+                onChange={(e) => setPdfPageRange(e.target.value)}
+                placeholder={pdfTotalPages ? `e.g. 1-3, 5, 7 (blank = all ${pdfTotalPages})` : "e.g. 1-3, 5, 7 (blank = all)"}
+                className="w-full bg-black border border-gray-700 focus:border-[#C9A84C] rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors placeholder-gray-600"
+              />
+              <p className="text-gray-600 text-xs">Ranges like <span className="text-gray-400">1-5</span>, individual pages like <span className="text-gray-400">2, 4, 7</span>, or combined</p>
+            </div>
+          )}
 
           {/* Convert Button */}
           <button
