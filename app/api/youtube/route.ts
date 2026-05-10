@@ -73,15 +73,42 @@ function isYouTubeUrl(url: string): boolean {
 const BASE_FLAGS = [
   "--no-playlist",
   "--no-cache-dir",
-  "--socket-timeout", "10",
-  "--retries", "2",
+  "--socket-timeout", "15",
+  "--retries", "1",
   "--js-runtimes", "deno",
+];
+
+// Fast flags for non-YouTube platforms (lower timeout)
+const FAST_FLAGS = [
+  "--no-playlist",
+  "--no-cache-dir",
+  "--socket-timeout", "8",
+  "--retries", "1",
 ];
 
 // Get YouTube-specific flags to bypass bot detection
 function getYouTubeFlags(url: string): string[] {
   if (!isYouTubeUrl(url)) return [];
   return ["--extractor-args", "youtube:player_client=android"];
+}
+
+// Detect platform from URL
+function getPlatform(url: string): string {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host.includes("youtube.com") || host.includes("youtu.be")) return "youtube";
+    if (host.includes("instagram.com")) return "instagram";
+    if (host.includes("twitch.tv")) return "twitch";
+    if (host.includes("twitter.com") || host.includes("x.com")) return "twitter";
+    if (host.includes("vimeo.com")) return "vimeo";
+    if (host.includes("tiktok.com")) return "tiktok";
+    if (host.includes("facebook.com") || host.includes("fb.watch")) return "facebook";
+    if (host.includes("soundcloud.com")) return "soundcloud";
+    return "generic";
+  } catch {
+    return "generic";
+  }
 }
 
 // Run yt-dlp and return stdout, with detailed error logging
@@ -118,27 +145,47 @@ function getProxyFlags(proxyUrl: string | null): string[] {
 
 // Try multiple proxies and strategies to get video info
 async function getVideoInfoWithFallback(url: string): Promise<{ title: string; author: string; lengthSeconds: string; thumbnail: string }> {
+  const platform = getPlatform(url);
+  const isYouTube = platform === "youtube";
+  
   // Generate all proxy+strategy combinations
   const strategies: { name: string; flags: string[] }[] = [];
   
-  // If we have proxies, try each one with different clients
+  // Use fast flags for non-YouTube platforms
+  const baseFlags = isYouTube ? BASE_FLAGS : FAST_FLAGS;
+  
+  // If we have proxies, try each one with appropriate flags
   if (PROXY_LIST.length > 0) {
     for (let i = 0; i < PROXY_LIST.length; i++) {
       const proxy = PROXY_LIST[i];
       const proxyFlags = getProxyFlags(proxy);
       
-      strategies.push(
-        { name: `proxy${i + 1}+android`, flags: [...BASE_FLAGS, ...proxyFlags, "--extractor-args", "youtube:player_client=android"] },
-        { name: `proxy${i + 1}+web`, flags: [...BASE_FLAGS, ...proxyFlags, "--extractor-args", "youtube:player_client=web_embedded"] },
-        { name: `proxy${i + 1}+ios`, flags: [...BASE_FLAGS, ...proxyFlags, "--extractor-args", "youtube:player_client=ios"] },
-      );
+      // YouTube needs special flags, other platforms use standard approach
+      if (isYouTube) {
+        strategies.push(
+          { name: `proxy${i + 1}+android`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=android"] },
+          { name: `proxy${i + 1}+web`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=web_embedded"] },
+          { name: `proxy${i + 1}+ios`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=ios"] },
+        );
+      } else {
+        // Non-YouTube: just use proxy with base flags
+        strategies.push(
+          { name: `proxy${i + 1}+standard`, flags: [...baseFlags, ...proxyFlags] },
+        );
+      }
     }
   } else {
     // No proxies, try without
-    strategies.push(
-      { name: "no-proxy+android", flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=android"] },
-      { name: "no-proxy+web", flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=web_embedded"] },
-    );
+    if (isYouTube) {
+      strategies.push(
+        { name: "no-proxy+android", flags: [...baseFlags, "--extractor-args", "youtube:player_client=android"] },
+        { name: "no-proxy+web", flags: [...baseFlags, "--extractor-args", "youtube:player_client=web_embedded"] },
+      );
+    } else {
+      strategies.push(
+        { name: "no-proxy+standard", flags: [...baseFlags] },
+      );
+    }
   }
 
   for (const strategy of strategies) {
@@ -173,27 +220,47 @@ async function getVideoInfo(url: string): Promise<{ title: string; author: strin
 
 // Download with fallback strategies (rotating through all proxies)
 async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath: string): Promise<void> {
+  const platform = getPlatform(url);
+  const isYouTube = platform === "youtube";
+  
   // Generate all proxy+strategy combinations
   const strategies: { name: string; flags: string[] }[] = [];
   
-  // If we have proxies, try each one with different clients
+  // Use fast flags for non-YouTube platforms
+  const baseFlags = isYouTube ? BASE_FLAGS : FAST_FLAGS;
+  
+  // If we have proxies, try each one with appropriate flags
   if (PROXY_LIST.length > 0) {
     for (let i = 0; i < PROXY_LIST.length; i++) {
       const proxy = PROXY_LIST[i];
       const proxyFlags = getProxyFlags(proxy);
       
-      strategies.push(
-        { name: `proxy${i + 1}+android`, flags: [...BASE_FLAGS, ...proxyFlags, "--extractor-args", "youtube:player_client=android"] },
-        { name: `proxy${i + 1}+web`, flags: [...BASE_FLAGS, ...proxyFlags, "--extractor-args", "youtube:player_client=web_embedded"] },
-        { name: `proxy${i + 1}+ios`, flags: [...BASE_FLAGS, ...proxyFlags, "--extractor-args", "youtube:player_client=ios"] },
-      );
+      // YouTube needs special flags, other platforms use standard approach
+      if (isYouTube) {
+        strategies.push(
+          { name: `proxy${i + 1}+android`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=android"] },
+          { name: `proxy${i + 1}+web`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=web_embedded"] },
+          { name: `proxy${i + 1}+ios`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=ios"] },
+        );
+      } else {
+        // Non-YouTube: just use proxy with base flags
+        strategies.push(
+          { name: `proxy${i + 1}+standard`, flags: [...baseFlags, ...proxyFlags] },
+        );
+      }
     }
   } else {
     // No proxies, try without
-    strategies.push(
-      { name: "no-proxy+android", flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=android"] },
-      { name: "no-proxy+web", flags: [...BASE_FLAGS, "--extractor-args", "youtube:player_client=web_embedded"] },
-    );
+    if (isYouTube) {
+      strategies.push(
+        { name: "no-proxy+android", flags: [...baseFlags, "--extractor-args", "youtube:player_client=android"] },
+        { name: "no-proxy+web", flags: [...baseFlags, "--extractor-args", "youtube:player_client=web_embedded"] },
+      );
+    } else {
+      strategies.push(
+        { name: "no-proxy+standard", flags: [...baseFlags] },
+      );
+    }
   }
 
   let lastError = "";
