@@ -7,11 +7,15 @@ import sys
 import tempfile
 import os
 from flask import Flask, request, jsonify, send_file
-import librosa
 import numpy as np
 import subprocess
 import multiprocessing
 import shutil
+
+# Lazy imports for heavy ML libraries to reduce startup memory
+def load_librosa():
+    import librosa
+    return librosa
 
 app = Flask(__name__)
 
@@ -33,7 +37,8 @@ def pearson(a, b):
     return np.corrcoef(a, b)[0, 1]
 
 def detect_key(path):
-    y, sr = librosa.load(path, sr=22050, mono=True, duration=120)
+    librosa = load_librosa()
+    y, sr = librosa.load(path, sr=None, mono=True, duration=120)
     # Compute chromagram using CQT (more accurate than STFT for key)
     chroma = librosa.feature.chroma_cqt(y=y, sr=sr, bins_per_octave=36)
     mean_chroma = np.mean(chroma, axis=1)
