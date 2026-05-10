@@ -18,9 +18,6 @@ RUN pip3 install --break-system-packages yt-dlp
 # Make yt-dlp executable
 RUN chmod +x /usr/local/bin/yt-dlp
 
-# Make start script executable
-RUN chmod +x /app/start.sh
-
 # Upgrade pip
 RUN pip3 install --no-cache-dir --upgrade pip --break-system-packages
 
@@ -44,6 +41,9 @@ RUN pip3 install --no-cache-dir \
 ENV PYTORCH_ENABLE_MPS_FALLBACK=1
 
 COPY . .
+
+# Make start script executable (must be after COPY)
+RUN chmod +x /app/start.sh
 
 RUN npm run build
 
