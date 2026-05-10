@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     await writeFile(audioPath, Buffer.from(bytes));
     await mkdir(outDir, { recursive: true });
 
-    const model = "mdx_q";
+    const model = "htdemucs";
     const demucs = process.env.DEMUCS_PATH || "demucs";
 
     console.log(`[separate] Running demucs model=${model} stem=${stem}`);
@@ -54,15 +54,20 @@ export async function POST(request: NextRequest) {
     if (stderr) console.error("[separate] stderr:", stderr.slice(0, 300));
 
     const base = basename(audioPath, extname(audioPath));
-    const stemPath = join(outDir, model, base, `${stem}.mp3`);
+    // htdemucs outputs: <outDir>/<model>/<basename>/<stem>.mp3
+    // stem is "vocals" or "no_vocals" depending on what was requested
+    const wantedStem = stem === "no_vocals" ? "no_vocals" : "vocals";
+    const stemPath = join(outDir, model, base, `${wantedStem}.mp3`);
 
     if (!existsSync(stemPath)) {
-      console.error("[separate] expected file not found:", stemPath);
-      return Response.json({ error: `Output not found. demucs output: ${stderr?.slice(0, 200)}` }, { status: 500 });
+      // Log what actually exists to help debug
+      const { stdout: lsOut } = await execFileAsync("find", [outDir, "-name", "*.mp3"], { encoding: "utf-8" }).catch(() => ({ stdout: "" }));
+      console.error("[separate] expected file not found:", stemPath, "| found:", lsOut.trim());
+      return Response.json({ error: `Output not found. Available: ${lsOut.trim() || "none"}` }, { status: 500 });
     }
 
     const audioBuffer = await readFile(stemPath);
-    const dlName = `${originalName}_${stem === "no_vocals" ? "instrumental" : "vocals"}.mp3`;
+    const dlName = `${originalName}_${wantedStem === "no_vocals" ? "instrumental" : "vocals"}.mp3`;
     return new Response(audioBuffer, {
       headers: {
         "Content-Type": "audio/mpeg",
