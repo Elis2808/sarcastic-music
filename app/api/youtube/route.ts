@@ -13,6 +13,22 @@ const execFileAsync = promisify(execFile);
 const YTDLP = "/usr/local/bin/yt-dlp";
 const FFMPEG = "/usr/bin/ffmpeg";
 
+// YouTube cookies from environment variable (base64 encoded)
+const YOUTUBE_COOKIES = process.env.YOUTUBE_COOKIES || "";
+
+// Write cookies to temp file for yt-dlp
+function getCookieFlags(): string[] {
+  if (!YOUTUBE_COOKIES) return [];
+  try {
+    const cookiePath = join(tmpdir(), `yt-cookies-${Date.now()}.txt`);
+    const decoded = Buffer.from(YOUTUBE_COOKIES, "base64").toString("utf-8");
+    writeFileSync(cookiePath, decoded);
+    return ["--cookies", cookiePath];
+  } catch {
+    return [];
+  }
+}
+
 // Multi-proxy rotating support
 function getProxyList(): string[] {
   const proxies = [];
@@ -191,9 +207,10 @@ async function getVideoInfoWithFallback(url: string): Promise<{ title: string; a
       // YouTube needs special flags - ONLY use android (not iOS - it's heavily blocked)
       if (isYouTube) {
         const userAgent = getRandomUserAgent();
+        const cookieFlags = getCookieFlags();
         strategies.push(
-          { name: `proxy${i + 1}+android`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=android", "--user-agent", userAgent] },
-          { name: `proxy${i + 1}+web`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=web_embedded", "--user-agent", userAgent] },
+          { name: `proxy${i + 1}+android`, flags: [...baseFlags, ...proxyFlags, ...cookieFlags, "--extractor-args", "youtube:player_client=android", "--user-agent", userAgent] },
+          { name: `proxy${i + 1}+web`, flags: [...baseFlags, ...proxyFlags, ...cookieFlags, "--extractor-args", "youtube:player_client=web_embedded", "--user-agent", userAgent] },
         );
       } else {
         // Non-YouTube: just use proxy with base flags
