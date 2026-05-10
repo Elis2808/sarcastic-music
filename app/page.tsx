@@ -434,7 +434,7 @@ export default function Home() {
           {ytInfo && (
             <div className="mt-6 w-full max-w-xl bg-gray-900 rounded-lg p-4 flex gap-4 items-start max-sm:flex-col max-sm:items-center">
               {ytInfo.thumbnail && (
-                <img src={ytInfo.thumbnail} alt="thumbnail" className="w-32 h-20 object-cover rounded max-sm:w-full max-sm:h-40" />
+                <img src={`/api/proxy-image?url=${encodeURIComponent(ytInfo.thumbnail)}`} alt="thumbnail" className="w-32 h-20 object-cover rounded max-sm:w-full max-sm:h-40" />
               )}
               <div className="flex-1 min-w-0">
                 <p className="text-white font-semibold text-sm truncate">{ytInfo.title}</p>
