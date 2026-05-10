@@ -1,23 +1,17 @@
 #!/usr/bin/env python3
-"""
-Librosa-based key detection server.
-Runs on port 5001. Called by the Next.js API route.
-"""
-import sys
 import tempfile
 import os
+import subprocess
+import shutil
+import threading
 from flask import Flask, request, jsonify, send_file
 import numpy as np
-import subprocess
-import multiprocessing
-import shutil
 
-# Lazy imports for heavy ML libraries to reduce startup memory
-def load_librosa():
-    import librosa
-    return librosa
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
 
 app = Flask(__name__)
+_demucs_lock = threading.Semaphore(1)
 
 # Musically correct tonic name per scale type
 # Major keys: use flat spelling for Eb, Ab, Bb major; sharp for C#, F# major
@@ -126,6 +120,9 @@ def handle_separate():
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
 
+    if not _demucs_lock.acquire(blocking=False):
+        return jsonify({"error": "Server busy processing another request, try again shortly"}), 429
+
     stem = request.form.get("stem", "no_vocals")  # no_vocals or vocals
     f = request.files["file"]
     original_name = os.path.splitext(f.filename)[0] or "track"
@@ -137,14 +134,13 @@ def handle_separate():
 
     out_dir = tempfile.mkdtemp()
     try:
-        model = "mdx_extra"
-        cpu_count = str(multiprocessing.cpu_count())
+        model = "mdx_q"
         result = subprocess.run(
             [
-                os.environ.get("DEMUXS_PATH", "demucs"),
+                os.environ.get("DEMUCS_PATH", "demucs"),
                 "-n", model,
                 "--two-stems", "vocals",
-                "--jobs", cpu_count,
+                "--jobs", "1",
                 "--mp3",
                 "--mp3-bitrate", "256",
                 "-o", out_dir,
@@ -174,6 +170,7 @@ def handle_separate():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
+        _demucs_lock.release()
         os.unlink(tmp_path)
         shutil.rmtree(out_dir, ignore_errors=True)
 

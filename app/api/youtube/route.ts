@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { spawn, execFile } from "child_process";
+import { spawn, execFile, execSync } from "child_process";
 import { promisify } from "util";
 import { mkdtemp, unlink, rmdir } from "fs/promises";
 import { createReadStream, existsSync, unlinkSync, writeFileSync } from "fs";
@@ -12,6 +12,25 @@ const execFileAsync = promisify(execFile);
 const YTDLP = "/usr/local/bin/yt-dlp";
 const FFMPEG = "/usr/bin/ffmpeg";
 const YOUTUBE_COOKIES = process.env.YOUTUBE_COOKIES || "";
+
+// Verify binaries at startup
+try {
+  const ytdlpVersion = execSync(`${YTDLP} --version 2>&1`).toString().trim();
+  console.log(`[YouTube] yt-dlp version: ${ytdlpVersion}`);
+} catch (e: any) {
+  console.error(`[YouTube] CRITICAL: yt-dlp not found at ${YTDLP}:`, e.message);
+  try {
+    const fallback = execSync("which yt-dlp 2>&1 || echo NOT_FOUND").toString().trim();
+    console.log(`[YouTube] yt-dlp fallback location: ${fallback}`);
+  } catch {}
+}
+try {
+  execSync(`${FFMPEG} -version 2>&1 | head -1`);
+  console.log(`[YouTube] ffmpeg found at ${FFMPEG}`);
+} catch (e: any) {
+  console.error(`[YouTube] CRITICAL: ffmpeg not found at ${FFMPEG}:`, e.message);
+}
+console.log(`[YouTube] cookies: ${YOUTUBE_COOKIES ? "yes" : "no"}`);
 
 // Get cookie flags from environment variable (base64 encoded)
 function getCookieFlags(): string[] {
