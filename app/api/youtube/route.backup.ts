@@ -110,55 +110,78 @@ function spawnToFileWithTimeout(
 // ─── Player clients to try per proxy ─────────────────────────────────────────
 const CLIENTS = ["android", "ios", "tv_embedded", "mweb"];
 
-const BASE_ARGS = ["--no-playlist", "--no-cache-dir", "--socket-timeout", "15", "--retries", "1"];
+const BASE_ARGS = ["--no-playlist", "--no-cache-dir", "--socket-timeout", "8", "--retries", "1"];
 
 function isBotBlock(stderr: string): boolean {
   return stderr.includes("Sign in") || stderr.includes("bot") || stderr.includes("cookies are no longer valid");
 }
 
-// ─── Core: try every proxy × every client, rotate randomly ───────────────────
-async function runWithFallback(
+// ─── GET: race all proxy×client combos in parallel, return first winner ───────
+async function runParallel(
   extraArgs: string[],
-  outPath?: string,
-  timeoutMs = 45000
+  timeoutMs = 30000
 ): Promise<{ stdout: string; stderr: string; code: number }> {
   const proxies = getProxies();
   const cookieFile = await getCookieFile();
   const cookieArgs = cookieFile ? ["--cookies", cookieFile] : [];
+  const proxyList = [...proxies.map(p => ["--proxy", p] as string[]), [] as string[]];
+  const attempts = proxyList.flatMap(proxyArgs =>
+    CLIENTS.map(client => ({
+      label: `${client}${proxyArgs.length ? "+proxy" : "+direct"}`,
+      args: [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...proxyArgs, ...cookieArgs, ...extraArgs],
+    }))
+  );
 
-  // Always try direct (no proxy) as last resort
+  return new Promise((resolve) => {
+    let settled = false;
+    let pending = attempts.length;
+
+    for (const attempt of attempts) {
+      console.log(`[YouTube] racing ${attempt.label}...`);
+      spawnWithTimeout(attempt.args, timeoutMs).then((result) => {
+        pending--;
+        console.log(`[YouTube] ${attempt.label} exit: ${result.code}`);
+        if (result.stderr) console.log(`[YouTube] ${attempt.label} stderr:`, result.stderr.slice(0, 200));
+
+        if (!settled && result.code === 0) {
+          settled = true;
+          resolve(result);
+        } else if (!settled && pending === 0) {
+          resolve({ stdout: "", stderr: "all strategies exhausted", code: 1 });
+        }
+      });
+    }
+  });
+}
+
+// ─── POST: sequential with bot-block fast-skip (each needs unique output file) 
+async function runSequential(
+  extraArgs: string[],
+  outPath: string,
+  timeoutMs = 120000
+): Promise<{ stderr: string; code: number }> {
+  const proxies = getProxies();
+  const cookieFile = await getCookieFile();
+  const cookieArgs = cookieFile ? ["--cookies", cookieFile] : [];
+
   const proxyList = [...proxies.map(p => ["--proxy", p] as string[]), [] as string[]];
 
   for (const proxyArgs of proxyList) {
     for (const client of CLIENTS) {
       const label = `${client}${proxyArgs.length ? "+proxy" : "+direct"}`;
-      const clientArgs = ["--extractor-args", `youtube:player_client=${client}`];
-      const fullArgs = [...BASE_ARGS, ...clientArgs, ...proxyArgs, ...cookieArgs, ...extraArgs];
+      const args = [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...proxyArgs, ...cookieArgs, ...extraArgs, "-o", outPath];
 
-      console.log(`[YouTube] trying ${label}...`);
-      let result: { stdout: string; stderr: string; code: number };
-
-      if (outPath) {
-        const r = await spawnToFileWithTimeout([...fullArgs, "-o", outPath], timeoutMs);
-        result = { stdout: "", stderr: r.stderr, code: r.code };
-      } else {
-        result = await spawnWithTimeout(fullArgs, timeoutMs);
-      }
-
+      console.log(`[YouTube] download ${label}...`);
+      const result = await spawnToFileWithTimeout(args, timeoutMs);
       console.log(`[YouTube] ${label} exit: ${result.code}`);
-      if (result.stderr) console.log(`[YouTube] ${label} stderr:`, result.stderr.slice(0, 400));
+      if (result.stderr) console.log(`[YouTube] ${label} stderr:`, result.stderr.slice(0, 300));
 
       if (result.code === 0) return result;
-
-      // Bot block → abandon this proxy, try next proxy immediately
-      if (isBotBlock(result.stderr)) {
-        console.log(`[YouTube] bot block on ${label}, switching proxy...`);
-        break;
-      }
+      if (isBotBlock(result.stderr)) break; // skip remaining clients, try next proxy
     }
   }
 
-  return { stdout: "", stderr: "all strategies exhausted", code: 1 };
+  return { stderr: "all strategies exhausted", code: 1 };
 }
 
 // ─── GET /api/youtube?url=... — fetch video info ──────────────────────────────
@@ -170,7 +193,7 @@ export async function GET(request: NextRequest) {
 
   console.log("[YouTube] GET info:", url);
 
-  const { stdout, stderr, code } = await runWithFallback(["--dump-single-json", url]);
+  const { stdout, stderr, code } = await runParallel(["--dump-single-json", url]);
 
   if (code !== 0) {
     return Response.json({ error: `yt-dlp failed: ${stderr.slice(0, 300)}` }, { status: 500 });
@@ -219,7 +242,7 @@ export async function POST(request: NextRequest) {
       url,
     ];
 
-    const { stderr, code } = await runWithFallback(dlArgs, outPath, 120000);
+    const { stderr, code } = await runSequential(dlArgs, outPath, 120000);
 
     // Find the output file (yt-dlp may change the extension)
     let resolvedPath = finalPath;
