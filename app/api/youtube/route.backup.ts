@@ -144,6 +144,7 @@ async function runYtDlp(
   // Non-YouTube: single pass, no client rotation needed
   if (!ytUrl) {
     const impersonateArgs = isVimeo(url) ? ["--impersonate", "chrome"] : [];
+    let lastErr = "";
     for (const proxyArgs of proxyList) {
       const proxyKey = proxyArgs[1] ?? "direct";
       const args = [...BASE_ARGS, ...impersonateArgs, ...proxyArgs, ...extraArgs];
@@ -152,12 +153,14 @@ async function runYtDlp(
       console.log(`[yt-dlp] ${proxyKey} exit: ${result.code}`);
       if (result.stderr) console.log(`[yt-dlp] ${proxyKey} stderr:`, result.stderr.slice(0, 200));
       if (result.code === 0) { markSuccess(proxyKey); return result; }
+      lastErr = result.stderr;
     }
-    return { stdout: "", stderr: "all strategies exhausted", code: 1 };
+    return { stdout: "", stderr: lastErr || "all strategies exhausted", code: 1 };
   }
 
   // YouTube: rotate clients + UA + PO token
   const poArgs = getPoTokenArgs();
+  let lastErr = "";
   for (const proxyArgs of proxyList) {
     const proxyKey = proxyArgs[1] ?? "direct";
     for (const { name, ua } of CLIENTS) {
@@ -170,11 +173,12 @@ async function runYtDlp(
       if (result.stderr) console.log(`[YouTube] ${label} stderr:`, result.stderr.slice(0, 200));
 
       if (result.code === 0) { markSuccess(proxyKey); return result; }
+      lastErr = result.stderr;
       if (isBotBlock(result.stderr)) { markBlocked(proxyKey); break; }
     }
   }
 
-  return { stdout: "", stderr: "all strategies exhausted", code: 1 };
+  return { stdout: "", stderr: lastErr || "all strategies exhausted", code: 1 };
 }
 
 // ─── GET /api/youtube?url=... — fetch video info ──────────────────────────────
