@@ -103,7 +103,11 @@ export default function Home() {
     setYtDownloading(format);
     try {
       // Use yt-dlp API with proxy support for all platforms
-      const res = await fetch(`/api/youtube?url=${encodeURIComponent(ytUrl)}&format=${format}`);
+      const res = await fetch("/api/youtube", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: ytUrl, format }),
+      });
       if (!res.ok) {
         const data = await res.json();
         setYtError(data.error || "Download failed.");
