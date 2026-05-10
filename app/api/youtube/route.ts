@@ -7,22 +7,22 @@ import { existsSync, readdirSync } from "fs";
 
 export const runtime = "nodejs";
 
-// ─── Concurrency limiter (max 2 simultaneous yt-dlp jobs) ──────────────────
+// ─── Concurrency limiter ──────────────────────────────────────────────────────
 let activeJobs = 0;
 const MAX_JOBS = 2;
 
-// ─── Proxy scorer: rotate fairly but bias toward what works ────────────────────
-const proxyScores = new Map<string, number>();      // higher = tried first
-const botBlockedUntil = new Map<string, number>();  // proxy key -> unblock timestamp
+// ─── Proxy scorer: best-performing proxy tried first, bot-blocked ones skipped
+const proxyScores = new Map<string, number>();
+const botBlockedUntil = new Map<string, number>();
 const BOT_BLOCK_TTL = 5 * 60 * 1000;
 
-function isProxyBotBlocked(key: string): boolean {
+function isBlocked(key: string): boolean {
   const until = botBlockedUntil.get(key);
   if (!until) return false;
   if (Date.now() > until) { botBlockedUntil.delete(key); return false; }
   return true;
 }
-function markBotBlocked(key: string) {
+function markBlocked(key: string) {
   botBlockedUntil.set(key, Date.now() + BOT_BLOCK_TTL);
   proxyScores.set(key, (proxyScores.get(key) ?? 0) - 2);
 }
@@ -30,7 +30,7 @@ function markSuccess(key: string) {
   proxyScores.set(key, (proxyScores.get(key) ?? 0) + 1);
 }
 
-// ─── Supported hosts ─────────────────────────────────────────────────────────
+// ─── Supported hosts ──────────────────────────────────────────────────────────
 const SUPPORTED_HOSTS = ["youtube.com","youtu.be","tiktok.com","instagram.com","facebook.com","fb.watch","twitter.com","x.com","soundcloud.com","vimeo.com","twitch.tv"];
 
 function isValidUrl(url: string): boolean {
@@ -40,98 +40,45 @@ function isValidUrl(url: string): boolean {
   } catch { return false; }
 }
 
-// ─── Proxies: load all 5 slots, shuffle for rotation ─────────────────────────
-function getProxies(): string[] {
-  const raw = [
+// ─── Proxies: sorted by score, best first ────────────────────────────────────
+function getProxyList(): string[][] {
+  const proxies = [
     process.env.PROXY_URL,
     process.env.PROXY_URL2,
     process.env.PROXY_URL3,
     process.env.PROXY_URL4,
     process.env.PROXY_URL5,
   ].filter(Boolean) as string[];
-  // Fisher-Yates shuffle so we don't hammer the same proxy every time
-  for (let i = raw.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [raw[i], raw[j]] = [raw[j], raw[i]];
+
+  return [...proxies.map(p => ["--proxy", p]), []]  // [] = direct (no proxy)
+    .filter(pa => !isBlocked(pa[1] ?? "direct"))
+    .sort((a, b) => (proxyScores.get(b[1] ?? "direct") ?? 0) - (proxyScores.get(a[1] ?? "direct") ?? 0));
+}
+
+// ─── Cookie file: written once, cached in memory ──────────────────────────────
+let cookieFilePath: string | null | undefined = undefined;
+async function getCookieArgs(): Promise<string[]> {
+  if (cookieFilePath === undefined) {
+    const b64 = process.env.YOUTUBE_COOKIES;
+    if (!b64) { cookieFilePath = null; }
+    else {
+      try {
+        cookieFilePath = join(tmpdir(), "yt-cookies.txt");
+        await writeFile(cookieFilePath, Buffer.from(b64, "base64").toString("utf-8"));
+      } catch { cookieFilePath = null; }
+    }
   }
-  return raw;
-}
-
-// ─── Cookies: optional fallback only ─────────────────────────────────────────
-async function getCookieFile(): Promise<string | null> {
-  const b64 = process.env.YOUTUBE_COOKIES;
-  if (!b64) return null;
-  try {
-    const path = join(tmpdir(), "yt-cookies.txt");
-    await writeFile(path, Buffer.from(b64, "base64").toString("utf-8"));
-    return path;
-  } catch { return null; }
-}
-
-// ─── Spawn with timeout, returns child so caller can kill it ─────────────────
-function spawnTracked(
-  args: string[],
-  timeoutMs: number
-): { promise: Promise<{ stdout: string; stderr: string; code: number }>; kill: () => void } {
-  let child: ReturnType<typeof spawn> | null = null;
-  const promise = new Promise<{ stdout: string; stderr: string; code: number }>((resolve) => {
-    child = spawn("yt-dlp", args, { stdio: ["pipe", "pipe", "pipe"] });
-    let stdout = "";
-    let stderr = "";
-    let done = false;
-
-    const timer = setTimeout(() => {
-      if (!done) { done = true; child?.kill("SIGKILL"); resolve({ stdout, stderr: stderr + "\n[TIMEOUT]", code: -1 }); }
-    }, timeoutMs);
-
-    child.stdout!.on("data", (d: Buffer) => { stdout += d.toString(); });
-    child.stderr!.on("data", (d: Buffer) => { stderr += d.toString(); });
-    child.on("error", (e: Error) => {
-      if (!done) { done = true; clearTimeout(timer); resolve({ stdout: "", stderr: e.message, code: -1 }); }
-    });
-    child.on("close", (code: number | null) => {
-      if (!done) { done = true; clearTimeout(timer); resolve({ stdout, stderr, code: code ?? -1 }); }
-    });
-  });
-  return { promise, kill: () => child?.kill("SIGKILL") };
-}
-
-// ─── Spawn to file with timeout ───────────────────────────────────────────────
-function spawnToFileWithTimeout(
-  args: string[],
-  timeoutMs: number
-): Promise<{ stderr: string; code: number }> {
-  return new Promise((resolve) => {
-    const child = spawn("yt-dlp", args, { stdio: ["pipe", "pipe", "pipe"] });
-    let stderr = "";
-    let done = false;
-
-    const timer = setTimeout(() => {
-      if (!done) {
-        done = true;
-        child.kill("SIGKILL");
-        resolve({ stderr: stderr + "\n[TIMEOUT]", code: -1 });
-      }
-    }, timeoutMs);
-
-    child.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
-    child.on("error", (e: Error) => {
-      if (!done) { done = true; clearTimeout(timer); resolve({ stderr: e.message, code: -1 }); }
-    });
-    child.on("close", (code: number | null) => {
-      if (!done) { done = true; clearTimeout(timer); resolve({ stderr, code: code ?? -1 }); }
-    });
-  });
+  return cookieFilePath ? ["--cookies", cookieFilePath] : [];
 }
 
 // ─── Player clients with matching User-Agents ─────────────────────────────────
-const CLIENTS: Array<{ name: string; ua: string }> = [
+const CLIENTS = [
   { name: "android", ua: "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip" },
   { name: "ios",     ua: "com.google.ios.youtube/19.09.3 (iPhone16,2; U; CPU iOS 17_4 like Mac OS X)" },
   { name: "mweb",    ua: "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36" },
 ];
 
-const BASE_ARGS = ["--no-playlist", "--no-cache-dir", "--socket-timeout", "4", "--retries", "0", "--sleep-requests", "1"];
+const BASE_ARGS = ["--no-playlist", "--no-cache-dir", "--socket-timeout", "8", "--retries", "0"];
 
 function getPoTokenArgs(): string[] {
   const po = process.env.YOUTUBE_PO_TOKEN;
@@ -146,95 +93,58 @@ function isBotBlock(stderr: string): boolean {
   return stderr.includes("Sign in") || stderr.includes("bot") || stderr.includes("cookies are no longer valid");
 }
 
-// ─── GET: race all non-blocked combos, sorted by score (best first) ──────────
-async function runParallel(
-  extraArgs: string[],
-  timeoutMs = 12000
+// ─── Unified spawn with timeout ───────────────────────────────────────────────
+function spawnYtDlp(
+  args: string[],
+  timeoutMs: number
 ): Promise<{ stdout: string; stderr: string; code: number }> {
-  const proxies = getProxies();
-  const cookieFile = await getCookieFile();
-  const cookieArgs = cookieFile ? ["--cookies", cookieFile] : [];
-  const poArgs = getPoTokenArgs();
-
-  const proxyList = [...proxies.map(p => ["--proxy", p] as string[]), [] as string[]];
-  const attempts = proxyList
-    .filter(pa => !isProxyBotBlocked(pa[1] ?? "direct"))
-    .sort((a, b) => (proxyScores.get(b[1] ?? "direct") ?? 0) - (proxyScores.get(a[1] ?? "direct") ?? 0))
-    .flatMap(proxyArgs =>
-      CLIENTS.map(({ name, ua }) => ({
-        label: `${name}${proxyArgs.length ? "+proxy" : "+direct"}`,
-        proxyKey: proxyArgs[1] ?? "direct",
-        proxyArgs,
-        client: name,
-        args: [...BASE_ARGS, "--extractor-args", `youtube:player_client=${name}`, "--user-agent", ua, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs],
-      }))
-    );
-
-  if (attempts.length === 0) return { stdout: "", stderr: "all proxies bot-blocked", code: 1 };
-
   return new Promise((resolve) => {
-    let settled = false;
-    let completed = 0;
-    const trackers: Array<{ kill: () => void }> = [];
-    const killAll = () => trackers.forEach(t => t.kill());
+    const child = spawn("yt-dlp", args, { stdio: ["pipe", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    let done = false;
 
-    for (const attempt of attempts) {
-      console.log(`[YouTube] racing ${attempt.label}...`);
-      const tracked = spawnTracked(attempt.args, timeoutMs);
-      trackers.push(tracked);
+    const timer = setTimeout(() => {
+      if (!done) { done = true; child.kill("SIGKILL"); resolve({ stdout, stderr: stderr + "\n[TIMEOUT]", code: -1 }); }
+    }, timeoutMs);
 
-      tracked.promise.then((result) => {
-        completed++;
-        console.log(`[YouTube] ${attempt.label} exit: ${result.code}`);
-        if (result.stderr) console.log(`[YouTube] ${attempt.label} stderr:`, result.stderr.slice(0, 150));
-
-        if (isBotBlock(result.stderr)) markBotBlocked(attempt.proxyKey);
-
-        if (!settled && result.code === 0) {
-          settled = true;
-          markSuccess(attempt.proxyKey);
-          killAll();
-          resolve(result);
-        } else if (!settled && completed === attempts.length) {
-          resolve({ stdout: "", stderr: "all strategies exhausted", code: 1 });
-        }
-      });
-    }
+    child.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
+    child.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
+    child.on("error", (e: Error) => {
+      if (!done) { done = true; clearTimeout(timer); resolve({ stdout: "", stderr: e.message, code: -1 }); }
+    });
+    child.on("close", (code: number | null) => {
+      if (!done) { done = true; clearTimeout(timer); resolve({ stdout, stderr, code: code ?? -1 }); }
+    });
   });
 }
 
-// ─── POST: sequential sorted by score, skip bot-blocked proxies ──────────────
-async function runSequential(
+// ─── Core: try proxies in score order, skip bot-blocked, move on fast ─────────
+async function runYtDlp(
   extraArgs: string[],
-  outPath: string,
-  timeoutMs = 120000
-): Promise<{ stderr: string; code: number }> {
-  const proxies = getProxies();
-  const cookieFile = await getCookieFile();
-  const cookieArgs = cookieFile ? ["--cookies", cookieFile] : [];
+  timeoutMs: number
+): Promise<{ stdout: string; stderr: string; code: number }> {
+  const proxyList = getProxyList();
+  const cookieArgs = await getCookieArgs();
   const poArgs = getPoTokenArgs();
-
-  const proxyList = [...proxies.map(p => ["--proxy", p] as string[]), [] as string[]]
-    .filter(pa => !isProxyBotBlocked(pa[1] ?? "direct"))
-    .sort((a, b) => (proxyScores.get(b[1] ?? "direct") ?? 0) - (proxyScores.get(a[1] ?? "direct") ?? 0));
 
   for (const proxyArgs of proxyList) {
     const proxyKey = proxyArgs[1] ?? "direct";
     for (const { name, ua } of CLIENTS) {
       const label = `${name}+${proxyKey}`;
-      const args = [...BASE_ARGS, "--extractor-args", `youtube:player_client=${name}`, "--user-agent", ua, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs, "-o", outPath];
+      const args = [...BASE_ARGS, "--extractor-args", `youtube:player_client=${name}`, "--user-agent", ua, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs];
 
-      console.log(`[YouTube] download ${label}...`);
-      const result = await spawnToFileWithTimeout(args, timeoutMs);
+      console.log(`[YouTube] trying ${label}...`);
+      const result = await spawnYtDlp(args, timeoutMs);
       console.log(`[YouTube] ${label} exit: ${result.code}`);
-      if (result.stderr) console.log(`[YouTube] ${label} stderr:`, result.stderr.slice(0, 300));
+      if (result.stderr) console.log(`[YouTube] ${label} stderr:`, result.stderr.slice(0, 200));
 
       if (result.code === 0) { markSuccess(proxyKey); return result; }
-      if (isBotBlock(result.stderr)) { markBotBlocked(proxyKey); break; }
+      if (isBotBlock(result.stderr)) { markBlocked(proxyKey); break; }
     }
   }
 
-  return { stderr: "all strategies exhausted", code: 1 };
+  return { stdout: "", stderr: "all strategies exhausted", code: 1 };
 }
 
 // ─── GET /api/youtube?url=... — fetch video info ──────────────────────────────
@@ -246,7 +156,7 @@ export async function GET(request: NextRequest) {
 
   console.log("[YouTube] GET info:", url);
 
-  const { stdout, stderr, code } = await runParallel(["--dump-single-json", url]);
+  const { stdout, stderr, code } = await runYtDlp(["--dump-single-json", url], 20000);
 
   if (code !== 0) {
     return Response.json({ error: `yt-dlp failed: ${stderr.slice(0, 300)}` }, { status: 500 });
@@ -295,7 +205,7 @@ export async function POST(request: NextRequest) {
       url,
     ];
 
-    const { stderr, code } = await runSequential(dlArgs, outPath, 120000);
+    const { stderr, code } = await runYtDlp([...dlArgs, "-o", outPath], 120000);
 
     // Find the output file (yt-dlp may change the extension)
     let resolvedPath = finalPath;
