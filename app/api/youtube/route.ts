@@ -74,9 +74,29 @@ const BASE_FLAGS = [
   "--no-playlist",
   "--no-cache-dir",
   "--socket-timeout", "10",
-  "--retries", "2",
+  "--retries", "1",
   "--js-runtimes", "deno",
+  "--sleep-requests", "2",
+  "--sleep-interval", "2",
+  "--max-sleep-interval", "6",
 ];
+
+// Rotating User-Agents to avoid fingerprinting
+const USER_AGENTS = [
+  "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+  "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Mobile Safari/537.36",
+];
+
+function getRandomUserAgent(): string {
+  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+// Exponential backoff delay
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 // Fast flags for non-YouTube platforms (very low timeout for quick failure)
 const FAST_FLAGS = [
@@ -168,12 +188,12 @@ async function getVideoInfoWithFallback(url: string): Promise<{ title: string; a
       const proxy = PROXY_LIST[i];
       const proxyFlags = getProxyFlags(proxy);
       
-      // YouTube needs special flags, other platforms use standard approach
+      // YouTube needs special flags - ONLY use android (not iOS - it's heavily blocked)
       if (isYouTube) {
+        const userAgent = getRandomUserAgent();
         strategies.push(
-          { name: `proxy${i + 1}+android`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=android"] },
-          { name: `proxy${i + 1}+web`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=web_embedded"] },
-          { name: `proxy${i + 1}+ios`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=ios"] },
+          { name: `proxy${i + 1}+android`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=android", "--user-agent", userAgent] },
+          { name: `proxy${i + 1}+web`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=web_embedded", "--user-agent", userAgent] },
         );
       } else {
         // Non-YouTube: just use proxy with base flags
@@ -196,7 +216,16 @@ async function getVideoInfoWithFallback(url: string): Promise<{ title: string; a
     }
   }
 
+  let attemptCount = 0;
   for (const strategy of strategies) {
+    // Exponential backoff between attempts (only for YouTube)
+    if (isYouTube && attemptCount > 0) {
+      const delay = Math.min(5000 * attemptCount, 15000); // 5s, 10s, 15s max
+      console.log(`[YouTube] Waiting ${delay}ms before next attempt...`);
+      await sleep(delay);
+    }
+    attemptCount++;
+    
     try {
       console.log(`[YouTube] Trying strategy: ${strategy.name}`);
       const args = [
@@ -286,7 +315,16 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
 
   let lastError = "";
   
+  let attemptCount = 0;
   for (const strategy of strategies) {
+    // Exponential backoff between attempts (only for YouTube)
+    if (isYouTube && attemptCount > 0) {
+      const delay = Math.min(5000 * attemptCount, 15000);
+      console.log(`[YouTube] Waiting ${delay}ms before download attempt...`);
+      await sleep(delay);
+    }
+    attemptCount++;
+    
     try {
       console.log(`[YouTube] Trying download strategy: ${strategy.name}`);
       
