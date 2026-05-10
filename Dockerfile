@@ -15,6 +15,12 @@ RUN curl -fsSL https://deno.land/install.sh | sh && \
 
 RUN pip3 install --break-system-packages yt-dlp
 
+# Make yt-dlp executable
+RUN chmod +x /usr/local/bin/yt-dlp
+
+# Make start script executable
+RUN chmod +x /app/start.sh
+
 # Upgrade pip
 RUN pip3 install --no-cache-dir --upgrade pip --break-system-packages
 
