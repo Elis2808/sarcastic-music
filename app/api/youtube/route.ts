@@ -241,6 +241,11 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
   
   // If we have proxies, try each one with appropriate flags
   if (PROXY_LIST.length > 0) {
+    // For non-YouTube platforms (Facebook, etc), try direct first - no proxy needed
+    if (!isYouTube) {
+      strategies.push({ name: "direct+fast", flags: [...baseFlags] });
+    }
+    
     for (let i = 0; i < PROXY_LIST.length; i++) {
       const proxy = PROXY_LIST[i];
       const proxyFlags = getProxyFlags(proxy);
@@ -253,9 +258,9 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
           { name: `proxy${i + 1}+ios`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=ios"] },
         );
       } else {
-        // Non-YouTube: just use proxy with base flags
+        // Non-YouTube: proxy as fallback only
         strategies.push(
-          { name: `proxy${i + 1}+standard`, flags: [...baseFlags, ...proxyFlags] },
+          { name: `proxy${i + 1}+fallback`, flags: [...baseFlags, ...proxyFlags] },
         );
       }
     }
