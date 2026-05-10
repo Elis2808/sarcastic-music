@@ -8,6 +8,8 @@ import { promisify } from "util";
 export const runtime = "nodejs";
 const execFileAsync = promisify(execFile);
 
+const SCRIPT_PATH = join(tmpdir(), "detect-key.py");
+
 const PYTHON_SCRIPT = `
 import sys, json, tempfile, os
 import numpy as np
@@ -22,7 +24,7 @@ def pearson(a,b): a,b=np.array(a),np.array(b); return np.corrcoef(a,b)[0,1]
 
 path = sys.argv[1]
 import librosa
-y, sr = librosa.load(path, sr=None, mono=True, duration=120)
+y, sr = librosa.load(path, sr=22050, mono=True, duration=30)
 chroma = librosa.feature.chroma_cqt(y=y, sr=sr, bins_per_octave=36)
 mean_chroma = np.mean(chroma, axis=1)
 mean_chroma = mean_chroma / mean_chroma.max()
@@ -53,14 +55,12 @@ export async function POST(request: NextRequest) {
 
   const ext = (file as File).name?.split(".").pop() || "mp3";
   const audioPath = join(tmpdir(), `key-${Date.now()}.${ext}`);
-  const scriptPath = join(tmpdir(), `detect-key-${Date.now()}.py`);
 
   try {
-    const bytes = await file.arrayBuffer();
+    const [bytes] = await Promise.all([file.arrayBuffer(), writeFile(SCRIPT_PATH, PYTHON_SCRIPT).catch(() => {})]);
     await writeFile(audioPath, Buffer.from(bytes));
-    await writeFile(scriptPath, PYTHON_SCRIPT);
 
-    const { stdout, stderr } = await execFileAsync("python3", [scriptPath, audioPath], {
+    const { stdout, stderr } = await execFileAsync("python3", [SCRIPT_PATH, audioPath], {
       timeout: 60000,
       encoding: "utf-8",
     });
@@ -73,6 +73,5 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: err.message || "Key detection failed" }, { status: 500 });
   } finally {
     unlink(audioPath).catch(() => {});
-    unlink(scriptPath).catch(() => {});
   }
 }
