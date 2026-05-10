@@ -64,6 +64,9 @@ ENV MALLOC_TRIM_THRESHOLD_=100000
 
 COPY . .
 
+# Copy pdfjs worker to public so it's served at /pdf.worker.min.mjs
+RUN cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/pdf.worker.min.mjs
+
 # Make start script executable (must be after COPY)
 RUN chmod +x /app/start.sh
 
