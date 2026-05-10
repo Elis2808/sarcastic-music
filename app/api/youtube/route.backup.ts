@@ -49,27 +49,24 @@ async function getCookieFile(): Promise<string | null> {
   } catch { return null; }
 }
 
-// ─── Spawn with timeout ───────────────────────────────────────────────────────
-function spawnWithTimeout(
+// ─── Spawn with timeout, returns child so caller can kill it ─────────────────
+function spawnTracked(
   args: string[],
   timeoutMs: number
-): Promise<{ stdout: string; stderr: string; code: number }> {
-  return new Promise((resolve) => {
-    const child = spawn("yt-dlp", args, { stdio: ["pipe", "pipe", "pipe"] });
+): { promise: Promise<{ stdout: string; stderr: string; code: number }>; kill: () => void } {
+  let child: ReturnType<typeof spawn> | null = null;
+  const promise = new Promise<{ stdout: string; stderr: string; code: number }>((resolve) => {
+    child = spawn("yt-dlp", args, { stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     let done = false;
 
     const timer = setTimeout(() => {
-      if (!done) {
-        done = true;
-        child.kill("SIGKILL");
-        resolve({ stdout, stderr: stderr + "\n[TIMEOUT]", code: -1 });
-      }
+      if (!done) { done = true; child?.kill("SIGKILL"); resolve({ stdout, stderr: stderr + "\n[TIMEOUT]", code: -1 }); }
     }, timeoutMs);
 
-    child.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
-    child.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
+    child.stdout!.on("data", (d: Buffer) => { stdout += d.toString(); });
+    child.stderr!.on("data", (d: Buffer) => { stderr += d.toString(); });
     child.on("error", (e: Error) => {
       if (!done) { done = true; clearTimeout(timer); resolve({ stdout: "", stderr: e.message, code: -1 }); }
     });
@@ -77,6 +74,7 @@ function spawnWithTimeout(
       if (!done) { done = true; clearTimeout(timer); resolve({ stdout, stderr, code: code ?? -1 }); }
     });
   });
+  return { promise, kill: () => child?.kill("SIGKILL") };
 }
 
 // ─── Spawn to file with timeout ───────────────────────────────────────────────
@@ -108,49 +106,73 @@ function spawnToFileWithTimeout(
 }
 
 // ─── Player clients to try per proxy ─────────────────────────────────────────
-const CLIENTS = ["android", "ios", "tv_embedded", "mweb"];
+const CLIENTS = ["android", "ios", "mweb"];
 
 const BASE_ARGS = ["--no-playlist", "--no-cache-dir", "--socket-timeout", "8", "--retries", "1"];
+
+function getPoTokenArgs(): string[] {
+  const po = process.env.YOUTUBE_PO_TOKEN;
+  const vis = process.env.YOUTUBE_VISITOR_DATA;
+  const args: string[] = [];
+  if (vis) args.push("--extractor-args", `youtube:visitor_data=${vis}`);
+  if (po && vis) args.push("--extractor-args", `youtube:po_token=web+${po}`);
+  return args;
+}
 
 function isBotBlock(stderr: string): boolean {
   return stderr.includes("Sign in") || stderr.includes("bot") || stderr.includes("cookies are no longer valid");
 }
 
-// ─── GET: race all proxy×client combos in parallel, return first winner ───────
+// ─── GET: staggered parallel race — kill all losers when first winner found ───
 async function runParallel(
   extraArgs: string[],
-  timeoutMs = 30000
+  timeoutMs = 25000
 ): Promise<{ stdout: string; stderr: string; code: number }> {
   const proxies = getProxies();
   const cookieFile = await getCookieFile();
   const cookieArgs = cookieFile ? ["--cookies", cookieFile] : [];
+  const poArgs = getPoTokenArgs();
   const proxyList = [...proxies.map(p => ["--proxy", p] as string[]), [] as string[]];
   const attempts = proxyList.flatMap(proxyArgs =>
     CLIENTS.map(client => ({
       label: `${client}${proxyArgs.length ? "+proxy" : "+direct"}`,
-      args: [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...proxyArgs, ...cookieArgs, ...extraArgs],
+      args: [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs],
     }))
   );
 
   return new Promise((resolve) => {
     let settled = false;
-    let pending = attempts.length;
+    let completed = 0;
+    const trackers: Array<{ kill: () => void }> = [];
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
-    for (const attempt of attempts) {
-      console.log(`[YouTube] racing ${attempt.label}...`);
-      spawnWithTimeout(attempt.args, timeoutMs).then((result) => {
-        pending--;
-        console.log(`[YouTube] ${attempt.label} exit: ${result.code}`);
-        if (result.stderr) console.log(`[YouTube] ${attempt.label} stderr:`, result.stderr.slice(0, 200));
+    const killAll = () => trackers.forEach(t => t.kill());
 
-        if (!settled && result.code === 0) {
-          settled = true;
-          resolve(result);
-        } else if (!settled && pending === 0) {
-          resolve({ stdout: "", stderr: "all strategies exhausted", code: 1 });
-        }
-      });
-    }
+    attempts.forEach((attempt, i) => {
+      // Stagger launches 80ms apart — avoids hammering OS/network at once
+      const t = setTimeout(() => {
+        if (settled) return;
+        console.log(`[YouTube] racing ${attempt.label}...`);
+        const tracked = spawnTracked(attempt.args, timeoutMs);
+        trackers.push(tracked);
+
+        tracked.promise.then((result: { stdout: string; stderr: string; code: number }) => {
+          completed++;
+          console.log(`[YouTube] ${attempt.label} exit: ${result.code}`);
+          if (result.stderr) console.log(`[YouTube] ${attempt.label} stderr:`, result.stderr.slice(0, 150));
+
+          if (!settled && result.code === 0) {
+            settled = true;
+            timers.forEach(clearTimeout);
+            killAll();
+            resolve(result);
+          } else if (!settled && completed === attempts.length) {
+            resolve({ stdout: "", stderr: "all strategies exhausted", code: 1 });
+          }
+        });
+      }, i * 80);
+      timers.push(t);
+    });
   });
 }
 
@@ -164,12 +186,13 @@ async function runSequential(
   const cookieFile = await getCookieFile();
   const cookieArgs = cookieFile ? ["--cookies", cookieFile] : [];
 
+  const poArgs = getPoTokenArgs();
   const proxyList = [...proxies.map(p => ["--proxy", p] as string[]), [] as string[]];
 
   for (const proxyArgs of proxyList) {
     for (const client of CLIENTS) {
       const label = `${client}${proxyArgs.length ? "+proxy" : "+direct"}`;
-      const args = [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...proxyArgs, ...cookieArgs, ...extraArgs, "-o", outPath];
+      const args = [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs, "-o", outPath];
 
       console.log(`[YouTube] download ${label}...`);
       const result = await spawnToFileWithTimeout(args, timeoutMs);
