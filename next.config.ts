@@ -1,6 +1,22 @@
 import type { NextConfig } from "next";
+import CopyPlugin from "copy-webpack-plugin";
 
 const nextConfig: NextConfig = {
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.plugins.push(
+        new CopyPlugin({
+          patterns: [
+            {
+              from: "node_modules/pdfjs-dist/build/pdf.worker.min.mjs",
+              to: "../public/pdf.worker.min.mjs",
+            },
+          ],
+        })
+      );
+    }
+    return config;
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "50mb",

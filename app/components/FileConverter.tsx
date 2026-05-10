@@ -153,7 +153,7 @@ export default function FileConverter() {
       // PDF to Images
       else if (activeConversion === "pdf-to-img") {
         const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+        pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
         
         for (const file of files) {
           const arrayBuffer = await file.arrayBuffer();

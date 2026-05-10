@@ -29,6 +29,7 @@
     "@types/pdfjs-dist": "^2.10.377",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "copy-webpack-plugin": "^14.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.5",
     "jspdf": "^4.2.1",
