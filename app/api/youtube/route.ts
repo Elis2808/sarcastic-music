@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { spawn, execFile } from "child_process";
 import { promisify } from "util";
 import { mkdtemp, unlink, rmdir } from "fs/promises";
-import { createReadStream, existsSync, unlinkSync } from "fs";
+import { createReadStream, existsSync, unlinkSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
