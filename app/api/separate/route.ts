@@ -3,7 +3,13 @@ import { NextRequest } from "next/server";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  const formData = await request.formData();
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch (err) {
+    return Response.json({ error: "Invalid form data" }, { status: 400 });
+  }
+  
   const file = formData.get("file");
   const stem = formData.get("stem") ?? "no_vocals";
 

@@ -3,9 +3,14 @@ import { NextRequest } from "next/server";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  const formData = await request.formData();
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch (err) {
+    return Response.json({ error: "Invalid form data" }, { status: 400 });
+  }
+  
   const file = formData.get("file");
-
   if (!file || !(file instanceof Blob)) {
     return Response.json({ error: "No file provided" }, { status: 400 });
   }
