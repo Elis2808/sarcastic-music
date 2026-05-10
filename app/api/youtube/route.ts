@@ -78,11 +78,11 @@ const BASE_FLAGS = [
   "--js-runtimes", "deno",
 ];
 
-// Fast flags for non-YouTube platforms (lower timeout)
+// Fast flags for non-YouTube platforms (very low timeout for quick failure)
 const FAST_FLAGS = [
   "--no-playlist",
   "--no-cache-dir",
-  "--socket-timeout", "8",
+  "--socket-timeout", "5",
   "--retries", "1",
 ];
 
@@ -244,23 +244,18 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
     // For non-YouTube platforms (Facebook, etc), try direct first - no proxy needed
     if (!isYouTube) {
       strategies.push({ name: "direct+fast", flags: [...baseFlags] });
-    }
-    
-    for (let i = 0; i < PROXY_LIST.length; i++) {
-      const proxy = PROXY_LIST[i];
-      const proxyFlags = getProxyFlags(proxy);
-      
-      // YouTube needs special flags, other platforms use standard approach
-      if (isYouTube) {
+      // Only try first proxy as fallback for non-YouTube (faster than cycling all 5)
+      const proxyFlags = getProxyFlags(PROXY_LIST[0]);
+      strategies.push({ name: "proxy1+fallback", flags: [...baseFlags, ...proxyFlags] });
+    } else {
+      // YouTube: cycle through all proxies with different clients
+      for (let i = 0; i < PROXY_LIST.length; i++) {
+        const proxy = PROXY_LIST[i];
+        const proxyFlags = getProxyFlags(proxy);
         strategies.push(
           { name: `proxy${i + 1}+android`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=android"] },
           { name: `proxy${i + 1}+web`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=web_embedded"] },
           { name: `proxy${i + 1}+ios`, flags: [...baseFlags, ...proxyFlags, "--extractor-args", "youtube:player_client=ios"] },
-        );
-      } else {
-        // Non-YouTube: proxy as fallback only
-        strategies.push(
-          { name: `proxy${i + 1}+fallback`, flags: [...baseFlags, ...proxyFlags] },
         );
       }
     }
