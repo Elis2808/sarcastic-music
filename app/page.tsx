@@ -80,12 +80,7 @@ export default function Home() {
     setYtError("");
     setYtInfo(null);
     try {
-      // Use yt-dlp API with proxy support for all platforms
-      const res = await fetch("/api/youtube", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: ytUrl }),
-      });
+      const res = await fetch(`/api/youtube?url=${encodeURIComponent(ytUrl)}`);
       const data = await res.json();
       if (!res.ok) {
         setYtError(data.error || "Something went wrong.");
@@ -128,6 +123,7 @@ export default function Home() {
 
   function formatDuration(seconds: string) {
     const s = parseInt(seconds);
+    if (!s || isNaN(s)) return "0:00";
     const m = Math.floor(s / 60);
     const rem = s % 60;
     return `${m}:${rem.toString().padStart(2, "0")}`;
