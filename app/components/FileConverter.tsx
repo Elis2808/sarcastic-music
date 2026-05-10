@@ -385,7 +385,7 @@ export default function FileConverter() {
     } finally {
       setConverting(false);
     }
-  }, [files, activeConversion, currentConversion]);
+  }, [files, activeConversion, currentConversion, pdfPageRange]);
 
   const clearAll = useCallback(() => {
     setFiles([]);
