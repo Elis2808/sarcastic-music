@@ -11,9 +11,10 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install yt-dlp as standalone binary (most reliable method)
+# Install yt-dlp as standalone binary (most reliable method) + update to latest
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
     && chmod +x /usr/local/bin/yt-dlp \
+    && yt-dlp -U \
     && yt-dlp --version
 
 # Install Deno (used by yt-dlp for JS extraction)
