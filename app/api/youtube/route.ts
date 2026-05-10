@@ -352,15 +352,16 @@ async function downloadWithFallback(url: string, format: "mp3" | "mp4", tempPath
 
   let lastError = "";
   
-  let attemptCount = 0;
-  for (const strategy of strategies) {
-    // Exponential backoff between attempts (only for YouTube)
-    if (isYouTube && attemptCount > 0) {
-      const delay = Math.min(5000 * attemptCount, 15000);
-      console.log(`[YouTube] Waiting ${delay}ms before download attempt...`);
+  // Try strategies sequentially to avoid spam detection
+  for (let i = 0; i < strategies.length; i++) {
+    const strategy = strategies[i];
+    
+    // Small delay between attempts (1-3s) to avoid looking like spam
+    if (i > 0) {
+      const delay = Math.min(1000 + i * 1000, 3000); // 1s, 2s, 3s max
+      console.log(`[YouTube] Waiting ${delay}ms before next download attempt...`);
       await sleep(delay);
     }
-    attemptCount++;
     
     try {
       console.log(`[YouTube] Trying download strategy: ${strategy.name}`);
