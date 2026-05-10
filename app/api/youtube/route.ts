@@ -73,8 +73,8 @@ function isYouTubeUrl(url: string): boolean {
 const BASE_FLAGS = [
   "--no-playlist",
   "--no-cache-dir",
-  "--socket-timeout", "15",
-  "--retries", "1",
+  "--socket-timeout", "10",
+  "--retries", "2",
   "--js-runtimes", "deno",
 ];
 
@@ -82,7 +82,7 @@ const BASE_FLAGS = [
 const FAST_FLAGS = [
   "--no-playlist",
   "--no-cache-dir",
-  "--socket-timeout", "5",
+  "--socket-timeout", "8",
   "--retries", "1",
 ];
 
