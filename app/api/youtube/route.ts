@@ -227,10 +227,18 @@ export async function POST(request: NextRequest) {
     return new Response("Server busy, please try again in a moment", { status: 429 });
   }
 
+  let tmpDir: string | null = null;
   activeJobs++;
   console.log(`[YouTube] POST download: ${url} [${format}] (active jobs: ${activeJobs})`);
 
-  const tmpDir = await mkdtemp(join(tmpdir(), "yt-"));
+  try {
+    tmpDir = await mkdtemp(join(tmpdir(), "yt-"));
+  } catch (err: any) {
+    activeJobs--;
+    console.error("[YouTube] mkdtemp failed:", err.message);
+    return new Response("Server error: could not create temp dir", { status: 500 });
+  }
+
   const outPath = join(tmpDir, `download.%(ext)s`);
   const finalPath = join(tmpDir, `download.${format}`);
 
@@ -269,6 +277,6 @@ export async function POST(request: NextRequest) {
     return new Response(err.message || "Download failed", { status: 500 });
   } finally {
     activeJobs--;
-    rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+    if (tmpDir) rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
 }
