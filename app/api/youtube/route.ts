@@ -210,7 +210,8 @@ async function getVideoInfoWithFallback(url: string): Promise<{ title: string; a
                         "";
       
       if (title && title !== "Unknown") {
-        console.log(`[YouTube] Success with strategy: ${strategy.name}, thumbnail: ${thumbnail ? "found" : "missing"}`);
+        console.log(`[YouTube] Success with strategy: ${strategy.name}`);
+        console.log(`[YouTube] Thumbnail URL: ${thumbnail?.substring(0, 80)}...`);
         return { title, author, lengthSeconds, thumbnail };
       }
     } catch (err) {
