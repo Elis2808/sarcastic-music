@@ -7,9 +7,22 @@ import { existsSync, readdirSync } from "fs";
 
 export const runtime = "nodejs";
 
-// ─── Concurrency limiter (max 2 simultaneous yt-dlp jobs) ───────────────────
+// ─── Concurrency limiter (max 2 simultaneous yt-dlp jobs) ──────────────────
 let activeJobs = 0;
 const MAX_JOBS = 2;
+
+// ─── Session memory: remember what worked, skip what bot-blocked ───────────────
+let lastWinner: { proxyArgs: string[]; client: string } | null = null;
+const botBlockedProxies = new Map<string, number>(); // proxy key -> timestamp
+const BOT_BLOCK_TTL = 5 * 60 * 1000; // skip bot-blocked proxy for 5 minutes
+
+function isProxyBotBlocked(key: string): boolean {
+  const ts = botBlockedProxies.get(key);
+  if (!ts) return false;
+  if (Date.now() - ts > BOT_BLOCK_TTL) { botBlockedProxies.delete(key); return false; }
+  return true;
+}
+function markBotBlocked(key: string) { botBlockedProxies.set(key, Date.now()); }
 
 // ─── Supported hosts ─────────────────────────────────────────────────────────
 const SUPPORTED_HOSTS = ["youtube.com","youtu.be","tiktok.com","instagram.com","facebook.com","fb.watch","twitter.com","x.com","soundcloud.com","vimeo.com","twitch.tv"];
@@ -123,60 +136,82 @@ function isBotBlock(stderr: string): boolean {
   return stderr.includes("Sign in") || stderr.includes("bot") || stderr.includes("cookies are no longer valid");
 }
 
-// ─── GET: staggered parallel race — kill all losers when first winner found ───
+// ─── GET: try last winner first, then race remaining non-blocked combos ────────
 async function runParallel(
   extraArgs: string[],
-  timeoutMs = 25000
+  timeoutMs = 20000
 ): Promise<{ stdout: string; stderr: string; code: number }> {
   const proxies = getProxies();
   const cookieFile = await getCookieFile();
   const cookieArgs = cookieFile ? ["--cookies", cookieFile] : [];
   const poArgs = getPoTokenArgs();
+
+  // Try last known-good combo first (fast path)
+  if (lastWinner) {
+    const { proxyArgs, client } = lastWinner;
+    const proxyKey = proxyArgs[1] ?? "direct";
+    if (!isProxyBotBlocked(proxyKey)) {
+      console.log(`[YouTube] trying last winner: ${client}+${proxyKey}`);
+      const args = [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs];
+      const result = await spawnTracked(args, timeoutMs).promise;
+      console.log(`[YouTube] last winner exit: ${result.code}`);
+      if (result.code === 0) return result;
+      if (isBotBlock(result.stderr)) { markBotBlocked(proxyKey); lastWinner = null; }
+    } else {
+      lastWinner = null;
+    }
+  }
+
+  // Build remaining attempts, skipping bot-blocked proxies
   const proxyList = [...proxies.map(p => ["--proxy", p] as string[]), [] as string[]];
-  const attempts = proxyList.flatMap(proxyArgs =>
-    CLIENTS.map(client => ({
-      label: `${client}${proxyArgs.length ? "+proxy" : "+direct"}`,
-      args: [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs],
-    }))
-  );
+  const attempts = proxyList
+    .filter(proxyArgs => !isProxyBotBlocked(proxyArgs[1] ?? "direct"))
+    .flatMap(proxyArgs =>
+      CLIENTS.map(client => ({
+        label: `${client}${proxyArgs.length ? "+proxy" : "+direct"}`,
+        proxyKey: proxyArgs[1] ?? "direct",
+        proxyArgs,
+        client,
+        args: [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs],
+      }))
+    );
+
+  if (attempts.length === 0) return { stdout: "", stderr: "all proxies bot-blocked", code: 1 };
 
   return new Promise((resolve) => {
     let settled = false;
     let completed = 0;
     const trackers: Array<{ kill: () => void }> = [];
-    const timers: ReturnType<typeof setTimeout>[] = [];
 
     const killAll = () => trackers.forEach(t => t.kill());
 
-    attempts.forEach((attempt, i) => {
-      // Stagger launches 80ms apart — avoids hammering OS/network at once
-      const t = setTimeout(() => {
-        if (settled) return;
-        console.log(`[YouTube] racing ${attempt.label}...`);
-        const tracked = spawnTracked(attempt.args, timeoutMs);
-        trackers.push(tracked);
+    for (const attempt of attempts) {
+      if (settled) break;
+      console.log(`[YouTube] racing ${attempt.label}...`);
+      const tracked = spawnTracked(attempt.args, timeoutMs);
+      trackers.push(tracked);
 
-        tracked.promise.then((result: { stdout: string; stderr: string; code: number }) => {
-          completed++;
-          console.log(`[YouTube] ${attempt.label} exit: ${result.code}`);
-          if (result.stderr) console.log(`[YouTube] ${attempt.label} stderr:`, result.stderr.slice(0, 150));
+      tracked.promise.then((result) => {
+        completed++;
+        console.log(`[YouTube] ${attempt.label} exit: ${result.code}`);
+        if (result.stderr) console.log(`[YouTube] ${attempt.label} stderr:`, result.stderr.slice(0, 150));
 
-          if (!settled && result.code === 0) {
-            settled = true;
-            timers.forEach(clearTimeout);
-            killAll();
-            resolve(result);
-          } else if (!settled && completed === attempts.length) {
-            resolve({ stdout: "", stderr: "all strategies exhausted", code: 1 });
-          }
-        });
-      }, i * 80);
-      timers.push(t);
-    });
+        if (isBotBlock(result.stderr)) markBotBlocked(attempt.proxyKey);
+
+        if (!settled && result.code === 0) {
+          settled = true;
+          lastWinner = { proxyArgs: attempt.proxyArgs, client: attempt.client };
+          killAll();
+          resolve(result);
+        } else if (!settled && completed === attempts.length) {
+          resolve({ stdout: "", stderr: "all strategies exhausted", code: 1 });
+        }
+      });
+    }
   });
 }
 
-// ─── POST: sequential with bot-block fast-skip (each needs unique output file) 
+// ─── POST: try last winner first, then sequential with bot-block skip ────────
 async function runSequential(
   extraArgs: string[],
   outPath: string,
@@ -185,13 +220,30 @@ async function runSequential(
   const proxies = getProxies();
   const cookieFile = await getCookieFile();
   const cookieArgs = cookieFile ? ["--cookies", cookieFile] : [];
-
   const poArgs = getPoTokenArgs();
+
+  // Try last known-good combo first
+  if (lastWinner) {
+    const { proxyArgs, client } = lastWinner;
+    const proxyKey = proxyArgs[1] ?? "direct";
+    if (!isProxyBotBlocked(proxyKey)) {
+      console.log(`[YouTube] download: trying last winner ${client}+${proxyKey}`);
+      const args = [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs, "-o", outPath];
+      const result = await spawnToFileWithTimeout(args, timeoutMs);
+      if (result.code === 0) return result;
+      if (isBotBlock(result.stderr)) { markBotBlocked(proxyKey); lastWinner = null; }
+    } else {
+      lastWinner = null;
+    }
+  }
+
   const proxyList = [...proxies.map(p => ["--proxy", p] as string[]), [] as string[]];
 
   for (const proxyArgs of proxyList) {
+    const proxyKey = proxyArgs[1] ?? "direct";
+    if (isProxyBotBlocked(proxyKey)) continue;
     for (const client of CLIENTS) {
-      const label = `${client}${proxyArgs.length ? "+proxy" : "+direct"}`;
+      const label = `${client}+${proxyKey}`;
       const args = [...BASE_ARGS, "--extractor-args", `youtube:player_client=${client}`, ...poArgs, ...proxyArgs, ...cookieArgs, ...extraArgs, "-o", outPath];
 
       console.log(`[YouTube] download ${label}...`);
@@ -199,8 +251,11 @@ async function runSequential(
       console.log(`[YouTube] ${label} exit: ${result.code}`);
       if (result.stderr) console.log(`[YouTube] ${label} stderr:`, result.stderr.slice(0, 300));
 
-      if (result.code === 0) return result;
-      if (isBotBlock(result.stderr)) break; // skip remaining clients, try next proxy
+      if (result.code === 0) {
+        lastWinner = { proxyArgs, client };
+        return result;
+      }
+      if (isBotBlock(result.stderr)) { markBotBlocked(proxyKey); break; }
     }
   }
 
