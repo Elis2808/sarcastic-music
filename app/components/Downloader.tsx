@@ -43,8 +43,22 @@ export default function Downloader() {
         @keyframes btn-sweep {
           to { --sweep-angle: 360deg; }
         }
-        .btn-sweeping {
-          background: conic-gradient(from var(--sweep-angle), #C9A84C 0deg, #C9A84C 90deg, transparent 120deg, transparent 340deg, #C9A84C 360deg);
+        .btn-sweep-wrapper {
+          position: relative;
+          border-radius: 0.75rem;
+          padding: 3px;
+          background: #111;
+        }
+        .btn-sweep-wrapper::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 0.75rem;
+          padding: 3px;
+          background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg);
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
           animation: btn-sweep 1.4s linear infinite;
         }
       `;
@@ -123,8 +137,7 @@ export default function Downloader() {
           placeholder={PLATFORMS.find(p => p.name === selectedPlatform)?.placeholder}
           className="flex-1 px-4 py-3 rounded-xl bg-black border border-gray-600 text-white outline-none focus:ring-2 focus:ring-[#C9A84C]"
         />
-        <div className={`rounded-xl p-[3px] max-sm:w-full ${ytLoading ? "btn-sweeping bg-black" : "bg-[#C9A84C]"}`}
-          style={ytLoading ? { backgroundOrigin: "border-box" } : {}}>
+        <div className={`max-sm:w-full ${ytLoading ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-[#C9A84C]"}`}>
           <button
             onClick={fetchInfo}
             disabled={ytLoading}
