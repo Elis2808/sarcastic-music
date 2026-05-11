@@ -46,6 +46,29 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [dictSearch, lookupWord]);
 
+  useEffect(() => {
+    const id = "btn-sweep-style";
+    if (!document.getElementById(id)) {
+      const style = document.createElement("style");
+      style.id = id;
+      style.textContent = `
+        @property --sweep-angle {
+          syntax: "<angle>";
+          initial-value: 0deg;
+          inherits: false;
+        }
+        @keyframes btn-sweep {
+          to { --sweep-angle: 360deg; }
+        }
+        .btn-sweeping {
+          background: conic-gradient(from var(--sweep-angle), #C9A84C 0deg, transparent 70deg, transparent 290deg, #C9A84C 360deg);
+          animation: btn-sweep 1.2s linear infinite;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
   // Scroll to last clicked word when returning to rhyme page
   useEffect(() => {
     if (activePage === "rhyme" && lastClickedWord && lastClickedRef.current) {
@@ -410,21 +433,15 @@ export default function Home() {
               placeholder={PLATFORMS.find(p => p.name === selectedPlatform)?.placeholder}
               className="flex-1 px-4 py-3 rounded-xl bg-black border border-gray-600 text-white outline-none focus:ring-2 focus:ring-[#C9A84C]"
             />
-            <button
-              onClick={fetchYtInfo}
-              disabled={ytLoading}
-              className="px-6 py-3 rounded-xl bg-black border border-[#C9A84C] hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all duration-200 ease-in-out shadow-lg hover:shadow-[0_0_20px_rgba(201,168,76,0.4)] outline-none focus:ring-2 focus:ring-[#C9A84C] flex items-center justify-center gap-2 max-sm:w-full"
-            >
-              {ytLoading ? (
-                <>
-                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                  </svg>
-                  Converting...
-                </>
-              ) : "Convert"}
-            </button>
+            <div className={`rounded-xl p-[2px] max-sm:w-full ${ytLoading ? "btn-sweeping" : "bg-[#C9A84C]"}`}>
+              <button
+                onClick={fetchYtInfo}
+                disabled={ytLoading}
+                className="px-6 py-3 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2 w-full"
+              >
+                {ytLoading ? <span className="text-[#C9A84C]">Converting...</span> : "Convert"}
+              </button>
+            </div>
           </div>
 
           {ytError && (
