@@ -75,7 +75,7 @@ async function getCookieArgs(): Promise<string[]> {
     if (!b64) { cookieFilePath = null; }
     else {
       try {
-        cookieFilePath = join(tmpdir(), "yt-cookies.txt");
+        cookieFilePath = join(/*turbopackIgnore: true*/ tmpdir(), "yt-cookies.txt");
         await writeFile(cookieFilePath, Buffer.from(b64, "base64").toString("utf-8"));
       } catch { cookieFilePath = null; }
     }
@@ -232,15 +232,15 @@ export async function POST(request: NextRequest) {
   console.log(`[YouTube] POST download: ${url} [${format}] (active jobs: ${activeJobs})`);
 
   try {
-    tmpDir = await mkdtemp(join(tmpdir(), "yt-"));
+    tmpDir = await mkdtemp(join(/*turbopackIgnore: true*/ tmpdir(), "yt-"));
   } catch (err: any) {
     activeJobs--;
     console.error("[YouTube] mkdtemp failed:", err.message);
     return new Response("Server error: could not create temp dir", { status: 500 });
   }
 
-  const outPath = join(tmpDir, `download.%(ext)s`);
-  const finalPath = join(tmpDir, `download.${format}`);
+  const outPath = join(/*turbopackIgnore: true*/ tmpDir, `download.%(ext)s`);
+  const finalPath = join(/*turbopackIgnore: true*/ tmpDir, `download.${format}`);
 
   try {
     const formatArg = format === "mp3" ? "bestaudio/best" : "best[ext=mp4]/best";
