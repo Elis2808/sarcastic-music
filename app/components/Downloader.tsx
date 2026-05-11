@@ -163,20 +163,24 @@ export default function Downloader() {
             <p className="text-white font-semibold text-sm truncate">{ytInfo.title}</p>
             <p className="text-gray-400 text-xs mt-1">{ytInfo.author} · {formatDuration(ytInfo.lengthSeconds)}</p>
             <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => handleDownload("mp3")}
-                disabled={ytDownloading !== null}
-                className="px-4 py-2 rounded-xl bg-black border border-[#C9A84C] hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 shadow hover:shadow-[0_0_12px_rgba(201,168,76,0.4)] outline-none focus:ring-2 focus:ring-[#C9A84C]"
-              >
-                {ytDownloading === "mp3" ? "Processing..." : "Download MP3"}
-              </button>
-              <button
-                onClick={() => handleDownload("mp4")}
-                disabled={ytDownloading !== null}
-                className="px-4 py-2 rounded-xl bg-black border border-[#C9A84C] hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 shadow hover:shadow-[0_0_12px_rgba(201,168,76,0.4)] outline-none focus:ring-2 focus:ring-[#C9A84C]"
-              >
-                {ytDownloading === "mp4" ? "Processing..." : "Download MP4"}
-              </button>
+              <div className={ytDownloading === "mp3" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-[#C9A84C]"}>
+                <button
+                  onClick={() => handleDownload("mp3")}
+                  disabled={ytDownloading !== null}
+                  className="px-4 py-2 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
+                >
+                  {ytDownloading === "mp3" ? <span className="text-[#C9A84C]">Processing...</span> : "Download MP3"}
+                </button>
+              </div>
+              <div className={ytDownloading === "mp4" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-[#C9A84C]"}>
+                <button
+                  onClick={() => handleDownload("mp4")}
+                  disabled={ytDownloading !== null}
+                  className="px-4 py-2 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
+                >
+                  {ytDownloading === "mp4" ? <span className="text-[#C9A84C]">Processing...</span> : "Download MP4"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
