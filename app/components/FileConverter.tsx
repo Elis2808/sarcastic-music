@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 export default function FileConverter() {
   const [activeCategory, setActiveCategory] = useState<"images" | "documents" | "audio" | "video">("images");
@@ -14,6 +14,29 @@ export default function FileConverter() {
   const [pdfTotalPages, setPdfTotalPages] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const id = "btn-sweep-style";
+    if (!document.getElementById(id)) {
+      const style = document.createElement("style");
+      style.id = id;
+      style.textContent = `
+        @property --sweep-angle {
+          syntax: "<angle>";
+          initial-value: 0deg;
+          inherits: false;
+        }
+        @keyframes btn-sweep {
+          to { --sweep-angle: 360deg; }
+        }
+        .btn-sweeping {
+          background: conic-gradient(from var(--sweep-angle), #C9A84C 0deg, transparent 70deg, transparent 290deg, #C9A84C 360deg);
+          animation: btn-sweep 1.2s linear infinite;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   const CATEGORIES = {
     images: {
@@ -537,7 +560,7 @@ export default function FileConverter() {
           )}
 
           {/* Convert Button */}
-          <div className={`relative mt-6 w-full rounded-xl p-[2px] ${converting ? "btn-border-sweep" : "bg-[#C9A84C]"}`}>
+          <div className={`relative mt-6 w-full rounded-xl p-[2px] ${converting ? "btn-sweeping" : "bg-[#C9A84C]"}`}>
             <button
               onClick={convertFiles}
               disabled={converting || files.length === 0}
