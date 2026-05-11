@@ -44,8 +44,8 @@ export default function Downloader() {
           to { --sweep-angle: 360deg; }
         }
         .btn-sweeping {
-          background: conic-gradient(from var(--sweep-angle), #C9A84C 0deg, #C9A84C 160deg, #ffe599 168deg, #ffffff 175deg, #ffe599 182deg, #C9A84C 190deg, #C9A84C 360deg);
-          animation: btn-sweep 1.8s linear infinite;
+          background: conic-gradient(from var(--sweep-angle), #C9A84C 0deg, #C9A84C 90deg, transparent 120deg, transparent 340deg, #C9A84C 360deg);
+          animation: btn-sweep 1.4s linear infinite;
         }
       `;
       document.head.appendChild(style);
@@ -123,7 +123,8 @@ export default function Downloader() {
           placeholder={PLATFORMS.find(p => p.name === selectedPlatform)?.placeholder}
           className="flex-1 px-4 py-3 rounded-xl bg-black border border-gray-600 text-white outline-none focus:ring-2 focus:ring-[#C9A84C]"
         />
-        <div className={`rounded-xl p-[3px] max-sm:w-full ${ytLoading ? "btn-sweeping" : "bg-[#C9A84C]"}`}>
+        <div className={`rounded-xl p-[3px] max-sm:w-full ${ytLoading ? "btn-sweeping bg-black" : "bg-[#C9A84C]"}`}
+          style={ytLoading ? { backgroundOrigin: "border-box" } : {}}>
           <button
             onClick={fetchInfo}
             disabled={ytLoading}
