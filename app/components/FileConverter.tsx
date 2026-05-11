@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 export default function FileConverter() {
   const [activeCategory, setActiveCategory] = useState<"images" | "documents" | "audio" | "video">("images");
@@ -14,6 +14,43 @@ export default function FileConverter() {
   const [pdfTotalPages, setPdfTotalPages] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const id = "btn-sweep-style";
+    if (!document.getElementById(id)) {
+      const style = document.createElement("style");
+      style.id = id;
+      style.textContent = `
+        @property --sweep-angle {
+          syntax: "<angle>";
+          initial-value: 0deg;
+          inherits: false;
+        }
+        @keyframes btn-sweep {
+          to { --sweep-angle: 360deg; }
+        }
+        .btn-sweep-wrapper {
+          position: relative;
+          border-radius: 0.75rem;
+          padding: 3px;
+          background: #111;
+        }
+        .btn-sweep-wrapper::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 0.75rem;
+          padding: 3px;
+          background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg);
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          animation: btn-sweep 1.4s linear infinite;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   const CATEGORIES = {
     images: {
@@ -537,23 +574,22 @@ export default function FileConverter() {
           )}
 
           {/* Convert Button */}
-          <button
-            onClick={convertFiles}
-            disabled={converting || files.length === 0}
-            className="w-full mt-6 px-6 py-4 rounded-xl bg-black border border-[#C9A84C] hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all duration-200 shadow-lg hover:shadow-[#C9A84C]/30 flex items-center justify-center gap-3 outline-none focus:ring-2 focus:ring-[#C9A84C]"
-          >
-            {converting ? (
-              <>
-                <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
-                Converting...
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5 text-[#C9A84C]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                Convert to {currentConversion.label.split(" → ")[1] || "Output"}
-              </>
-            )}
-          </button>
+          <div className={`w-full mt-6 ${converting ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-[#C9A84C]"}`}>
+            <button
+              onClick={convertFiles}
+              disabled={converting || files.length === 0}
+              className="w-full px-6 py-4 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all duration-200 flex items-center justify-center gap-3 outline-none"
+            >
+              {converting ? (
+                <span className="text-[#C9A84C]">Converting...</span>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 text-[#C9A84C]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Convert to {currentConversion.label.split(" → ")[1] || "Output"}
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
     </div>

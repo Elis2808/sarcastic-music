@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 type StemType = "no_vocals" | "vocals";
 
@@ -10,6 +10,43 @@ export default function VoiceRemover() {
   const [processing, setProcessing] = useState<StemType | null>(null);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const id = "btn-sweep-style";
+    if (!document.getElementById(id)) {
+      const style = document.createElement("style");
+      style.id = id;
+      style.textContent = `
+        @property --sweep-angle {
+          syntax: "<angle>";
+          initial-value: 0deg;
+          inherits: false;
+        }
+        @keyframes btn-sweep {
+          to { --sweep-angle: 360deg; }
+        }
+        .btn-sweep-wrapper {
+          position: relative;
+          border-radius: 0.75rem;
+          padding: 3px;
+          background: #111;
+        }
+        .btn-sweep-wrapper::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 0.75rem;
+          padding: 3px;
+          background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg);
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          animation: btn-sweep 1.4s linear infinite;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   const handleFile = useCallback((f: File) => {
     setFile(f);
@@ -109,51 +146,43 @@ export default function VoiceRemover() {
         <div className="mt-8 flex flex-col items-center gap-4 w-full max-w-xs">
           <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Download as</p>
 
-          <button
-            onClick={() => download("no_vocals")}
-            disabled={processing !== null}
-            className="w-full px-6 py-4 rounded-xl bg-black border border-[#C9A84C] hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all duration-200 shadow-lg hover:shadow-[#C9A84C]/30 flex items-center justify-center gap-3 outline-none focus:ring-2 focus:ring-[#C9A84C]"
-          >
-            {processing === "no_vocals" ? (
-              <>
-                <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                </svg>
-                Processing…
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5 text-[#C9A84C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                </svg>
-                Instrumental (No Vocals)
-              </>
-            )}
-          </button>
+          <div className={`w-full ${processing === "no_vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-[#C9A84C]"}`}>
+            <button
+              onClick={() => download("no_vocals")}
+              disabled={processing !== null}
+              className="w-full px-6 py-4 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all duration-200 flex items-center justify-center gap-3 outline-none"
+            >
+              {processing === "no_vocals" ? (
+                <span className="text-[#C9A84C]">Processing…</span>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 text-[#C9A84C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
+                  Instrumental (No Vocals)
+                </>
+              )}
+            </button>
+          </div>
 
-          <button
-            onClick={() => download("vocals")}
-            disabled={processing !== null}
-            className="w-full px-6 py-4 rounded-xl bg-black border border-gray-600 hover:border-gray-400 hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all duration-200 flex items-center justify-center gap-3 outline-none focus:ring-2 focus:ring-[#C9A84C]"
-          >
-            {processing === "vocals" ? (
-              <>
-                <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                </svg>
-                Processing…
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-                Vocals Only
-              </>
-            )}
-          </button>
+          <div className={`w-full ${processing === "vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-600"}`}>
+            <button
+              onClick={() => download("vocals")}
+              disabled={processing !== null}
+              className="w-full px-6 py-4 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all duration-200 flex items-center justify-center gap-3 outline-none"
+            >
+              {processing === "vocals" ? (
+                <span className="text-[#C9A84C]">Processing…</span>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                  Vocals Only
+                </>
+              )}
+            </button>
+          </div>
 
           <p className="text-gray-600 text-xs mt-2 text-center">Processing may take 1–3 minutes depending on song length</p>
         </div>
