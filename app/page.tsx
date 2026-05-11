@@ -61,7 +61,7 @@ export default function Home() {
           to { --sweep-angle: 360deg; }
         }
         .btn-sweeping {
-          background: conic-gradient(from var(--sweep-angle), #C9A84C 0deg, #C9A84C 60deg, #fff9c4 80deg, #ffe066 90deg, #fff9c4 100deg, #C9A84C 120deg, #C9A84C 360deg);
+          background: conic-gradient(from var(--sweep-angle), #C9A84C 0deg, #C9A84C 170deg, #ffffff 180deg, #fffbe6 185deg, #ffffff 190deg, #C9A84C 200deg, #C9A84C 360deg);
           animation: btn-sweep 1.4s linear infinite;
         }
       `;
