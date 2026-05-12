@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     await writeFile(audioPath, Buffer.from(bytes));
     await mkdir(outDir, { recursive: true });
 
-    const model = "htdemucs";
+    const model = "htdemucs_ft";
     const demucs = process.env.DEMUCS_PATH || "demucs";
 
     console.log(`[separate] Running demucs model=${model} stem=${stem}`);

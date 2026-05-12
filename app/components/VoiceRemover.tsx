@@ -146,7 +146,7 @@ export default function VoiceRemover() {
         <div className="mt-8 flex flex-col items-center gap-4 w-full max-w-xs">
           <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Download as</p>
 
-          <div className={`w-full ${processing === "no_vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-[#C9A84C]"}`}>
+          <div className={`w-full ${processing === "no_vocals" ? "btn-sweep-wrapper" : processing === "vocals" ? "rounded-xl p-[3px] bg-gray-700" : "rounded-xl p-[3px] bg-[#C9A84C]"}`}>
             <button
               onClick={() => download("no_vocals")}
               disabled={processing !== null}
@@ -165,7 +165,7 @@ export default function VoiceRemover() {
             </button>
           </div>
 
-          <div className={`w-full ${processing === "vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-600"}`}>
+          <div className={`w-full ${processing === "vocals" ? "btn-sweep-wrapper" : processing === "no_vocals" ? "rounded-xl p-[3px] bg-gray-700" : "rounded-xl p-[3px] bg-gray-600"}`}>
             <button
               onClick={() => download("vocals")}
               disabled={processing !== null}
