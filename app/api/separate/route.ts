@@ -9,7 +9,7 @@ import { existsSync } from "fs";
 export const runtime = "nodejs";
 const execFileAsync = promisify(execFile);
 
-const SONG_SPLITTER_DISABLED = true;
+const SONG_SPLITTER_DISABLED = false;
 
 let _separationBusy = false;
 
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     console.log(`[separate] Running demucs model=${model} stem=${stem}`);
     const { stdout, stderr } = await execFileAsync(
       demucs,
-      ["-n", model, "--two-stems", "vocals", "--jobs", "1", "--mp3", "--mp3-bitrate", "256", "-o", outDir, audioPath],
+      ["-n", model, "--two-stems", "vocals", "--jobs", "2", "--mp3", "--mp3-bitrate", "256", "-o", outDir, audioPath],
       { timeout: 600000, encoding: "utf-8" }
     );
     if (stderr) console.error("[separate] stderr:", stderr.slice(0, 300));
