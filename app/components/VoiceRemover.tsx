@@ -86,8 +86,10 @@ export default function VoiceRemover() {
       if (!startRes.ok) throw new Error(startData.error || "Failed to start processing");
       const { jobId } = startData;
 
-      // Poll until done (survives tab switches)
+      // Poll until done (survives tab switches), timeout after 8 min
+      const deadline = Date.now() + 8 * 60 * 1000;
       while (true) {
+        if (Date.now() > deadline) throw new Error("Processing timed out. Please try again.");
         await new Promise(r => setTimeout(r, 4000));
         const pollRes = await fetch(`/api/separate?id=${jobId}`);
         const contentType = pollRes.headers.get("content-type") ?? "";

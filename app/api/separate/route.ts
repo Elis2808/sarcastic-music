@@ -46,15 +46,18 @@ async function runSeparation(jobId: string, audioPath: string, outDir: string, s
       ["-n", model, "--two-stems", "vocals", "--jobs", "1", "--mp3", "--mp3-bitrate", "256", "-o", outDir, audioPath],
       { timeout: 600000, encoding: "utf-8" }
     );
-    if (stderr) console.error(`[separate:${jobId}] stderr:`, stderr.slice(0, 300));
+    if (stderr) console.error(`[separate:${jobId}] stderr:`, stderr.slice(0, 600));
 
     const base = basename(audioPath, extname(audioPath));
     const wantedStem = stem === "no_vocals" ? "no_vocals" : "vocals";
     const stemPath = join(outDir, model, base, `${wantedStem}.mp3`);
 
+    console.log(`[separate:${jobId}] Looking for stem at: ${stemPath}`);
+    const { stdout: lsAll } = await execFileAsync("find", [outDir, "-type", "f"], { encoding: "utf-8" }).catch(() => ({ stdout: "" }));
+    console.log(`[separate:${jobId}] Files in outDir: ${lsAll.trim() || "none"}`);
+
     if (!existsSync(stemPath)) {
-      const { stdout: lsOut } = await execFileAsync("find", [outDir, "-name", "*.mp3"], { encoding: "utf-8" }).catch(() => ({ stdout: "" }));
-      throw new Error(`Output not found. Available: ${lsOut.trim() || "none"}`);
+      throw new Error(`Output not found at ${stemPath}. Files: ${lsAll.trim() || "none"}`);
     }
 
     job.resultPath = stemPath;

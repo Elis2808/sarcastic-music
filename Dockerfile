@@ -50,6 +50,7 @@ RUN printf '%s\n' \
     'os.environ["MKL_NUM_THREADS"] = "1"' \
     'try:' \
     '    from demucs.pretrained import get_model' \
+    '    get_model("htdemucs")' \
     '    get_model("htdemucs_ft")' \
     '    print("htdemucs model downloaded successfully")' \
     'except Exception as e:' \
