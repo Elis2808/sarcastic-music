@@ -74,21 +74,31 @@ export default function VoiceRemover() {
       formData.append("file", file);
       formData.append("stem", stem);
 
-      const res = await fetch("/api/separate", { method: "POST", body: formData });
+      // Start the job
+      const startRes = await fetch("/api/separate", { method: "POST", body: formData });
+      const startData = await startRes.json();
+      if (!startRes.ok) throw new Error(startData.error || "Failed to start processing");
+      const { jobId } = startData;
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Processing failed");
+      // Poll until done (survives tab switches)
+      while (true) {
+        await new Promise(r => setTimeout(r, 4000));
+        const pollRes = await fetch(`/api/separate?id=${jobId}`);
+        if (pollRes.headers.get("content-type")?.includes("audio")) {
+          const blob = await pollRes.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${file.name.replace(/\.[^.]+$/, "")}_${stem === "no_vocals" ? "instrumental" : "vocals"}.mp3`;
+          a.click();
+          URL.revokeObjectURL(url);
+          break;
+        }
+        const pollData = await pollRes.json().catch(() => ({}));
+        if (!pollRes.ok) throw new Error(pollData.error || "Processing failed");
+        if (pollData.status === "error") throw new Error(pollData.error || "Processing failed");
+        // status is "pending" or "processing" — keep polling
       }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const baseName = file.name.replace(/\.[^.]+$/, "");
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${baseName}_${stem === "no_vocals" ? "instrumental" : "vocals"}.mp3`;
-      a.click();
-      URL.revokeObjectURL(url);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Processing failed.");
     } finally {
