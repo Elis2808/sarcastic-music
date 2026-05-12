@@ -43,7 +43,7 @@ async function runSeparation(jobId: string, audioPath: string, outDir: string, s
     console.log(`[separate:${jobId}] Running demucs model=${model} stem=${stem}`);
     const { stderr } = await execFileAsync(
       demucs,
-      ["-n", model, "--two-stems", "vocals", "--jobs", "2", "--mp3", "--mp3-bitrate", "256", "-o", outDir, audioPath],
+      ["-n", model, "--two-stems", "vocals", "--jobs", "1", "--mp3", "--mp3-bitrate", "256", "-o", outDir, audioPath],
       { timeout: 600000, encoding: "utf-8" }
     );
     if (stderr) console.error(`[separate:${jobId}] stderr:`, stderr.slice(0, 300));
@@ -67,6 +67,9 @@ async function runSeparation(jobId: string, audioPath: string, outDir: string, s
     job.error = err.message || "Separation failed";
   } finally {
     unlink(audioPath).catch(() => {});
+    if (jobs.get(jobId)?.status === "error") {
+      import("fs").then(fs => fs.rmSync(outDir, { recursive: true, force: true })).catch(() => {});
+    }
   }
 }
 
@@ -118,7 +121,6 @@ export async function POST(request: NextRequest) {
   // Fire and forget — runs in background, client polls for status
   runSeparation(jobId, audioPath, outDir, stem, originalName).finally(() => {
     _activeJobs--;
-    import("fs").then(fs => fs.rmSync(outDir, { recursive: true, force: true })).catch(() => {});
   });
 
   return Response.json({ jobId });
@@ -136,7 +138,9 @@ export async function GET(request: NextRequest) {
     const audioBuffer = await readFile(job.resultPath).catch(() => null);
     if (!audioBuffer) return Response.json({ error: "Result file missing" }, { status: 500 });
     // Clean up after serving
+    const resultDir = job.resultPath.split("/").slice(0, -3).join("/");
     unlink(job.resultPath).catch(() => {});
+    import("fs").then(fs => fs.rmSync(resultDir, { recursive: true, force: true })).catch(() => {});
     jobs.delete(jobId);
     return new Response(audioBuffer, {
       headers: {
