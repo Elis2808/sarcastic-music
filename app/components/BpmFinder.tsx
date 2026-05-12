@@ -128,7 +128,7 @@ export default function BpmFinder() {
         <div className="mt-8 flex items-center justify-center">
           <div className="btn-sweep-wrapper">
             <div className="px-6 py-3 rounded-[10px] bg-black text-[#C9A84C] text-sm font-medium">
-              Analysing File…
+              Analyzing File…
             </div>
           </div>
         </div>
