@@ -70,14 +70,15 @@ async function runSeparation(jobId: string, audioPath: string, outDir: string, s
   }
 }
 
-let _separationBusy = false;
+const MAX_CONCURRENT = 2;
+let _activeJobs = 0;
 
 // POST /api/separate — start a job, return jobId immediately
 export async function POST(request: NextRequest) {
   pruneJobs();
 
-  if (_separationBusy) {
-    return Response.json({ error: "Server busy processing another request, try again shortly" }, { status: 429 });
+  if (_activeJobs >= MAX_CONCURRENT) {
+    return Response.json({ error: "Server is busy, please try again in a moment" }, { status: 429 });
   }
 
   let formData: FormData;
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "No file provided" }, { status: 400 });
   }
 
-  _separationBusy = true;
+  _activeJobs++;
 
   const jobId = randomUUID();
   const ext = (file as File).name?.split(".").pop() || "mp3";
@@ -109,14 +110,14 @@ export async function POST(request: NextRequest) {
     await writeFile(audioPath, Buffer.from(bytes));
     await mkdir(outDir, { recursive: true });
   } catch (err: any) {
-    _separationBusy = false;
+    _activeJobs--;
     jobs.delete(jobId);
     return Response.json({ error: "Failed to save file" }, { status: 500 });
   }
 
   // Fire and forget — runs in background, client polls for status
   runSeparation(jobId, audioPath, outDir, stem, originalName).finally(() => {
-    _separationBusy = false;
+    _activeJobs--;
     import("fs").then(fs => fs.rmSync(outDir, { recursive: true, force: true })).catch(() => {});
   });
 
