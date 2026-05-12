@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 type BpmResult = {
   bpm: number;
@@ -23,6 +23,43 @@ export default function BpmFinder() {
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const id = "btn-sweep-style";
+    if (!document.getElementById(id)) {
+      const style = document.createElement("style");
+      style.id = id;
+      style.textContent = `
+        @property --sweep-angle {
+          syntax: "<angle>";
+          initial-value: 0deg;
+          inherits: false;
+        }
+        @keyframes btn-sweep {
+          to { --sweep-angle: 360deg; }
+        }
+        .btn-sweep-wrapper {
+          position: relative;
+          border-radius: 0.75rem;
+          padding: 3px;
+          background: #111;
+        }
+        .btn-sweep-wrapper::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 0.75rem;
+          padding: 3px;
+          background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg);
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          animation: btn-sweep 1.4s linear infinite;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   const processFile = useCallback(async (file: File) => {
     setLoading(true);
@@ -88,12 +125,12 @@ export default function BpmFinder() {
 
       {/* Loading */}
       {loading && (
-        <div className="mt-8 flex flex-col items-center gap-3">
-          <svg className="animate-spin w-8 h-8 text-[#C9A84C]" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-          </svg>
-          <p className="text-gray-400 text-sm">Analysing <span className="text-white">{fileName}</span>…</p>
+        <div className="mt-8 flex items-center justify-center">
+          <div className="btn-sweep-wrapper">
+            <div className="px-6 py-3 rounded-[10px] bg-black text-[#C9A84C] text-sm font-medium">
+              Analysing File…
+            </div>
+          </div>
         </div>
       )}
 
