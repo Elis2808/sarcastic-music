@@ -136,6 +136,14 @@ export default function VoiceRemover() {
         if (!pollRes.ok) throw new Error(pollData.error || "Processing failed");
         if (pollData.status === "error") throw new Error(pollData.error || "Processing failed");
         if (typeof pollData.progress === "number") setDemucsProgress(pollData.progress);
+        if (pollData.downloadUrl) {
+          // Replicate URL — download directly from Replicate, instant
+          const a = document.createElement("a");
+          a.href = pollData.downloadUrl;
+          a.download = pollData.filename ?? `${file.name.replace(/\.[^.]+$/, "")}_${stem === "no_vocals" ? "instrumental" : "vocals"}.mp3`;
+          a.click();
+          break;
+        }
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Processing failed.");

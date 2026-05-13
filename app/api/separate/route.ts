@@ -218,27 +218,25 @@ export async function GET(request: NextRequest) {
 
   if (job.status === "done" && job.stemUrl && job.dlName) {
     await deleteJob(jobId);
-    let audioBuffer: Buffer;
-    if (job.stemUrl.startsWith("file://")) {
-      // Locally mixed file
-      const localPath = job.stemUrl.slice(7);
-      audioBuffer = await readFile(localPath).catch(() => Buffer.alloc(0));
-      unlink(localPath).catch(() => {});
-    } else {
-      // Remote Replicate URL — proxy through our server
-      const upstream = await fetch(job.stemUrl);
-      if (!upstream.ok) return Response.json({ error: "Failed to fetch result from Replicate" }, { status: 502 });
-      audioBuffer = Buffer.from(await upstream.arrayBuffer());
-    }
-    if (!audioBuffer.length) return Response.json({ error: "Result file missing" }, { status: 500 });
     const safeFilename = job.dlName.replace(/[^\x00-\x7F]/g, "").replace(/[^a-zA-Z0-9._\-]/g, "_") || "download.mp3";
-    return new Response(new Uint8Array(audioBuffer), {
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Content-Disposition": `attachment; filename="${safeFilename}"`,
-        "Content-Length": String(audioBuffer.length),
-      },
-    });
+
+    if (job.stemUrl.startsWith("file://")) {
+      // Locally mixed instrumental — must proxy since it's on disk
+      const localPath = job.stemUrl.slice(7);
+      const audioBuffer = await readFile(localPath).catch(() => Buffer.alloc(0));
+      unlink(localPath).catch(() => {});
+      if (!audioBuffer.length) return Response.json({ error: "Result file missing" }, { status: 500 });
+      return new Response(new Uint8Array(audioBuffer), {
+        headers: {
+          "Content-Type": "audio/mpeg",
+          "Content-Disposition": `attachment; filename="${safeFilename}"`,
+          "Content-Length": String(audioBuffer.length),
+        },
+      });
+    }
+
+    // Remote Replicate URL — redirect browser directly for instant download
+    return Response.json({ downloadUrl: job.stemUrl, filename: safeFilename });
   }
 
   if (job.status === "error") {
