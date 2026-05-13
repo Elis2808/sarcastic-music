@@ -3,7 +3,11 @@ import { writeFile, unlink, readFile, mkdir, readdir } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { randomUUID } from "crypto";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import Replicate from "replicate";
+
+const execFileAsync = promisify(execFile);
 
 export const runtime = "nodejs";
 
@@ -68,11 +72,28 @@ const MIME_MAP: Record<string, string> = {
   flac: "audio/flac", ogg: "audio/ogg", aac: "audio/aac", webm: "audio/webm",
 };
 
+// Extract a plain URL string from a Replicate FileOutput object or string
+async function resolveUrl(val: any): Promise<string | null> {
+  if (!val) return null;
+  if (typeof val === "string") return val;
+  if (typeof val.url === "function") return String(await val.url());
+  if (typeof val.url === "string") return val.url;
+  return null;
+}
+
+// Download a URL to a local temp file, return the path
+async function downloadToTmp(url: string, dest: string): Promise<void> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to download ${url}: ${res.status}`);
+  await writeFile(dest, Buffer.from(await res.arrayBuffer()));
+}
+
 async function runSeparation(jobId: string, audioPath: string, stem: string, originalName: string) {
   await writeJob(jobId, { status: "processing", createdAt: Date.now() });
+  const tmpFiles: string[] = [];
   try {
-    // Upload file to Replicate so they can access it
-    console.log(`[separate:${jobId}] Uploading file to Replicate...`);
+    // Upload file to Replicate
+    console.log(`[separate:${jobId}] Uploading to Replicate...`);
     const fileBytes = await readFile(audioPath);
     const ext = audioPath.split(".").pop()?.toLowerCase() ?? "mp3";
     const mime = MIME_MAP[ext] ?? "audio/mpeg";
@@ -80,22 +101,56 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
     const fileUrl = (uploadedFile as any).urls?.get ?? (uploadedFile as any).url;
     console.log(`[separate:${jobId}] Uploaded. Running htdemucs on Replicate GPU...`);
 
-    // Run demucs on Replicate GPU — two_stems=vocals gives us vocals + no_vocals
     const output = await replicate.run("cjwbw/demucs:25a173108cff36ef9f80f854c162d01df9e6528be175794b81158fa03836d953", {
-      input: {
-        audio: fileUrl,
-        model: "htdemucs",
-        two_stems: "vocals",
-      },
+      input: { audio: fileUrl, model: "htdemucs", two_stems: "vocals" },
     }) as any;
 
-    console.log(`[separate:${jobId}] Replicate output:`, JSON.stringify(output).slice(0, 300));
+    console.log(`[separate:${jobId}] Output keys:`, Object.keys(output ?? {}));
 
-    // With two_stems=vocals, output has { vocals: url, no_vocals: url }
-    const wantedKey = stem === "no_vocals" ? "no_vocals" : "vocals";
-    const stemUrl: string = output?.[wantedKey] ?? output?.vocals ?? (typeof output === "string" ? output : null);
+    let stemUrl: string | null = null;
 
-    if (!stemUrl) throw new Error(`No ${wantedKey} URL in Replicate output: ${JSON.stringify(output)}`);
+    if (stem === "vocals") {
+      // Vocals stem — direct from output
+      stemUrl = await resolveUrl(output?.vocals);
+      if (!stemUrl) throw new Error(`No vocals in output: ${JSON.stringify(Object.keys(output ?? {}))}`);
+
+    } else {
+      // Instrumental — try no_vocals key first (if two_stems worked)
+      stemUrl = await resolveUrl(output?.no_vocals);
+
+      if (!stemUrl) {
+        // two_stems not supported — mix bass + drums + other with ffmpeg
+        console.log(`[separate:${jobId}] No no_vocals key — mixing bass+drums+other for instrumental`);
+        const stemKeys = ["bass", "drums", "other"] as const;
+        const localPaths: string[] = [];
+
+        for (const key of stemKeys) {
+          const url = await resolveUrl(output?.[key]);
+          if (!url) continue;
+          const p = join(tmpdir(), `sep-${jobId}-${key}.mp3`);
+          await downloadToTmp(url, p);
+          localPaths.push(p);
+          tmpFiles.push(p);
+        }
+
+        if (localPaths.length === 0) throw new Error("No stems available to build instrumental");
+
+        const mixedPath = join(tmpdir(), `sep-${jobId}-instrumental.mp3`);
+
+        // ffmpeg amix: sum all stems into one file
+        const inputs = localPaths.flatMap(p => ["-i", p]);
+        await execFileAsync("ffmpeg", [
+          "-y", ...inputs,
+          "-filter_complex", `amix=inputs=${localPaths.length}:duration=longest:normalize=0`,
+          "-c:a", "libmp3lame", "-b:a", "256k", mixedPath,
+        ], { timeout: 120000 });
+
+        const dlName = `${originalName}_instrumental.mp3`;
+        await writeJob(jobId, { status: "done", stemUrl: `file://${mixedPath}`, dlName, createdAt: Date.now() });
+        console.log(`[separate:${jobId}] Instrumental mixed locally — done`);
+        return;
+      }
+    }
 
     const dlName = `${originalName}_${stem === "no_vocals" ? "instrumental" : "vocals"}.mp3`;
     await writeJob(jobId, { status: "done", stemUrl, dlName, createdAt: Date.now() });
@@ -105,6 +160,7 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
     await writeJob(jobId, { status: "error", error: err.message || "Separation failed", createdAt: Date.now() });
   } finally {
     unlink(audioPath).catch(() => {});
+    for (const f of tmpFiles) unlink(f).catch(() => {});
   }
 }
 
@@ -162,12 +218,21 @@ export async function GET(request: NextRequest) {
 
   if (job.status === "done" && job.stemUrl && job.dlName) {
     await deleteJob(jobId);
-    // Proxy the file through our server so the browser gets a proper download
-    const upstream = await fetch(job.stemUrl);
-    if (!upstream.ok) return Response.json({ error: "Failed to fetch result from Replicate" }, { status: 502 });
-    const audioBuffer = Buffer.from(await upstream.arrayBuffer());
+    let audioBuffer: Buffer;
+    if (job.stemUrl.startsWith("file://")) {
+      // Locally mixed file
+      const localPath = job.stemUrl.slice(7);
+      audioBuffer = await readFile(localPath).catch(() => Buffer.alloc(0));
+      unlink(localPath).catch(() => {});
+    } else {
+      // Remote Replicate URL — proxy through our server
+      const upstream = await fetch(job.stemUrl);
+      if (!upstream.ok) return Response.json({ error: "Failed to fetch result from Replicate" }, { status: 502 });
+      audioBuffer = Buffer.from(await upstream.arrayBuffer());
+    }
+    if (!audioBuffer.length) return Response.json({ error: "Result file missing" }, { status: 500 });
     const safeFilename = job.dlName.replace(/[^\x00-\x7F]/g, "").replace(/[^a-zA-Z0-9._\-]/g, "_") || "download.mp3";
-    return new Response(audioBuffer, {
+    return new Response(new Uint8Array(audioBuffer), {
       headers: {
         "Content-Type": "audio/mpeg",
         "Content-Disposition": `attachment; filename="${safeFilename}"`,
