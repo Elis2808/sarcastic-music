@@ -195,10 +195,11 @@ export async function GET(request: NextRequest) {
     await deleteJob(jobId);
     unlink(job.resultPath).catch(() => {});
     if (job.outDir) import("fs").then(fs => fs.rmSync(job.outDir!, { recursive: true, force: true })).catch(() => {});
+    const safeFilename = (job.dlName ?? "download.mp3").replace(/[^\x00-\x7F]/g, "").replace(/[^a-zA-Z0-9._\-]/g, "_") || "download.mp3";
     return new Response(audioBuffer, {
       headers: {
         "Content-Type": "audio/mpeg",
-        "Content-Disposition": `attachment; filename="${job.dlName}"`,
+        "Content-Disposition": `attachment; filename="${safeFilename}"`,
         "Content-Length": String(audioBuffer.length),
       },
     });

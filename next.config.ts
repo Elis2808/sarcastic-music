@@ -1,11 +1,13 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const nextConfig: NextConfig & Record<string, any> = {
   experimental: {
     serverActions: {
       bodySizeLimit: "50mb",
     },
   },
+  middlewareClientMaxBodySize: "50mb",
   // Allow ngrok and all external hosts
   allowedDevOrigins: [
     "*.ngrok-free.app",
