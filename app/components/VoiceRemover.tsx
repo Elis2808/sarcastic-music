@@ -104,6 +104,7 @@ export default function VoiceRemover() {
           break;
         }
         const pollData = await pollRes.json().catch(() => ({}));
+        if (pollRes.status === 404) continue; // transient — keep polling
         if (!pollRes.ok) throw new Error(pollData.error || "Processing failed");
         if (pollData.status === "error") throw new Error(pollData.error || "Processing failed");
       }

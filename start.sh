@@ -26,4 +26,4 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
-exec next start -p ${PORT:-3000}
+WEB_CONCURRENCY=1 exec next start -p ${PORT:-3000}
