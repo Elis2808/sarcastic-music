@@ -71,13 +71,14 @@ async function runSeparation(jobId: string, audioPath: string, outDir: string, s
     const model = "htdemucs_ft";
     const demucs = process.env.DEMUCS_PATH || "demucs";
 
-    console.log(`[separate:${jobId}] Running demucs model=${model} stem=${stem}`);
-    const { stderr } = await execFileAsync(
+    console.log(`[separate:${jobId}] Running demucs model=${model} stem=${stem} audio=${audioPath} out=${outDir}`);
+    const { stdout, stderr } = await execFileAsync(
       demucs,
       ["-n", model, "--two-stems", "vocals", "--jobs", "1", "--mp3", "--mp3-bitrate", "256", "-o", outDir, audioPath],
-      { timeout: 600000, encoding: "utf-8" }
+      { timeout: 600000, encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 }
     );
-    if (stderr) console.error(`[separate:${jobId}] stderr:`, stderr.slice(0, 600));
+    if (stdout) console.log(`[separate:${jobId}] stdout:`, stdout.slice(0, 600));
+    if (stderr) console.log(`[separate:${jobId}] stderr:`, stderr.slice(0, 600));
 
     const base = basename(audioPath, extname(audioPath));
     const wantedStem = stem === "no_vocals" ? "no_vocals" : "vocals";
