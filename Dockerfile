@@ -43,24 +43,24 @@ RUN pip3 install --no-cache-dir \
 # Install curl_cffi for yt-dlp browser impersonation (needed for Vimeo etc.)
 RUN pip3 install --no-cache-dir curl_cffi --break-system-packages
 
-# Pre-download htdemucs model weights at build time (prevents runtime download timeout/crash)
+# Pre-download demucs model weights — fail the build if download fails
+ENV XDG_CACHE_HOME=/root/.cache
 RUN printf '%s\n' \
-    'import os' \
+    'import os, sys' \
     'os.environ["OMP_NUM_THREADS"] = "1"' \
     'os.environ["MKL_NUM_THREADS"] = "1"' \
-    'try:' \
-    '    from demucs.pretrained import get_model' \
-    '    get_model("htdemucs")' \
-    '    get_model("htdemucs_ft")' \
-    '    print("htdemucs model downloaded successfully")' \
-    'except Exception as e:' \
-    '    print("Warning: model pre-download failed:", e)' \
+    'from demucs.pretrained import get_model' \
+    'print("Downloading htdemucs...")' \
+    'get_model("htdemucs")' \
+    'print("Downloading htdemucs_ft...")' \
+    'get_model("htdemucs_ft")' \
+    'print("All models downloaded OK")' \
     > /tmp/preload_model.py && python3 /tmp/preload_model.py
 
-# Memory optimization env vars
+# Memory optimization env vars — keep threads low to avoid OOM with 4 workers
 ENV PYTORCH_ENABLE_MPS_FALLBACK=1
-ENV OMP_NUM_THREADS=4
-ENV MKL_NUM_THREADS=4
+ENV OMP_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
 ENV MALLOC_TRIM_THRESHOLD_=100000
 
 COPY . .

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { writeFile, unlink, readFile, mkdir, readdir } from "fs/promises";
 import { join, basename, extname } from "path";
 import { tmpdir } from "os";
-import { execFile } from "child_process";
+import { execFile, spawn } from "child_process";
 import { promisify } from "util";
 import { existsSync } from "fs";
 import { randomUUID } from "crypto";
@@ -82,13 +82,22 @@ async function runSeparation(jobId: string, audioPath: string, outDir: string, s
     if (ffSterr) console.log(`[separate:${jobId}] ffmpeg:`, ffSterr.slice(0, 300));
     console.log(`[separate:${jobId}] WAV ready, running demucs model=${model} stem=${stem}`);
 
-    const { stdout, stderr } = await execFileAsync(
-      demucs,
-      ["-n", model, "--two-stems", "vocals", "--jobs", "1", "--mp3", "--mp3-bitrate", "256", "-o", outDir, wavPath],
-      { timeout: 600000, encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 }
-    );
-    if (stdout) console.log(`[separate:${jobId}] stdout:`, stdout.slice(0, 600));
-    if (stderr) console.log(`[separate:${jobId}] stderr:`, stderr.slice(0, 600));
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn(
+        demucs,
+        ["-n", model, "--two-stems", "vocals", "--jobs", "1", "--mp3", "--mp3-bitrate", "256", "-o", outDir, wavPath],
+        { env: { ...process.env, PYTHONUNBUFFERED: "1" } }
+      );
+      const timer = setTimeout(() => { proc.kill("SIGKILL"); reject(new Error("demucs timed out after 10 min")); }, 600000);
+      proc.stdout.on("data", (d: Buffer) => console.log(`[separate:${jobId}] out:`, d.toString().trim().slice(0, 300)));
+      proc.stderr.on("data", (d: Buffer) => console.log(`[separate:${jobId}] err:`, d.toString().trim().slice(0, 300)));
+      proc.on("close", (code) => {
+        clearTimeout(timer);
+        if (code === 0) resolve();
+        else reject(new Error(`demucs exited with code ${code}`));
+      });
+      proc.on("error", (e) => { clearTimeout(timer); reject(e); });
+    });
 
     const base = basename(wavPath, extname(wavPath));
     const wantedStem = stem === "no_vocals" ? "no_vocals" : "vocals";
