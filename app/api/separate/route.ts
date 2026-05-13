@@ -19,6 +19,7 @@ type JobState = {
   resultPath?: string;
   dlName?: string;
   outDir?: string;
+  progress?: number;
   createdAt: number;
 };
 
@@ -71,7 +72,7 @@ async function runSeparation(jobId: string, audioPath: string, outDir: string, s
   const wavPath = join(tmpdir(), `sep-${jobId}.wav`);
 
   try {
-    const model = "htdemucs_ft";
+    const model = "htdemucs";
     const demucs = process.env.DEMUCS_PATH || "demucs";
 
     console.log(`[separate:${jobId}] Converting to WAV: ${audioPath} -> ${wavPath}`);
@@ -90,7 +91,17 @@ async function runSeparation(jobId: string, audioPath: string, outDir: string, s
       );
       const timer = setTimeout(() => { proc.kill("SIGKILL"); reject(new Error("demucs timed out after 10 min")); }, 600000);
       proc.stdout.on("data", (d: Buffer) => console.log(`[separate:${jobId}] out:`, d.toString().trim().slice(0, 300)));
-      proc.stderr.on("data", (d: Buffer) => console.log(`[separate:${jobId}] err:`, d.toString().trim().slice(0, 300)));
+      proc.stderr.on("data", (d: Buffer) => {
+        const text = d.toString();
+        console.log(`[separate:${jobId}] err:`, text.trim().slice(0, 300));
+        const m = text.match(/(\d+)%/);
+        if (m) {
+          const pct = parseInt(m[1]);
+          readJob(jobId).then(j => {
+            if (j && j.status === "processing") writeJob(jobId, { ...j, progress: pct });
+          }).catch(() => {});
+        }
+      });
       proc.on("close", (code) => {
         clearTimeout(timer);
         if (code === 0) resolve();
@@ -198,5 +209,5 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: job.error || "Separation failed" }, { status: 500 });
   }
 
-  return Response.json({ status: job.status });
+  return Response.json({ status: job.status, progress: job.progress ?? 0 });
 }

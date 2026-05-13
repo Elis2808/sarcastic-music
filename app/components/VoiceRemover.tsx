@@ -9,6 +9,7 @@ export default function VoiceRemover() {
   const [file, setFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState<StemType | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const [demucsProgress, setDemucsProgress] = useState(0);
   const [downloadPct, setDownloadPct] = useState<number | null>(null);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -72,6 +73,7 @@ export default function VoiceRemover() {
     if (!file) return;
     setProcessing(stem);
     setElapsed(0);
+    setDemucsProgress(0);
     setDownloadPct(null);
     setError("");
 
@@ -133,6 +135,7 @@ export default function VoiceRemover() {
         if (pollRes.status === 404) continue;
         if (!pollRes.ok) throw new Error(pollData.error || "Processing failed");
         if (pollData.status === "error") throw new Error(pollData.error || "Processing failed");
+        if (typeof pollData.progress === "number") setDemucsProgress(pollData.progress);
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Processing failed.");
@@ -140,6 +143,7 @@ export default function VoiceRemover() {
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
       setProcessing(null);
       setElapsed(0);
+      setDemucsProgress(0);
       setDownloadPct(null);
     }
   }, [file]);
@@ -201,7 +205,7 @@ export default function VoiceRemover() {
               className="w-full px-6 py-4 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all duration-200 flex items-center justify-center gap-3 outline-none"
             >
               {processing === "no_vocals" ? (
-                <span className="text-[#C9A84C]">{downloadPct !== null ? `Downloading ${downloadPct}%…` : `Processing… ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`}</span>
+                <span className="text-[#C9A84C]">{downloadPct !== null ? `Downloading ${downloadPct}%…` : demucsProgress > 0 ? `Processing… ${demucsProgress}%` : `Processing… ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`}</span>
               ) : (
                 <>
                   <svg className="w-5 h-5 text-[#C9A84C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -220,7 +224,7 @@ export default function VoiceRemover() {
               className="w-full px-6 py-4 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all duration-200 flex items-center justify-center gap-3 outline-none"
             >
               {processing === "vocals" ? (
-                <span className="text-[#C9A84C]">{downloadPct !== null ? `Downloading ${downloadPct}%…` : `Processing… ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`}</span>
+                <span className="text-[#C9A84C]">{downloadPct !== null ? `Downloading ${downloadPct}%…` : demucsProgress > 0 ? `Processing… ${demucsProgress}%` : `Processing… ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`}</span>
               ) : (
                 <>
                   <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
