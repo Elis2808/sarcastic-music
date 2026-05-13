@@ -67,20 +67,30 @@ async function countActiveJobs(): Promise<number> {
 async function runSeparation(jobId: string, audioPath: string, outDir: string, stem: string, originalName: string) {
   await writeJob(jobId, { status: "processing", outDir, createdAt: Date.now() });
 
+  // Convert to WAV first so demucs doesn't have to deal with any format
+  const wavPath = join(tmpdir(), `sep-${jobId}.wav`);
+
   try {
     const model = "htdemucs_ft";
     const demucs = process.env.DEMUCS_PATH || "demucs";
 
-    console.log(`[separate:${jobId}] Running demucs model=${model} stem=${stem} audio=${audioPath} out=${outDir}`);
+    console.log(`[separate:${jobId}] Converting to WAV: ${audioPath} -> ${wavPath}`);
+    const { stderr: ffSterr } = await execFileAsync(
+      "ffmpeg", ["-y", "-i", audioPath, "-ar", "44100", "-ac", "2", wavPath],
+      { timeout: 120000, encoding: "utf-8" }
+    );
+    if (ffSterr) console.log(`[separate:${jobId}] ffmpeg:`, ffSterr.slice(0, 300));
+    console.log(`[separate:${jobId}] WAV ready, running demucs model=${model} stem=${stem}`);
+
     const { stdout, stderr } = await execFileAsync(
       demucs,
-      ["-n", model, "--two-stems", "vocals", "--jobs", "1", "--mp3", "--mp3-bitrate", "256", "-o", outDir, audioPath],
+      ["-n", model, "--two-stems", "vocals", "--jobs", "1", "--mp3", "--mp3-bitrate", "256", "-o", outDir, wavPath],
       { timeout: 600000, encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 }
     );
     if (stdout) console.log(`[separate:${jobId}] stdout:`, stdout.slice(0, 600));
     if (stderr) console.log(`[separate:${jobId}] stderr:`, stderr.slice(0, 600));
 
-    const base = basename(audioPath, extname(audioPath));
+    const base = basename(wavPath, extname(wavPath));
     const wantedStem = stem === "no_vocals" ? "no_vocals" : "vocals";
     const stemPath = join(outDir, model, base, `${wantedStem}.mp3`);
 
@@ -101,6 +111,7 @@ async function runSeparation(jobId: string, audioPath: string, outDir: string, s
     import("fs").then(fs => fs.rmSync(outDir, { recursive: true, force: true })).catch(() => {});
   } finally {
     unlink(audioPath).catch(() => {});
+    unlink(wavPath).catch(() => {});
   }
 }
 
