@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { writeFile, unlink, readFile, mkdir } from "fs/promises";
+import { writeFile, unlink, readFile, mkdir, readdir } from "fs/promises";
 import { join, basename, extname } from "path";
 import { tmpdir } from "os";
 import { execFile } from "child_process";
@@ -10,31 +10,62 @@ import { randomUUID } from "crypto";
 export const runtime = "nodejs";
 const execFileAsync = promisify(execFile);
 
-type JobStatus = "pending" | "processing" | "done" | "error";
-type Job = {
-  status: JobStatus;
+// Filesystem-based job state — works across all worker processes
+const JOB_DIR = join(tmpdir(), "sep-jobs");
+
+type JobState = {
+  status: "pending" | "processing" | "done" | "error";
   error?: string;
   resultPath?: string;
   dlName?: string;
+  outDir?: string;
   createdAt: number;
 };
 
-const jobs = new Map<string, Job>();
+async function ensureJobDir() {
+  await mkdir(JOB_DIR, { recursive: true });
+}
 
-// Clean up jobs older than 30 minutes
-function pruneJobs() {
-  const cutoff = Date.now() - 30 * 60 * 1000;
-  for (const [id, job] of jobs.entries()) {
-    if (job.createdAt < cutoff) {
-      if (job.resultPath) unlink(job.resultPath).catch(() => {});
-      jobs.delete(id);
-    }
+async function writeJob(jobId: string, state: JobState) {
+  await ensureJobDir();
+  await writeFile(join(JOB_DIR, `${jobId}.json`), JSON.stringify(state));
+}
+
+async function readJob(jobId: string): Promise<JobState | null> {
+  try {
+    const raw = await readFile(join(JOB_DIR, `${jobId}.json`), "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return null;
   }
 }
 
+async function deleteJob(jobId: string) {
+  await unlink(join(JOB_DIR, `${jobId}.json`)).catch(() => {});
+}
+
+async function countActiveJobs(): Promise<number> {
+  await ensureJobDir();
+  const files = await readdir(JOB_DIR).catch(() => [] as string[]);
+  let count = 0;
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const f of files) {
+    if (!f.endsWith(".json")) continue;
+    try {
+      const raw = await readFile(join(JOB_DIR, f), "utf-8");
+      const job: JobState = JSON.parse(raw);
+      if (job.createdAt < cutoff) {
+        await unlink(join(JOB_DIR, f)).catch(() => {});
+        continue;
+      }
+      if (job.status === "pending" || job.status === "processing") count++;
+    } catch {}
+  }
+  return count;
+}
+
 async function runSeparation(jobId: string, audioPath: string, outDir: string, stem: string, originalName: string) {
-  const job = jobs.get(jobId)!;
-  job.status = "processing";
+  await writeJob(jobId, { status: "processing", outDir, createdAt: Date.now() });
 
   try {
     const model = "htdemucs_ft";
@@ -60,30 +91,24 @@ async function runSeparation(jobId: string, audioPath: string, outDir: string, s
       throw new Error(`Output not found at ${stemPath}. Files: ${lsAll.trim() || "none"}`);
     }
 
-    job.resultPath = stemPath;
-    job.dlName = `${originalName}_${wantedStem === "no_vocals" ? "instrumental" : "vocals"}.mp3`;
-    job.status = "done";
+    const dlName = `${originalName}_${wantedStem === "no_vocals" ? "instrumental" : "vocals"}.mp3`;
+    await writeJob(jobId, { status: "done", resultPath: stemPath, dlName, outDir, createdAt: Date.now() });
     console.log(`[separate:${jobId}] Done`);
   } catch (err: any) {
     console.error(`[separate:${jobId}] error:`, err.message);
-    job.status = "error";
-    job.error = err.message || "Separation failed";
+    await writeJob(jobId, { status: "error", error: err.message || "Separation failed", outDir, createdAt: Date.now() });
+    import("fs").then(fs => fs.rmSync(outDir, { recursive: true, force: true })).catch(() => {});
   } finally {
     unlink(audioPath).catch(() => {});
-    if (jobs.get(jobId)?.status === "error") {
-      import("fs").then(fs => fs.rmSync(outDir, { recursive: true, force: true })).catch(() => {});
-    }
   }
 }
 
 const MAX_CONCURRENT = 2;
-let _activeJobs = 0;
 
 // POST /api/separate — start a job, return jobId immediately
 export async function POST(request: NextRequest) {
-  pruneJobs();
-
-  if (_activeJobs >= MAX_CONCURRENT) {
+  const active = await countActiveJobs();
+  if (active >= MAX_CONCURRENT) {
     return Response.json({ error: "Server is busy, please try again in a moment" }, { status: 429 });
   }
 
@@ -101,30 +126,25 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "No file provided" }, { status: 400 });
   }
 
-  _activeJobs++;
-
   const jobId = randomUUID();
   const ext = (file as File).name?.split(".").pop() || "mp3";
   const originalName = (file as File).name?.replace(/\.[^.]+$/, "") || "track";
   const audioPath = join(tmpdir(), `sep-${jobId}.${ext}`);
   const outDir = join(tmpdir(), `sep-out-${jobId}`);
 
-  jobs.set(jobId, { status: "pending", createdAt: Date.now() });
+  await writeJob(jobId, { status: "pending", outDir, createdAt: Date.now() });
 
   try {
     const bytes = await file.arrayBuffer();
     await writeFile(audioPath, Buffer.from(bytes));
     await mkdir(outDir, { recursive: true });
-  } catch (err: any) {
-    _activeJobs--;
-    jobs.delete(jobId);
+  } catch {
+    await deleteJob(jobId);
     return Response.json({ error: "Failed to save file" }, { status: 500 });
   }
 
   // Fire and forget — runs in background, client polls for status
-  runSeparation(jobId, audioPath, outDir, stem, originalName).finally(() => {
-    _activeJobs--;
-  });
+  runSeparation(jobId, audioPath, outDir, stem, originalName);
 
   return Response.json({ jobId });
 }
@@ -134,17 +154,15 @@ export async function GET(request: NextRequest) {
   const jobId = request.nextUrl.searchParams.get("id");
   if (!jobId) return Response.json({ error: "Missing id" }, { status: 400 });
 
-  const job = jobs.get(jobId);
+  const job = await readJob(jobId);
   if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
   if (job.status === "done" && job.resultPath && job.dlName) {
     const audioBuffer = await readFile(job.resultPath).catch(() => null);
     if (!audioBuffer) return Response.json({ error: "Result file missing" }, { status: 500 });
-    // Clean up after serving
-    const resultDir = job.resultPath.split("/").slice(0, -3).join("/");
+    await deleteJob(jobId);
     unlink(job.resultPath).catch(() => {});
-    import("fs").then(fs => fs.rmSync(resultDir, { recursive: true, force: true })).catch(() => {});
-    jobs.delete(jobId);
+    if (job.outDir) import("fs").then(fs => fs.rmSync(job.outDir!, { recursive: true, force: true })).catch(() => {});
     return new Response(audioBuffer, {
       headers: {
         "Content-Type": "audio/mpeg",
@@ -154,7 +172,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (job.status === "error") {
-    jobs.delete(jobId);
+    await deleteJob(jobId);
     return Response.json({ error: job.error || "Separation failed" }, { status: 500 });
   }
 
