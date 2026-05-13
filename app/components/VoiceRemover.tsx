@@ -9,6 +9,7 @@ export default function VoiceRemover() {
   const [file, setFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState<StemType | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const [downloadPct, setDownloadPct] = useState<number | null>(null);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -71,6 +72,7 @@ export default function VoiceRemover() {
     if (!file) return;
     setProcessing(stem);
     setElapsed(0);
+    setDownloadPct(null);
     setError("");
 
     timerRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
@@ -86,7 +88,7 @@ export default function VoiceRemover() {
       if (!startRes.ok) throw new Error(startData.error || "Failed to start processing");
       const { jobId } = startData;
 
-      // Poll until done (survives tab switches), timeout after 8 min
+      // Poll until done, timeout after 8 min
       const deadline = Date.now() + 8 * 60 * 1000;
       while (true) {
         if (Date.now() > deadline) throw new Error("Processing timed out. Please try again.");
@@ -94,7 +96,31 @@ export default function VoiceRemover() {
         const pollRes = await fetch(`/api/separate?id=${jobId}`);
         const contentType = pollRes.headers.get("content-type") ?? "";
         if (contentType.includes("audio")) {
-          const blob = await pollRes.blob();
+          // Stream the response and track download progress
+          const contentLength = pollRes.headers.get("content-length");
+          const total = contentLength ? parseInt(contentLength) : null;
+          const reader = pollRes.body?.getReader();
+          if (!reader) {
+            const blob = await pollRes.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${file.name.replace(/\.[^.]+$/, "")}_${stem === "no_vocals" ? "instrumental" : "vocals"}.mp3`;
+            a.click();
+            URL.revokeObjectURL(url);
+            break;
+          }
+          setDownloadPct(0);
+          const chunks: BlobPart[] = [];
+          let received = 0;
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+            received += value.length;
+            if (total) setDownloadPct(Math.round((received / total) * 100));
+          }
+          const blob = new Blob(chunks, { type: "audio/mpeg" });
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
@@ -104,7 +130,7 @@ export default function VoiceRemover() {
           break;
         }
         const pollData = await pollRes.json().catch(() => ({}));
-        if (pollRes.status === 404) continue; // transient — keep polling
+        if (pollRes.status === 404) continue;
         if (!pollRes.ok) throw new Error(pollData.error || "Processing failed");
         if (pollData.status === "error") throw new Error(pollData.error || "Processing failed");
       }
@@ -114,6 +140,7 @@ export default function VoiceRemover() {
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
       setProcessing(null);
       setElapsed(0);
+      setDownloadPct(null);
     }
   }, [file]);
 
@@ -174,7 +201,7 @@ export default function VoiceRemover() {
               className="w-full px-6 py-4 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all duration-200 flex items-center justify-center gap-3 outline-none"
             >
               {processing === "no_vocals" ? (
-                <span className="text-[#C9A84C]">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} — Processing…</span>
+                <span className="text-[#C9A84C]">{downloadPct !== null ? `Downloading ${downloadPct}%…` : `Processing… ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`}</span>
               ) : (
                 <>
                   <svg className="w-5 h-5 text-[#C9A84C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -193,7 +220,7 @@ export default function VoiceRemover() {
               className="w-full px-6 py-4 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all duration-200 flex items-center justify-center gap-3 outline-none"
             >
               {processing === "vocals" ? (
-                <span className="text-[#C9A84C]">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} — Processing…</span>
+                <span className="text-[#C9A84C]">{downloadPct !== null ? `Downloading ${downloadPct}%…` : `Processing… ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`}</span>
               ) : (
                 <>
                   <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
