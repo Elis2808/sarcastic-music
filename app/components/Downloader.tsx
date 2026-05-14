@@ -28,6 +28,8 @@ export default function Downloader() {
   const [ytLoading, setYtLoading] = useState(false);
   const [ytError, setYtError] = useState("");
   const [ytDownloading, setYtDownloading] = useState<"mp3" | "mp4" | null>(null);
+  const [analyzing, setAnalyzing] = useState<"bpm" | "key" | "split" | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<{type: "bpm" | "key"; data: any} | null>(null);
 
   useEffect(() => {
     const id = "btn-sweep-style";
@@ -109,6 +111,103 @@ export default function Downloader() {
     }
   }
 
+  async function analyzeBpm() {
+    if (!ytUrl.trim()) return;
+    setAnalyzing("bpm");
+    setYtError("");
+    setAnalysisResult(null);
+    try {
+      // Download audio first
+      const res = await fetch("/api/youtube", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: ytUrl, format: "mp3" }),
+      });
+      if (!res.ok) throw new Error("Failed to fetch audio");
+      const blob = await res.blob();
+      const formData = new FormData();
+      formData.append("file", blob, "audio.mp3");
+      const bpmRes = await fetch("/api/detect-bpm", { method: "POST", body: formData });
+      const data = await bpmRes.json();
+      if (!bpmRes.ok) throw new Error(data.error || "BPM detection failed");
+      setAnalysisResult({ type: "bpm", data });
+    } catch (e: any) {
+      setYtError(e.message || "BPM analysis failed");
+    } finally {
+      setAnalyzing(null);
+    }
+  }
+
+  async function analyzeKey() {
+    if (!ytUrl.trim()) return;
+    setAnalyzing("key");
+    setYtError("");
+    setAnalysisResult(null);
+    try {
+      const res = await fetch("/api/youtube", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: ytUrl, format: "mp3" }),
+      });
+      if (!res.ok) throw new Error("Failed to fetch audio");
+      const blob = await res.blob();
+      const formData = new FormData();
+      formData.append("file", blob, "audio.mp3");
+      const keyRes = await fetch("/api/detect-key", { method: "POST", body: formData });
+      const data = await keyRes.json();
+      if (!keyRes.ok) throw new Error(data.error || "Key detection failed");
+      setAnalysisResult({ type: "key", data });
+    } catch (e: any) {
+      setYtError(e.message || "Key analysis failed");
+    } finally {
+      setAnalyzing(null);
+    }
+  }
+
+  async function splitSong() {
+    if (!ytUrl.trim()) return;
+    setAnalyzing("split");
+    setYtError("");
+    try {
+      const res = await fetch("/api/youtube", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: ytUrl, format: "mp3" }),
+      });
+      if (!res.ok) throw new Error("Failed to fetch audio");
+      const blob = await res.blob();
+      const formData = new FormData();
+      formData.append("file", blob, "audio.mp3");
+      formData.append("stem", "no_vocals");
+      const startRes = await fetch("/api/separate", { method: "POST", body: formData });
+      const startData = await startRes.json();
+      if (!startRes.ok) throw new Error(startData.error || "Failed to start splitting");
+      const jobId = startData.jobId;
+      // Poll for result
+      const deadline = Date.now() + 8 * 60 * 1000;
+      while (true) {
+        if (Date.now() > deadline) throw new Error("Processing timed out");
+        await new Promise(r => setTimeout(r, 4000));
+        const pollRes = await fetch(`/api/separate?id=${jobId}`);
+        const pollData = await pollRes.json().catch(() => ({}));
+        if (pollRes.status === 404) continue;
+        if (!pollRes.ok) throw new Error(pollData.error || "Processing failed");
+        if (pollData.status === "error") throw new Error(pollData.error || "Processing failed");
+        if (pollData.downloadUrl) {
+          const a = document.createElement("a");
+          a.href = pollData.downloadUrl;
+          a.download = `${ytInfo?.title || "song"}_instrumental.mp3`;
+          a.click();
+          break;
+        }
+      }
+    } catch (e: any) {
+      setYtError(e.message || "Split failed");
+    } finally {
+      setAnalyzing(null);
+    }
+  }
+
   return (
     <div className="flex flex-col items-center w-full pt-8 px-4 max-sm:pt-6 max-sm:px-3">
       <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">{selectedPlatform} Downloader</h1>
@@ -137,7 +236,7 @@ export default function Downloader() {
           placeholder={PLATFORMS.find(p => p.name === selectedPlatform)?.placeholder}
           className="flex-1 px-4 py-3 rounded-xl bg-black border border-gray-600 text-white outline-none focus:ring-2 focus:ring-[#C9A84C]"
         />
-        <div className={`max-sm:w-full ${ytLoading ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-[#C9A84C]"}`}>
+        <div className={`max-sm:w-full ${ytLoading ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
           <button
             onClick={fetchInfo}
             disabled={ytLoading}
@@ -149,6 +248,69 @@ export default function Downloader() {
       </div>
 
       {ytError && <p className="mt-4 text-red-400 text-sm">{ytError}</p>}
+
+      {/* Analyze buttons - always show when URL entered */}
+      {ytUrl.trim() && (
+        <div className="mt-4 flex gap-2 flex-wrap justify-center w-full max-w-xl">
+          <div className={analyzing === "bpm" ? "btn-sweep-wrapper" : "rounded-xl p-[2px] bg-gray-700"}>
+            <button
+              onClick={analyzeBpm}
+              disabled={analyzing !== null || ytDownloading !== null}
+              className="px-3 py-2 rounded-[10px] bg-black border border-gray-600 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
+            >
+              {analyzing === "bpm" ? <span className="text-[#C9A84C]">Finding BPM...</span> : "Find BPM"}
+            </button>
+          </div>
+          <div className={analyzing === "key" ? "btn-sweep-wrapper" : "rounded-xl p-[2px] bg-gray-700"}>
+            <button
+              onClick={analyzeKey}
+              disabled={analyzing !== null || ytDownloading !== null}
+              className="px-3 py-2 rounded-[10px] bg-black border border-gray-600 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
+            >
+              {analyzing === "key" ? <span className="text-[#C9A84C]">Finding Key...</span> : "Find Key"}
+            </button>
+          </div>
+          <div className={analyzing === "split" ? "btn-sweep-wrapper" : "rounded-xl p-[2px] bg-gray-700"}>
+            <button
+              onClick={splitSong}
+              disabled={analyzing !== null || ytDownloading !== null}
+              className="px-3 py-2 rounded-[10px] bg-black border border-gray-600 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
+            >
+              {analyzing === "split" ? <span className="text-[#C9A84C]">Splitting...</span> : "Split Song"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Analysis Results */}
+      {analysisResult && (
+        <div className="mt-4 w-full max-w-xl bg-gray-900 rounded-xl p-4 border border-[#C9A84C]/30">
+          {analysisResult.type === "bpm" && (
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-gray-500 text-xs uppercase tracking-widest">Detected BPM</p>
+              <div className="btn-sweep-wrapper p-[3px] rounded-full">
+                <div className="w-24 h-24 rounded-full flex flex-col items-center justify-center bg-black">
+                  <span className="text-3xl font-bold text-[#C9A84C]">{Math.round(analysisResult.data.bpm)}</span>
+                  <span className="text-xs text-gray-300">BPM</span>
+                </div>
+              </div>
+              <p className="text-gray-400 text-xs">{analysisResult.data.timeSignature} · {analysisResult.data.beatCount} beats</p>
+            </div>
+          )}
+          {analysisResult.type === "key" && (
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-gray-500 text-xs uppercase tracking-widest">Detected Key</p>
+              <div className="btn-sweep-wrapper p-[3px] rounded-full">
+                <div className="w-24 h-24 rounded-full flex flex-col items-center justify-center bg-black">
+                  <span className="text-3xl font-bold text-[#C9A84C]">{analysisResult.data.key}</span>
+                  <span className="text-xs text-gray-300 capitalize">{analysisResult.data.scale}</span>
+                </div>
+              </div>
+              <p className="text-gray-400 text-xs">Relative: {analysisResult.data.relativeKey} {analysisResult.data.relativeScale}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {ytInfo && (
         <div className="mt-6 w-full max-w-xl bg-gray-900 rounded-lg p-4 flex gap-4 items-start max-sm:flex-col max-sm:items-center">
@@ -163,19 +325,19 @@ export default function Downloader() {
             <p className="text-white font-semibold text-sm truncate">{ytInfo.title}</p>
             <p className="text-gray-400 text-xs mt-1">{ytInfo.author} · {formatDuration(ytInfo.lengthSeconds)}</p>
             <div className="flex gap-2 mt-3">
-              <div className={ytDownloading === "mp3" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-[#C9A84C]"}>
+              <div className={ytDownloading === "mp3" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}>
                 <button
                   onClick={() => handleDownload("mp3")}
-                  disabled={ytDownloading !== null}
+                  disabled={ytDownloading !== null || analyzing !== null}
                   className="px-4 py-2 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
                 >
                   {ytDownloading === "mp3" ? <span className="text-[#C9A84C]">Processing...</span> : "Download MP3"}
                 </button>
               </div>
-              <div className={ytDownloading === "mp4" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-[#C9A84C]"}>
+              <div className={ytDownloading === "mp4" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}>
                 <button
                   onClick={() => handleDownload("mp4")}
-                  disabled={ytDownloading !== null}
+                  disabled={ytDownloading !== null || analyzing !== null}
                   className="px-4 py-2 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
                 >
                   {ytDownloading === "mp4" ? <span className="text-[#C9A84C]">Processing...</span> : "Download MP4"}

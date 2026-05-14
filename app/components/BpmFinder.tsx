@@ -102,32 +102,34 @@ export default function BpmFinder() {
     <div className="flex flex-col items-center w-full pt-8 px-4 max-sm:pt-6 max-sm:px-3 select-none">
       <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">BPM Finder</h1>
 
-      {/* Drop zone */}
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-        onClick={() => inputRef.current?.click()}
-        className={`w-full max-w-xl max-sm:h-40 h-52 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200 ${
-          dragging
-            ? "border-[#C9A84C] bg-[#C9A84C]/10 scale-[1.02]"
-            : "border-gray-600 bg-gray-900 hover:border-[#C9A84C] hover:bg-black"
-        }`}
-      >
-        <svg className={`w-10 h-10 transition-colors ${dragging ? "text-[#C9A84C]" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-        </svg>
-        <p className="text-gray-400 text-sm">
-          {dragging ? "Drop It!" : "Drop An Audio File To Detect The BPM"}
-        </p>
-        <input ref={inputRef} type="file" accept="audio/*" className="hidden" onChange={onFileChange} />
-      </div>
+      {/* Drop zone - hide when result shown */}
+      {!result && (
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          onClick={() => inputRef.current?.click()}
+          className={`w-full max-w-xl max-sm:h-40 h-52 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200 ${
+            dragging
+              ? "border-[#C9A84C] bg-[#C9A84C]/10 scale-[1.02]"
+              : "border-gray-600 bg-gray-900 hover:border-[#C9A84C] hover:bg-black"
+          }`}
+        >
+          <svg className={`w-10 h-10 transition-colors ${dragging ? "text-[#C9A84C]" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+          </svg>
+          <p className="text-gray-400 text-sm">
+            {dragging ? "Drop It!" : "Drop An Audio File To Detect The BPM"}
+          </p>
+          <input ref={inputRef} type="file" accept="audio/*" className="hidden" onChange={onFileChange} />
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
         <div className="mt-8 flex items-center justify-center">
           <div className="btn-sweep-wrapper">
-            <div className="px-6 py-3 rounded-[10px] bg-black text-[#C9A84C] text-sm font-medium">
+            <div className="px-6 py-3 rounded-[10px] bg-black border border-[#C9A84C] text-[#C9A84C] text-sm font-medium">
               Analyzing File…
             </div>
           </div>
@@ -142,24 +144,18 @@ export default function BpmFinder() {
         <div className="mt-8 flex flex-col items-center gap-5 w-full max-w-xs">
           <p className="text-gray-500 text-xs uppercase tracking-widest">Detected Tempo</p>
 
-          {/* BPM circle */}
-          <div
-            className="w-44 h-44 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all duration-500"
-            style={{
-              backgroundColor: category.color + "22",
-              border: `3px solid ${category.color}`,
-              boxShadow: `0 0 40px ${category.color}55`,
-            }}
-          >
-            <span className="text-5xl font-bold" style={{ color: category.color }}>{bpmDisplay}</span>
-            <span className="text-sm text-gray-300 mt-1">BPM</span>
+          {/* BPM circle with gold spinning effect */}
+          <div className="btn-sweep-wrapper p-[3px] rounded-full">
+            <div
+              className="w-44 h-44 rounded-full flex flex-col items-center justify-center bg-black transition-all duration-500"
+            >
+              <span className="text-5xl font-bold text-[#C9A84C]">{bpmDisplay}</span>
+              <span className="text-sm text-gray-300 mt-1">BPM</span>
+            </div>
           </div>
 
-          {/* Category badge */}
-          <span
-            className="px-4 py-1 rounded-full text-sm font-medium"
-            style={{ backgroundColor: category.color + "33", color: category.color, border: `1px solid ${category.color}66` }}
-          >
+          {/* Category badge - gold themed */}
+          <span className="px-4 py-1 rounded-full text-sm font-medium bg-[#C9A84C]/20 text-[#C9A84C] border border-[#C9A84C]/50">
             {category.label}
           </span>
 
@@ -177,12 +173,14 @@ export default function BpmFinder() {
 
           <p className="text-gray-600 text-xs">{fileName}</p>
 
-          <button
-            onClick={() => { setResult(null); setFileName(""); }}
-            className="px-4 py-2 rounded-lg bg-black border border-gray-700 hover:border-[#C9A84C] text-gray-400 hover:text-white text-xs transition-all duration-200 outline-none focus:ring-2 focus:ring-[#C9A84C]"
-          >
-            Analyse another file
-          </button>
+          <div className="btn-sweep-wrapper">
+            <button
+              onClick={() => { setResult(null); setFileName(""); }}
+              className="px-4 py-2 rounded-[10px] bg-black border border-[#C9A84C] hover:bg-gray-900 text-white text-xs font-medium transition-all duration-200 outline-none"
+            >
+              Analyze another file
+            </button>
+          </div>
         </div>
       )}
     </div>

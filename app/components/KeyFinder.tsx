@@ -122,32 +122,34 @@ export default function KeyFinder() {
     <div className="flex flex-col items-center w-full pt-8 px-4 select-none max-sm:pt-6 max-sm:px-3">
       <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">Key Finder</h1>
 
-      {/* Drop zone */}
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-        onClick={() => inputRef.current?.click()}
-        className={`w-full max-w-xl max-sm:h-40 h-52 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200 ${
-          dragging
-            ? "border-[#C9A84C] bg-[#C9A84C]/10 scale-[1.02]"
-            : "border-gray-600 bg-gray-900 hover:border-[#C9A84C] hover:bg-black"
-        }`}
-      >
-        <svg className={`w-10 h-10 transition-colors ${dragging ? "text-[#C9A84C]" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-        </svg>
-        <p className="text-gray-400 text-sm">
-          {dragging ? "Drop It!" : "Drop An Audio File To Detect The Song Key"}
-        </p>
-        <input ref={inputRef} type="file" accept="audio/*" className="hidden" onChange={onFileChange} />
-      </div>
+      {/* Drop zone - hide when result shown */}
+      {!result && (
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          onClick={() => inputRef.current?.click()}
+          className={`w-full max-w-xl max-sm:h-40 h-52 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200 ${
+            dragging
+              ? "border-[#C9A84C] bg-[#C9A84C]/10 scale-[1.02]"
+              : "border-gray-600 bg-gray-900 hover:border-[#C9A84C] hover:bg-black"
+          }`}
+        >
+          <svg className={`w-10 h-10 transition-colors ${dragging ? "text-[#C9A84C]" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+          </svg>
+          <p className="text-gray-400 text-sm">
+            {dragging ? "Drop It!" : "Drop An Audio File To Detect The Song Key"}
+          </p>
+          <input ref={inputRef} type="file" accept="audio/*" className="hidden" onChange={onFileChange} />
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
         <div className="mt-8 flex items-center justify-center">
           <div className="btn-sweep-wrapper">
-            <div className="px-6 py-3 rounded-[10px] bg-black text-[#C9A84C] text-sm font-medium">
+            <div className="px-6 py-3 rounded-[10px] bg-black border border-[#C9A84C] text-[#C9A84C] text-sm font-medium">
               Analyzing File…
             </div>
           </div>
@@ -162,13 +164,12 @@ export default function KeyFinder() {
         <div className="mt-8 flex flex-col items-center gap-4">
           <p className="text-gray-500 text-xs uppercase tracking-widest">Detected Key</p>
 
-          {/* Big key display */}
-          <div
-            className="w-40 h-40 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all duration-500"
-            style={{ backgroundColor: color + "22", border: `3px solid ${color}`, boxShadow: `0 0 40px ${color}55` }}
-          >
-            <span className="text-5xl font-bold" style={{ color }}>{result.key}</span>
-            <span className="text-lg text-white mt-1 capitalize">{result.scale}</span>
+          {/* Big key display with gold spinning effect */}
+          <div className="btn-sweep-wrapper p-[3px] rounded-full">
+            <div className="w-40 h-40 rounded-full flex flex-col items-center justify-center bg-black transition-all duration-500">
+              <span className="text-5xl font-bold text-[#C9A84C]">{result.key}</span>
+              <span className="text-lg text-white mt-1 capitalize">{result.scale}</span>
+            </div>
           </div>
 
           {/* Relative key */}
@@ -179,7 +180,7 @@ export default function KeyFinder() {
             </span>
           </p>
 
-          {/* Confidence bar */}
+          {/* Confidence bar - gold themed */}
           <div className="w-full max-w-xs">
             <div className="flex justify-between text-xs text-gray-500 mb-1">
               <span>Confidence</span>
@@ -187,20 +188,22 @@ export default function KeyFinder() {
             </div>
             <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${strengthPct}%`, backgroundColor: color }}
+                className="h-full rounded-full transition-all duration-700 bg-[#C9A84C]"
+                style={{ width: `${strengthPct}%` }}
               />
             </div>
           </div>
 
           <p className="text-gray-500 text-xs mt-1">{fileName}</p>
 
-          <button
-            onClick={() => { setResult(null); setFileName(""); }}
-            className="mt-2 px-4 py-2 rounded-lg bg-black border border-gray-700 hover:border-[#C9A84C] text-gray-400 hover:text-white text-xs transition-all duration-200 outline-none focus:ring-2 focus:ring-[#C9A84C]"
-          >
-            Analyse another file
-          </button>
+          <div className="btn-sweep-wrapper mt-2">
+            <button
+              onClick={() => { setResult(null); setFileName(""); }}
+              className="px-4 py-2 rounded-[10px] bg-black border border-[#C9A84C] hover:bg-gray-900 text-white text-xs font-medium transition-all duration-200 outline-none"
+            >
+              Analyze another file
+            </button>
+          </div>
         </div>
       )}
     </div>
