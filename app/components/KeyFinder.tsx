@@ -84,14 +84,19 @@ export default function KeyFinder() {
         /* Circular sweep wrapper */
         .circle-sweep-wrapper {
           position: relative;
+          display: inline-block;
           border-radius: 50%;
           padding: 3px;
           background: #111;
+          line-height: 0;
         }
         .circle-sweep-wrapper::before {
           content: '';
           position: absolute;
-          inset: 0;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
           border-radius: 50%;
           padding: 3px;
           background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg);

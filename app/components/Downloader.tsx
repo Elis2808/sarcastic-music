@@ -50,6 +50,8 @@ export default function Downloader() {
           border-radius: 0.75rem;
           padding: 3px;
           background: #111;
+          will-change: transform;
+          contain: layout style;
         }
         .btn-sweep-wrapper::before {
           content: '';
@@ -62,6 +64,7 @@ export default function Downloader() {
           -webkit-mask-composite: xor;
           mask-composite: exclude;
           animation: btn-sweep 1.4s linear infinite;
+          will-change: transform;
         }
       `;
       document.head.appendChild(style);

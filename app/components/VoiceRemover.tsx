@@ -11,6 +11,23 @@ const FORMATS = [
   { ext: "m4a", label: "M4A", desc: "Apple/AAC format" },
 ];
 
+const PLATFORMS = [
+  { id: "youtube", label: "YouTube", icon: "▶️" },
+  { id: "soundcloud", label: "SoundCloud", icon: "☁️" },
+  { id: "tiktok", label: "TikTok", icon: "🎵" },
+  { id: "instagram", label: "Instagram", icon: "📸" },
+  { id: "facebook", label: "Facebook", icon: "📘" },
+  { id: "twitter", label: "Twitter/X", icon: "🐦" },
+  { id: "vimeo", label: "Vimeo", icon: "🎬" },
+  { id: "twitch", label: "Twitch", icon: "🎮" },
+  { id: "spotify", label: "Spotify", icon: "🎧" },
+  { id: "apple", label: "Apple Music", icon: "🍎" },
+  { id: "bandcamp", label: "Bandcamp", icon: "🎸" },
+  { id: "dailymotion", label: "Dailymotion", icon: "📺" },
+  { id: "reddit", label: "Reddit", icon: "🤖" },
+  { id: "mixcloud", label: "Mixcloud", icon: "🎧" },
+];
+
 export default function VoiceRemover() {
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -22,6 +39,8 @@ export default function VoiceRemover() {
   const [error, setError] = useState("");
   const [showFormats, setShowFormats] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState("mp3");
+  const [showPlatforms, setShowPlatforms] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -44,6 +63,8 @@ export default function VoiceRemover() {
           border-radius: 0.75rem;
           padding: 3px;
           background: #111;
+          will-change: transform;
+          contain: layout style;
         }
         .btn-sweep-wrapper::before {
           content: '';
@@ -56,6 +77,7 @@ export default function VoiceRemover() {
           -webkit-mask-composite: xor;
           mask-composite: exclude;
           animation: btn-sweep 1.4s linear infinite;
+          will-change: transform;
         }
       `;
       document.head.appendChild(style);
@@ -200,7 +222,9 @@ export default function VoiceRemover() {
           <input
             value={linkUrl}
             onChange={(e) => { setLinkUrl(e.target.value); setFile(null); }}
-            placeholder="Paste any audio link (YouTube, SoundCloud, etc.)"
+            placeholder={selectedPlatform 
+            ? `Paste ${PLATFORMS.find(p => p.id === selectedPlatform)?.label || ''} link here...`
+            : "Paste any audio link (YouTube, SoundCloud, etc.)"}
             className="w-full px-4 py-3 rounded-xl bg-black border border-gray-600 text-white outline-none focus:ring-2 focus:ring-[#C9A84C]"
           />
           {linkUrl && (
@@ -221,6 +245,15 @@ export default function VoiceRemover() {
             className="px-4 py-3 rounded-[10px] bg-black hover:bg-gray-900 text-white text-sm font-medium transition-all duration-200 outline-none whitespace-nowrap"
           >
             Format: {FORMATS.find(f => f.ext === selectedFormat)?.label}
+          </button>
+          <button
+            onClick={() => setShowPlatforms(!showPlatforms)}
+            disabled={processing !== null}
+            className="px-4 py-3 rounded-[10px] bg-black hover:bg-gray-900 text-white text-sm font-medium transition-all duration-200 outline-none whitespace-nowrap"
+          >
+            {selectedPlatform 
+              ? `Platform: ${PLATFORMS.find(p => p.id === selectedPlatform)?.label}`
+              : "Choose Platform"}
           </button>
         </div>
       </div>
@@ -244,6 +277,40 @@ export default function VoiceRemover() {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Platforms sidebar - for link input */}
+      {showPlatforms && (
+        <div className="w-full max-w-xl mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700">
+          <p className="text-gray-500 text-xs mb-2">Supported platforms (click to filter):</p>
+          <div className="flex gap-2 flex-wrap max-h-32 overflow-y-auto">
+            {PLATFORMS.map((platform) => (
+              <button
+                key={platform.id}
+                onClick={() => { 
+                  setSelectedPlatform(selectedPlatform === platform.id ? "" : platform.id);
+                  setShowPlatforms(false);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all duration-200 flex items-center gap-1.5 ${
+                  selectedPlatform === platform.id
+                    ? "bg-[#C9A84C] text-black font-medium"
+                    : "bg-gray-800 text-gray-400 hover:text-white"
+                }`}
+              >
+                <span>{platform.icon}</span>
+                <span>{platform.label}</span>
+              </button>
+            ))}
+          </div>
+          {selectedPlatform && (
+            <button
+              onClick={() => setSelectedPlatform("")}
+              className="mt-2 text-xs text-gray-500 hover:text-[#C9A84C] transition-colors"
+            >
+              Clear filter
+            </button>
+          )}
         </div>
       )}
 

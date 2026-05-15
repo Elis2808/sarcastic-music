@@ -14,12 +14,6 @@ interface Props {
   highlightWord?: string;
 }
 
-const CATEGORY_COLOR: Record<string, string> = {
-  perfect: "#4ade80",    // green-400
-  sounding: "#60a5fa",   // blue-400
-  near: "#f87171",       // red-400
-};
-
 const CATEGORY_TEXT_CLASS: Record<string, string> = {
   perfect: "text-green-400",
   sounding: "text-blue-400",
@@ -62,21 +56,36 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
   const sliderTrackRef = useRef<HTMLDivElement | null>(null);
   const lastClickedRef = useRef<HTMLSpanElement | null>(null);
 
-  // Add CSS animation for rotating borders
+  // Add optimized CSS for rhyme pills
   useEffect(() => {
-    const id = "rhyme-sweep-style";
+    const id = "rhyme-pill-style";
     if (!document.getElementById(id)) {
       const style = document.createElement("style");
       style.id = id;
       style.textContent = `
-        @property --sweep-angle {
-          syntax: "<angle>";
-          initial-value: 0deg;
-          inherits: false;
+        .rhyme-pill {
+          position: relative;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+          will-change: transform;
         }
-        @keyframes rhyme-sweep {
-          from { --sweep-angle: 0deg; }
-          to { --sweep-angle: 360deg; }
+        .rhyme-pill:hover {
+          transform: scale(1.05);
+        }
+        .rhyme-pill-perfect {
+          border: 2px solid #4ade80;
+          box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
+        }
+        .rhyme-pill-sounding {
+          border: 2px solid #60a5fa;
+          box-shadow: 0 0 8px rgba(96, 165, 250, 0.3);
+        }
+        .rhyme-pill-near {
+          border: 2px solid #f87171;
+          box-shadow: 0 0 8px rgba(248, 113, 113, 0.3);
+        }
+        .rhyme-pill-selected {
+          border-color: #C9A84C !important;
+          box-shadow: 0 0 12px rgba(201, 168, 76, 0.5) !important;
         }
       `;
       document.head.appendChild(style);
@@ -171,7 +180,6 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
 
   function renderWordPill(r: { word: string; category: string }, i: number, small = false) {
     const isSelected = lastClickedWord === r.word.toLowerCase();
-    const rhymeColor = CATEGORY_COLOR[r.category] || "#ffffff";
     const rhymeTextClass = CATEGORY_TEXT_CLASS[r.category] || "text-white";
 
     // Get word types for advanced mode
@@ -183,32 +191,17 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
     // Advanced mode: text color = part-of-speech color
     const textColorClass = rhymeMode === "advanced" ? posColor : rhymeTextClass;
 
-    // Wrapper style with rotating border based on rhyme quality
-    const wrapperStyle: React.CSSProperties = {
-      background: `conic-gradient(from var(--sweep-angle, 0deg), ${rhymeColor}, ${rhymeColor}40, ${rhymeColor})`,
-      borderRadius: "0.5rem",
-      padding: "2px",
-      animation: "rhyme-sweep 2s linear infinite",
-    };
-
-    // Inner pill style
-    const innerClass = isSelected
-      ? "bg-black border border-[#C9A84C] shadow-[0_0_10px_rgba(201,168,76,0.5)]"
-      : "bg-gray-900 border border-transparent";
+    // Static border class based on rhyme quality
+    const borderClass = `rhyme-pill rhyme-pill-${r.category} ${isSelected ? "rhyme-pill-selected" : ""}`;
 
     return (
       <span
         key={i}
         ref={isSelected ? lastClickedRef : null}
         onClick={() => handleWordClick(r.word)}
-        className="inline-block"
-        style={wrapperStyle}
+        className={`${small ? "px-3 py-1 text-sm" : "px-4 py-2 text-lg"} rounded-lg cursor-pointer bg-gray-900 ${borderClass} ${textColorClass}`}
       >
-        <span
-          className={`${small ? "px-3 py-1 text-sm" : "px-4 py-2 text-lg"} rounded transition-all duration-200 transform hover:scale-105 cursor-pointer block ${innerClass} ${textColorClass}`}
-        >
-          {r.word}
-        </span>
+        {r.word}
       </span>
     );
   }
