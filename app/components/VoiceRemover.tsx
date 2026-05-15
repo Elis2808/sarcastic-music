@@ -37,6 +37,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
   const [processing, setProcessing] = useState<StemType | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [demucsProgress, setDemucsProgress] = useState(0);
+  const [demucsProgress2, setDemucsProgress2] = useState(0);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -195,8 +196,8 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
         }
       }
 
-      // Poll for first job
-      const pollJob = async (jid: string, isVocals: boolean): Promise<string> => {
+      // Poll for both jobs in parallel when both is selected
+      const pollJob = async (jid: string, setProgress: (p: number) => void): Promise<string> => {
         const deadline = Date.now() + 8 * 60 * 1000;
         while (true) {
           if (Date.now() > deadline) throw new Error("Processing timed out.");
@@ -206,23 +207,36 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
           if (pollRes.status === 404) continue;
           if (!pollRes.ok) throw new Error(pollData.error || "Processing failed");
           if (pollData.status === "error") throw new Error(pollData.error || "Processing failed");
-          if (typeof pollData.progress === "number") setDemucsProgress(pollData.progress);
+          if (typeof pollData.progress === "number") setProgress(pollData.progress);
           if (pollData.downloadUrl) return pollData.downloadUrl;
         }
       };
 
-      const instrumentalUrl = await pollJob(jobId, false);
-      const a1 = document.createElement("a");
-      a1.href = instrumentalUrl;
-      a1.download = `${(file?.name || "song").replace(/\.[^.]+$/, "")}_instrumental.mp3`;
-      a1.click();
-
       if (vocalsJobId && stem === "both") {
-        const vocalsUrl = await pollJob(vocalsJobId, true);
+        // Poll both jobs in parallel for Both
+        const [instrumentalUrl, vocalsUrl] = await Promise.all([
+          pollJob(jobId, setDemucsProgress),
+          pollJob(vocalsJobId, setDemucsProgress2)
+        ]);
+        const a1 = document.createElement("a");
+        a1.href = instrumentalUrl;
+        a1.download = `${(file?.name || "song").replace(/\.[^.]+$/, "")}_instrumental.mp3`;
+        a1.click();
+        
+        // Small delay between downloads
+        await new Promise(r => setTimeout(r, 500));
+        
         const a2 = document.createElement("a");
         a2.href = vocalsUrl;
         a2.download = `${(file?.name || "song").replace(/\.[^.]+$/, "")}_vocals.mp3`;
         a2.click();
+      } else {
+        // Single job
+        const instrumentalUrl = await pollJob(jobId, setDemucsProgress);
+        const a1 = document.createElement("a");
+        a1.href = instrumentalUrl;
+        a1.download = `${(file?.name || "song").replace(/\.[^.]+$/, "")}_instrumental.mp3`;
+        a1.click();
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Processing failed.");
@@ -231,6 +245,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
       setProcessing(null);
       setElapsed(0);
       setDemucsProgress(0);
+      setDemucsProgress2(0);
     }
   }, [file, linkUrl]);
 
@@ -372,7 +387,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
           {/* Main buttons with Both in middle */}
           <div className="flex items-center gap-3 w-full">
             {/* Instrumental */}
-            <div className={`flex-1 ${processing === "no_vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+            <div className={`flex-1 ${processing === "no_vocals" || processing === "both" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
               <button
                 onClick={() => download("no_vocals")}
                 disabled={processing !== null}
@@ -391,7 +406,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
               <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-[2px] bg-gradient-to-r from-gray-600 to-[#C9A84C]" />
               <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-[2px] bg-gradient-to-l from-gray-600 to-[#C9A84C]" />
               
-              <div className={`${processing === "both" ? "btn-sweep-wrapper" : "rounded-lg p-[2px] bg-gray-600"}`}>
+              <div className={`${processing === null ? "" : "rounded-lg p-[2px] bg-gray-600"}`}>
                 <button
                   onClick={() => download("both")}
                   disabled={processing !== null}
@@ -403,7 +418,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
             </div>
 
             {/* Vocals */}
-            <div className={`flex-1 ${processing === "vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+            <div className={`flex-1 ${processing === "vocals" || processing === "both" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
               <button
                 onClick={() => download("vocals")}
                 disabled={processing !== null}
@@ -422,12 +437,12 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
             <div className="w-full">
               <div className="flex justify-between text-xs text-gray-500 mb-1">
                 <span>Processing</span>
-                <span>{Math.round(demucsProgress)}%</span>
+                <span>{Math.round(processing === "both" ? (demucsProgress + demucsProgress2) / 2 : demucsProgress)}%</span>
               </div>
               <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-300 bg-[#C9A84C]"
-                  style={{ width: `${demucsProgress}%` }}
+                  style={{ width: `${processing === "both" ? (demucsProgress + demucsProgress2) / 2 : demucsProgress}%` }}
                 />
               </div>
             </div>
