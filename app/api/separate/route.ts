@@ -353,7 +353,8 @@ export async function GET(request: NextRequest) {
 
         // Read and return the mixed instrumental
         const audioBuffer = await readFile(mixedPath);
-        unlink(mixedPath).catch(() => {});
+        // Delay file deletion to match job deletion timing
+        setTimeout(() => unlink(mixedPath).catch(() => {}), 35000);
 
         // Return as JSON with both URLs (instrumental proxied, vocals remote)
         return Response.json({ 
@@ -373,7 +374,7 @@ export async function GET(request: NextRequest) {
         // Locally mixed instrumental — must proxy since it's on disk
         const localPath = job.stemUrl.slice(7);
         const audioBuffer = await readFile(localPath).catch(() => Buffer.alloc(0));
-        unlink(localPath).catch(() => {});
+        // Don't delete immediately - let job persist for retries
         if (!audioBuffer.length) return Response.json({ error: "Result file missing" }, { status: 500 });
         return new Response(new Uint8Array(audioBuffer), {
           headers: {
