@@ -97,16 +97,36 @@ async function downloadToTmp(url: string, dest: string): Promise<void> {
 }
 
 // Helper to run Replicate with timeout
-async function runReplicateWithTimeout(fileUrl: string, timeoutMs: number = 5 * 60 * 1000): Promise<any> {
+async function runReplicateWithTimeout(fileUrl: string, jobId: string, timeoutMs: number = 5 * 60 * 1000): Promise<any> {
+  console.log(`[separate:${jobId}] Starting Replicate with ${timeoutMs/1000}s timeout...`);
+  
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => reject(new Error("Replicate processing timed out after 5 minutes")), timeoutMs);
   });
   
-  const replicatePromise = replicate.run("cjwbw/demucs:25a173108cff36ef9f80f854c162d01df9e6528be175794b81158fa03836d953", {
-    input: { audio: fileUrl, model: "htdemucs", two_stems: "vocals" },
-  });
+  // Update progress periodically while waiting
+  const progressInterval = setInterval(async () => {
+    try {
+      const job = await readJob(jobId);
+      if (job && job.status === "processing" && job.progress === 20) {
+        await writeJob(jobId, { ...job, progress: 25, createdAt: job.createdAt });
+        console.log(`[separate:${jobId}] Still processing...`);
+      }
+    } catch {}
+  }, 30000); // Every 30 seconds
   
-  return Promise.race([replicatePromise, timeoutPromise]);
+  try {
+    const replicatePromise = replicate.run("cjwbw/demucs:25a173108cff36ef9f80f854c162d01df9e6528be175794b81158fa03836d953", {
+      input: { audio: fileUrl, model: "htdemucs", two_stems: "vocals" },
+    });
+    
+    const result = await Promise.race([replicatePromise, timeoutPromise]);
+    clearInterval(progressInterval);
+    return result;
+  } catch (error) {
+    clearInterval(progressInterval);
+    throw error;
+  }
 }
 
 async function runSeparation(jobId: string, audioPath: string, stem: string, originalName: string, isBoth: boolean = false) {
@@ -123,7 +143,7 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
     console.log(`[separate:${jobId}] Uploaded. Running htdemucs on Replicate GPU...`);
     await writeJob(jobId, { status: "processing", progress: 20, createdAt: Date.now() });
 
-    const output = await runReplicateWithTimeout(fileUrl) as any;
+    const output = await runReplicateWithTimeout(fileUrl, jobId) as any;
     await writeJob(jobId, { status: "processing", progress: 80, createdAt: Date.now() });
 
     console.log(`[separate:${jobId}] Output keys:`, Object.keys(output ?? {}));
