@@ -97,27 +97,31 @@ async function downloadToTmp(url: string, dest: string): Promise<void> {
 }
 
 // Helper to run Replicate with timeout
-async function runReplicateWithTimeout(fileUrl: string, jobId: string, timeoutMs: number = 5 * 60 * 1000): Promise<any> {
+async function runReplicateWithTimeout(fileUrl: string, jobId: string, timeoutMs: number = 10 * 60 * 1000): Promise<any> {
   console.log(`[separate:${jobId}] Starting Replicate with ${timeoutMs/1000}s timeout...`);
   
   const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => reject(new Error("Replicate processing timed out after 5 minutes")), timeoutMs);
+    setTimeout(() => reject(new Error("Replicate processing timed out after 10 minutes")), timeoutMs);
   });
   
-  // Update progress periodically while waiting
+  // Update progress gradually from 20% -> 70% while waiting for Replicate
+  let progressBumpCount = 0;
   const progressInterval = setInterval(async () => {
     try {
       const job = await readJob(jobId);
-      if (job && job.status === "processing" && job.progress === 20) {
-        await writeJob(jobId, { ...job, progress: 25, createdAt: job.createdAt });
-        console.log(`[separate:${jobId}] Still processing...`);
+      if (job && job.status === "processing" && job.progress && job.progress >= 20 && job.progress < 70) {
+        progressBumpCount++;
+        // Increment by ~5% every 15 seconds, max 70%
+        const newProgress = Math.min(70, 20 + (progressBumpCount * 5));
+        await writeJob(jobId, { ...job, progress: newProgress, createdAt: job.createdAt });
+        console.log(`[separate:${jobId}] Still processing... ${newProgress}%`);
       }
     } catch {}
-  }, 30000); // Every 30 seconds
+  }, 15000); // Every 15 seconds
   
   try {
     const replicatePromise = replicate.run("cjwbw/demucs:25a173108cff36ef9f80f854c162d01df9e6528be175794b81158fa03836d953", {
-      input: { audio: fileUrl, model: "htdemucs", two_stems: "vocals" },
+      input: { audio: fileUrl, model: "demucs", two_stems: "vocals" },
     });
     
     const result = await Promise.race([replicatePromise, timeoutPromise]);
@@ -125,6 +129,13 @@ async function runReplicateWithTimeout(fileUrl: string, jobId: string, timeoutMs
     return result;
   } catch (error) {
     clearInterval(progressInterval);
+    // Update job to error state on timeout
+    try {
+      const job = await readJob(jobId);
+      if (job) {
+        await writeJob(jobId, { ...job, status: "error", error: error instanceof Error ? error.message : "Processing failed", createdAt: job.createdAt });
+      }
+    } catch {}
     throw error;
   }
 }
