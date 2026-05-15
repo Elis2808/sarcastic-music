@@ -249,19 +249,18 @@ export default function Downloader() {
       <div className="flex items-center gap-2 mb-4 w-full max-w-xl">
         <button
           onClick={() => {
-            const idx = PLATFORMS.findIndex(p => p.name === selectedPlatform);
-            const newIdx = idx > 0 ? idx - 1 : PLATFORMS.length - 1;
-            setSelectedPlatform(PLATFORMS[newIdx].name);
+            const container = document.getElementById('downloader-platform-scroll');
+            if (container) container.scrollBy({ left: -150, behavior: 'smooth' });
           }}
           className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-[#C9A84C] transition-all duration-200 flex-shrink-0"
-          aria-label="Previous platform"
+          aria-label="Scroll left"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
 
-        <div className="flex-1 overflow-x-auto scrollbar-hide">
+        <div id="downloader-platform-scroll" className="flex-1 overflow-x-auto scrollbar-hide">
           <div className="flex gap-2 px-1">
             {PLATFORMS.map((platform) => (
               <button
@@ -281,12 +280,11 @@ export default function Downloader() {
 
         <button
           onClick={() => {
-            const idx = PLATFORMS.findIndex(p => p.name === selectedPlatform);
-            const newIdx = idx < PLATFORMS.length - 1 ? idx + 1 : 0;
-            setSelectedPlatform(PLATFORMS[newIdx].name);
+            const container = document.getElementById('downloader-platform-scroll');
+            if (container) container.scrollBy({ left: 150, behavior: 'smooth' });
           }}
           className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-[#C9A84C] transition-all duration-200 flex-shrink-0"
-          aria-label="Next platform"
+          aria-label="Scroll right"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

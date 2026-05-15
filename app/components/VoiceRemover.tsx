@@ -4,27 +4,20 @@ import { useState, useRef, useCallback, useEffect } from "react";
 
 type StemType = "no_vocals" | "vocals" | "both";
 
-const FORMATS = [
-  { ext: "mp3", label: "MP3", desc: "Universal audio format" },
-  { ext: "wav", label: "WAV", desc: "Uncompressed, high quality" },
-  { ext: "flac", label: "FLAC", desc: "Lossless compression" },
-  { ext: "m4a", label: "M4A", desc: "Apple/AAC format" },
-];
-
 const PLATFORMS = [
-  { id: "youtube", label: "YouTube", icon: "▶️" },
-  { id: "soundcloud", label: "SoundCloud", icon: "☁️" },
-  { id: "tiktok", label: "TikTok", icon: "🎵" },
-  { id: "instagram", label: "Instagram", icon: "📸" },
-  { id: "facebook", label: "Facebook", icon: "📘" },
-  { id: "twitter", label: "Twitter/X", icon: "🐦" },
-  { id: "reddit", label: "Reddit", icon: "🤖" },
-  { id: "bandcamp", label: "Bandcamp", icon: "🎸" },
-  { id: "mixcloud", label: "Mixcloud", icon: "🎧" },
-  { id: "dailymotion", label: "Dailymotion", icon: "📺" },
-  { id: "imgur", label: "Imgur", icon: "🖼️" },
-  { id: "vimeo", label: "Vimeo", icon: "🎬" },
-  { id: "twitch", label: "Twitch", icon: "🎮" },
+  { id: "youtube", label: "YouTube" },
+  { id: "soundcloud", label: "SoundCloud" },
+  { id: "tiktok", label: "TikTok" },
+  { id: "instagram", label: "Instagram" },
+  { id: "facebook", label: "Facebook" },
+  { id: "twitter", label: "Twitter/X" },
+  { id: "reddit", label: "Reddit" },
+  { id: "bandcamp", label: "Bandcamp" },
+  { id: "mixcloud", label: "Mixcloud" },
+  { id: "dailymotion", label: "Dailymotion" },
+  { id: "imgur", label: "Imgur" },
+  { id: "vimeo", label: "Vimeo" },
+  { id: "twitch", label: "Twitch" },
 ];
 
 export default function VoiceRemover() {
@@ -36,10 +29,6 @@ export default function VoiceRemover() {
   const [demucsProgress, setDemucsProgress] = useState(0);
   const [downloadPct, setDownloadPct] = useState<number | null>(null);
   const [error, setError] = useState("");
-  const [showFormats, setShowFormats] = useState(false);
-  const [selectedFormat, setSelectedFormat] = useState("mp3");
-  const [showPlatforms, setShowPlatforms] = useState(false);
-  const [selectedPlatform, setSelectedPlatform] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -215,15 +204,56 @@ export default function VoiceRemover() {
     <div className="flex flex-col items-center w-full pt-8 px-4 select-none max-sm:pt-6 max-sm:px-3">
       <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">Song Splitter</h1>
 
-      {/* Link input section */}
-      <div className="flex gap-2 w-full max-w-xl max-sm:flex-col mb-4">
-        <div className="relative flex-1">
+      {/* Platform selector with scroll arrows */}
+      <div className="flex items-center gap-2 mb-4 w-full max-w-xl">
+        <button
+          onClick={() => {
+            const container = document.getElementById('platform-scroll');
+            if (container) container.scrollBy({ left: -150, behavior: 'smooth' });
+          }}
+          className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-[#C9A84C] transition-all duration-200 flex-shrink-0"
+          aria-label="Scroll left"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        <div id="platform-scroll" className="flex-1 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2 px-1">
+            {PLATFORMS.map((platform) => (
+              <button
+                key={platform.id}
+                onClick={() => setLinkUrl('')}
+                className="px-3 py-1.5 rounded-xl bg-black border border-gray-600 hover:border-[#C9A84C] hover:text-[#C9A84C] text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 text-white"
+              >
+                {platform.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            const container = document.getElementById('platform-scroll');
+            if (container) container.scrollBy({ left: 150, behavior: 'smooth' });
+          }}
+          className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-[#C9A84C] transition-all duration-200 flex-shrink-0"
+          aria-label="Scroll right"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Link input */}
+      <div className="w-full max-w-xl mb-4">
+        <div className="relative">
           <input
             value={linkUrl}
             onChange={(e) => { setLinkUrl(e.target.value); setFile(null); }}
-            placeholder={selectedPlatform 
-            ? `Paste ${PLATFORMS.find(p => p.id === selectedPlatform)?.label || ''} link here...`
-            : "Paste any audio link (YouTube, SoundCloud, etc.)"}
+            placeholder="Paste audio link here (YouTube, SoundCloud, TikTok, etc.)"
             className="w-full px-4 py-3 rounded-xl bg-black border border-gray-600 text-white outline-none focus:ring-2 focus:ring-[#C9A84C]"
           />
           {linkUrl && (
@@ -237,81 +267,7 @@ export default function VoiceRemover() {
             </button>
           )}
         </div>
-        <div className={`max-sm:w-full ${processing ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
-          <button
-            onClick={() => setShowFormats(!showFormats)}
-            disabled={processing !== null}
-            className="px-4 py-3 rounded-[10px] bg-black hover:bg-gray-900 text-white text-sm font-medium transition-all duration-200 outline-none whitespace-nowrap"
-          >
-            Format: {FORMATS.find(f => f.ext === selectedFormat)?.label}
-          </button>
-          <button
-            onClick={() => setShowPlatforms(!showPlatforms)}
-            disabled={processing !== null}
-            className="px-4 py-3 rounded-[10px] bg-black hover:bg-gray-900 text-white text-sm font-medium transition-all duration-200 outline-none whitespace-nowrap"
-          >
-            {selectedPlatform 
-              ? `Platform: ${PLATFORMS.find(p => p.id === selectedPlatform)?.label}`
-              : "Choose Platform"}
-          </button>
-        </div>
       </div>
-
-      {/* Formats sidebar */}
-      {showFormats && (
-        <div className="w-full max-w-xl mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700">
-          <p className="text-gray-500 text-xs mb-2">Select download format:</p>
-          <div className="flex gap-2 flex-wrap">
-            {FORMATS.map((fmt) => (
-              <button
-                key={fmt.ext}
-                onClick={() => { setSelectedFormat(fmt.ext); setShowFormats(false); }}
-                className={`px-3 py-1.5 rounded-lg text-xs transition-all duration-200 ${
-                  selectedFormat === fmt.ext
-                    ? "bg-[#C9A84C] text-black font-medium"
-                    : "bg-gray-800 text-gray-400 hover:text-white"
-                }`}
-              >
-                {fmt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Platforms sidebar - for link input */}
-      {showPlatforms && (
-        <div className="w-full max-w-xl mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700">
-          <p className="text-gray-500 text-xs mb-2">Supported platforms (click to filter):</p>
-          <div className="flex gap-2 flex-wrap max-h-32 overflow-y-auto">
-            {PLATFORMS.map((platform) => (
-              <button
-                key={platform.id}
-                onClick={() => { 
-                  setSelectedPlatform(selectedPlatform === platform.id ? "" : platform.id);
-                  setShowPlatforms(false);
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs transition-all duration-200 flex items-center gap-1.5 ${
-                  selectedPlatform === platform.id
-                    ? "bg-[#C9A84C] text-black font-medium"
-                    : "bg-gray-800 text-gray-400 hover:text-white"
-                }`}
-              >
-                <span>{platform.icon}</span>
-                <span>{platform.label}</span>
-              </button>
-            ))}
-          </div>
-          {selectedPlatform && (
-            <button
-              onClick={() => setSelectedPlatform("")}
-              className="mt-2 text-xs text-gray-500 hover:text-[#C9A84C] transition-colors"
-            >
-              Clear filter
-            </button>
-          )}
-        </div>
-      )}
 
       {/* Drop zone - only show when no link entered */}
       {!linkUrl && (
