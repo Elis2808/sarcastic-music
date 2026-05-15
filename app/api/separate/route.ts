@@ -14,7 +14,10 @@ export const runtime = "nodejs";
 const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN! });
 
 // Filesystem-based job state — works across all worker processes
-const JOB_DIR = join(tmpdir(), "sep-jobs");
+// Use /app/.jobs for persistence across container restarts
+const JOB_DIR = process.env.NODE_ENV === "production" 
+  ? "/app/.jobs" 
+  : join(tmpdir(), "sep-jobs");
 
 type JobState = {
   status: "pending" | "processing" | "done" | "error";
