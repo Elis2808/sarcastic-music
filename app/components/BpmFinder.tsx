@@ -196,7 +196,7 @@ export default function BpmFinder() {
             <button
               onClick={processLink}
               disabled={!linkUrl.trim() || loading}
-              className="px-4 py-3 rounded-xl bg-[#C9A84C] text-black font-semibold text-sm hover:bg-[#b8973d] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-3 rounded-xl bg-gray-800 border border-gray-600 hover:border-[#C9A84C] hover:bg-gray-700 text-white text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed outline-none"
             >
               Analyze
             </button>
