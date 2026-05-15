@@ -3,14 +3,19 @@
 import { useState, useEffect } from "react";
 
 const PLATFORMS = [
-  { name: "YouTube",    placeholder: "Paste YouTube URL here" },
-  { name: "TikTok",     placeholder: "Paste TikTok URL here" },
-  { name: "Instagram",  placeholder: "Paste Instagram URL here" },
-  { name: "Facebook",   placeholder: "Paste Facebook URL here" },
-  { name: "Twitter",    placeholder: "Paste Twitter/X URL here" },
-  { name: "SoundCloud", placeholder: "Paste SoundCloud URL here" },
-  { name: "Vimeo",      placeholder: "Paste Vimeo URL here" },
-  { name: "Twitch",     placeholder: "Paste Twitch URL here" },
+  { name: "YouTube",     placeholder: "Paste YouTube URL here" },
+  { name: "TikTok",      placeholder: "Paste TikTok URL here" },
+  { name: "Instagram",   placeholder: "Paste Instagram URL here" },
+  { name: "Facebook",    placeholder: "Paste Facebook URL here" },
+  { name: "Twitter",     placeholder: "Paste Twitter/X URL here" },
+  { name: "Reddit",      placeholder: "Paste Reddit URL here" },
+  { name: "SoundCloud",  placeholder: "Paste SoundCloud URL here" },
+  { name: "Bandcamp",    placeholder: "Paste Bandcamp URL here" },
+  { name: "Mixcloud",    placeholder: "Paste Mixcloud URL here" },
+  { name: "Dailymotion", placeholder: "Paste Dailymotion URL here" },
+  { name: "Imgur",       placeholder: "Paste Imgur URL here" },
+  { name: "Vimeo",       placeholder: "Paste Vimeo URL here" },
+  { name: "Twitch",      placeholder: "Paste Twitch URL here" },
 ];
 
 function formatDuration(seconds: string) {
@@ -240,20 +245,53 @@ export default function Downloader() {
     <div className="flex flex-col items-center w-full pt-8 px-4 max-sm:pt-6 max-sm:px-3">
       <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">{selectedPlatform} Downloader</h1>
 
-      <div className="grid grid-cols-4 max-sm:grid-cols-2 gap-2 mb-4 w-full max-w-xl">
-        {PLATFORMS.map((platform) => (
-          <button
-            key={platform.name}
-            onClick={() => setSelectedPlatform(platform.name)}
-            className={`px-3 py-1.5 rounded-xl bg-black border text-xs transition-all duration-200 ${
-              selectedPlatform === platform.name
-                ? "border-[#C9A84C] text-[#C9A84C]"
-                : "border-gray-600 text-white hover:border-[#C9A84C] hover:text-[#C9A84C]"
-            }`}
-          >
-            {platform.name}
-          </button>
-        ))}
+      {/* Platform selector with scroll arrows */}
+      <div className="flex items-center gap-2 mb-4 w-full max-w-xl">
+        <button
+          onClick={() => {
+            const idx = PLATFORMS.findIndex(p => p.name === selectedPlatform);
+            const newIdx = idx > 0 ? idx - 1 : PLATFORMS.length - 1;
+            setSelectedPlatform(PLATFORMS[newIdx].name);
+          }}
+          className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-[#C9A84C] transition-all duration-200 flex-shrink-0"
+          aria-label="Previous platform"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        <div className="flex-1 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2 px-1">
+            {PLATFORMS.map((platform) => (
+              <button
+                key={platform.name}
+                onClick={() => setSelectedPlatform(platform.name)}
+                className={`px-3 py-1.5 rounded-xl bg-black border text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                  selectedPlatform === platform.name
+                    ? "border-[#C9A84C] text-[#C9A84C]"
+                    : "border-gray-600 text-white hover:border-[#C9A84C] hover:text-[#C9A84C]"
+                }`}
+              >
+                {platform.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            const idx = PLATFORMS.findIndex(p => p.name === selectedPlatform);
+            const newIdx = idx < PLATFORMS.length - 1 ? idx + 1 : 0;
+            setSelectedPlatform(PLATFORMS[newIdx].name);
+          }}
+          className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-[#C9A84C] transition-all duration-200 flex-shrink-0"
+          aria-label="Next platform"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
       </div>
 
       <div className="flex gap-2 w-full max-w-xl max-sm:flex-col">

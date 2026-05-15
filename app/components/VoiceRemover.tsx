@@ -18,14 +18,13 @@ const PLATFORMS = [
   { id: "instagram", label: "Instagram", icon: "📸" },
   { id: "facebook", label: "Facebook", icon: "📘" },
   { id: "twitter", label: "Twitter/X", icon: "🐦" },
+  { id: "reddit", label: "Reddit", icon: "🤖" },
+  { id: "bandcamp", label: "Bandcamp", icon: "🎸" },
+  { id: "mixcloud", label: "Mixcloud", icon: "🎧" },
+  { id: "dailymotion", label: "Dailymotion", icon: "📺" },
+  { id: "imgur", label: "Imgur", icon: "🖼️" },
   { id: "vimeo", label: "Vimeo", icon: "🎬" },
   { id: "twitch", label: "Twitch", icon: "🎮" },
-  { id: "spotify", label: "Spotify", icon: "🎧" },
-  { id: "apple", label: "Apple Music", icon: "🍎" },
-  { id: "bandcamp", label: "Bandcamp", icon: "🎸" },
-  { id: "dailymotion", label: "Dailymotion", icon: "📺" },
-  { id: "reddit", label: "Reddit", icon: "🤖" },
-  { id: "mixcloud", label: "Mixcloud", icon: "🎧" },
 ];
 
 export default function VoiceRemover() {

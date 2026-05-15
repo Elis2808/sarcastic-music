@@ -31,7 +31,11 @@ function markSuccess(key: string) {
 }
 
 // ─── Supported hosts ──────────────────────────────────────────────────────────
-const SUPPORTED_HOSTS = ["youtube.com","youtu.be","tiktok.com","instagram.com","facebook.com","fb.watch","twitter.com","x.com","soundcloud.com","vimeo.com","twitch.tv"];
+const SUPPORTED_HOSTS = [
+  "youtube.com","youtu.be","tiktok.com","instagram.com","facebook.com","fb.watch",
+  "twitter.com","x.com","reddit.com","redd.it","soundcloud.com","bandcamp.com",
+  "mixcloud.com","dailymotion.com","imgur.com","vimeo.com","twitch.tv"
+];
 
 function isValidUrl(url: string): boolean {
   try {
@@ -50,6 +54,13 @@ function isYouTube(url: string): boolean {
 function isVimeo(url: string): boolean {
   try { return new URL(url).hostname.replace(/^www\./, "") === "vimeo.com"; }
   catch { return false; }
+}
+
+function isReddit(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return host === "reddit.com" || host === "redd.it";
+  } catch { return false; }
 }
 
 // ─── Proxies: sorted by score, best first ────────────────────────────────────

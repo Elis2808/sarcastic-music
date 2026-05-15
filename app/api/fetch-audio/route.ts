@@ -14,9 +14,8 @@ const MAX_JOBS = 2;
 const SUPPORTED_HOSTS = [
   "youtube.com", "youtu.be", "tiktok.com", "instagram.com",
   "facebook.com", "fb.watch", "twitter.com", "x.com",
-  "soundcloud.com", "vimeo.com", "twitch.tv", "dailymotion.com",
-  "reddit.com", "spotify.com", "open.spotify.com", "apple.com",
-  "music.apple.com", "bandcamp.com", "mixcloud.com"
+  "reddit.com", "redd.it", "soundcloud.com", "bandcamp.com",
+  "mixcloud.com", "dailymotion.com", "imgur.com", "vimeo.com", "twitch.tv"
 ];
 
 function isValidUrl(url: string): boolean {
@@ -37,9 +36,11 @@ function getPlatform(url: string): string {
     if (host.includes("twitter") || host === "x.com") return "twitter";
     if (host.includes("vimeo")) return "vimeo";
     if (host.includes("twitch")) return "twitch";
-    if (host.includes("spotify")) return "spotify";
-    if (host.includes("apple")) return "apple";
+    if (host === "reddit.com" || host === "redd.it") return "reddit";
     if (host.includes("bandcamp")) return "bandcamp";
+    if (host.includes("mixcloud")) return "mixcloud";
+    if (host.includes("dailymotion")) return "dailymotion";
+    if (host.includes("imgur")) return "imgur";
     return "unknown";
   } catch { return "unknown"; }
 }
