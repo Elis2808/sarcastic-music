@@ -96,8 +96,21 @@ async function downloadToTmp(url: string, dest: string): Promise<void> {
   await writeFile(dest, Buffer.from(await res.arrayBuffer()));
 }
 
+// Helper to run Replicate with timeout
+async function runReplicateWithTimeout(fileUrl: string, timeoutMs: number = 5 * 60 * 1000): Promise<any> {
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error("Replicate processing timed out after 5 minutes")), timeoutMs);
+  });
+  
+  const replicatePromise = replicate.run("cjwbw/demucs:25a173108cff36ef9f80f854c162d01df9e6528be175794b81158fa03836d953", {
+    input: { audio: fileUrl, model: "htdemucs", two_stems: "vocals" },
+  });
+  
+  return Promise.race([replicatePromise, timeoutPromise]);
+}
+
 async function runSeparation(jobId: string, audioPath: string, stem: string, originalName: string, isBoth: boolean = false) {
-  await writeJob(jobId, { status: "processing", createdAt: Date.now() });
+  await writeJob(jobId, { status: "processing", progress: 10, createdAt: Date.now() });
   const tmpFiles: string[] = [];
   try {
     // Upload file to Replicate
@@ -108,10 +121,10 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
     const uploadedFile = await replicate.files.create(new Blob([fileBytes], { type: mime }));
     const fileUrl = (uploadedFile as any).urls?.get ?? (uploadedFile as any).url;
     console.log(`[separate:${jobId}] Uploaded. Running htdemucs on Replicate GPU...`);
+    await writeJob(jobId, { status: "processing", progress: 20, createdAt: Date.now() });
 
-    const output = await replicate.run("cjwbw/demucs:25a173108cff36ef9f80f854c162d01df9e6528be175794b81158fa03836d953", {
-      input: { audio: fileUrl, model: "htdemucs", two_stems: "vocals" },
-    }) as any;
+    const output = await runReplicateWithTimeout(fileUrl) as any;
+    await writeJob(jobId, { status: "processing", progress: 80, createdAt: Date.now() });
 
     console.log(`[separate:${jobId}] Output keys:`, Object.keys(output ?? {}));
 
