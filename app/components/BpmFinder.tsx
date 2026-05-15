@@ -12,6 +12,7 @@ interface BpmFinderProps {
   initialBpm?: number;
   initialTimeSignature?: string;
   initialBeatCount?: number;
+  shareableLink?: string;
 }
 
 const PLATFORMS = [
@@ -44,7 +45,7 @@ function bpmCategory(bpm: number): { label: string; color: string } {
   return           { label: "Very Fast",  color: "#e74c3c" };
 }
 
-export default function BpmFinder({ initialUrl, initialPlatform, initialBpm, initialTimeSignature, initialBeatCount }: BpmFinderProps) {
+export default function BpmFinder({ initialUrl, initialPlatform, initialBpm, initialTimeSignature, initialBeatCount, shareableLink }: BpmFinderProps) {
   const [dragging, setDragging] = useState(false);
   const [result, setResult] = useState<BpmResult | null>(initialBpm ? { bpm: initialBpm, timeSignature: initialTimeSignature || '', beatCount: initialBeatCount || 0 } : null);
   const [loading, setLoading] = useState(false);
@@ -151,7 +152,6 @@ export default function BpmFinder({ initialUrl, initialPlatform, initialBpm, ini
   const processLink = useCallback(async () => {
     if (!linkUrl.trim()) return;
     setLoading(true);
-    setError("");
     setResult(null);
     setFileName(linkUrl);
     try {
@@ -187,8 +187,7 @@ export default function BpmFinder({ initialUrl, initialPlatform, initialBpm, ini
       });
       showToast(`BPM detected: ${data.bpm}`, "success");
     } catch (e: any) {
-      setError(e.message || "Could not detect BPM. Make sure it's a valid audio URL.");
-      showToast(e.message || "Analysis failed", "error");
+      showToast("Invalid link. Update and try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -410,9 +409,14 @@ export default function BpmFinder({ initialUrl, initialPlatform, initialBpm, ini
             <button
               onClick={async () => {
                 try {
-                  const shareData = `${result.bpm} BPM, ${result.timeSignature} time signature (detected with Sarcastic Music)`;
-                  await navigator.clipboard.writeText(shareData);
-                  showToast("Share data copied!", "success");
+                  const shareUrl = new URL(window.location.href);
+                  shareUrl.search = '';
+                  shareUrl.searchParams.set('tool', 'bpm');
+                  shareUrl.searchParams.set('bpm', String(result.bpm));
+                  shareUrl.searchParams.set('timeSignature', result.timeSignature);
+                  shareUrl.searchParams.set('beatCount', String(result.beatCount));
+                  await navigator.clipboard.writeText(shareUrl.toString());
+                  showToast("Share link copied!", "success");
                 } catch {
                   showToast("Failed to copy", "error");
                 }

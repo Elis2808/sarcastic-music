@@ -9,6 +9,11 @@ import { showToast } from "./Toast";
 interface KeyFinderProps {
   initialUrl?: string;
   initialPlatform?: string;
+  initialKey?: string;
+  initialScale?: string;
+  initialStrength?: number;
+  initialRelativeKey?: string;
+  initialRelativeScale?: string;
 }
 
 const PLATFORMS = [
@@ -64,9 +69,13 @@ async function detectKey(file: File): Promise<KeyResult> {
   return res.json();
 }
 
-export default function KeyFinder({ initialUrl, initialPlatform }: KeyFinderProps) {
+export default function KeyFinder({ initialUrl, initialPlatform, initialKey, initialScale, initialStrength, initialRelativeKey, initialRelativeScale }: KeyFinderProps) {
   const [dragging, setDragging] = useState(false);
-  const [result, setResult] = useState<KeyResult | null>(null);
+  const [result, setResult] = useState<KeyResult | null>(
+    initialKey && initialScale 
+      ? { key: initialKey, scale: initialScale, strength: initialStrength || 0.85, relativeKey: initialRelativeKey || "", relativeScale: initialRelativeScale || "" }
+      : null
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
@@ -169,7 +178,6 @@ export default function KeyFinder({ initialUrl, initialPlatform }: KeyFinderProp
   const processLink = useCallback(async () => {
     if (!linkUrl.trim()) return;
     setLoading(true);
-    setError("");
     setResult(null);
     setFileName(linkUrl);
     try {
@@ -204,8 +212,7 @@ export default function KeyFinder({ initialUrl, initialPlatform }: KeyFinderProp
       });
       showToast(`Key detected: ${res.key} ${res.scale}`, "success");
     } catch (err: any) {
-      setError(err.message || "Analysis failed");
-      showToast(err.message || "Analysis failed", "error");
+      showToast("Invalid link. Update and try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -433,9 +440,16 @@ export default function KeyFinder({ initialUrl, initialPlatform }: KeyFinderProp
             <button
               onClick={async () => {
                 try {
-                  const shareData = `${result.key} ${result.scale} (detected with Sarcastic Music)`;
-                  await navigator.clipboard.writeText(shareData);
-                  showToast("Share data copied!", "success");
+                  const shareUrl = new URL(window.location.href);
+                  shareUrl.search = '';
+                  shareUrl.searchParams.set('tool', 'key');
+                  shareUrl.searchParams.set('key', result.key);
+                  shareUrl.searchParams.set('scale', result.scale);
+                  shareUrl.searchParams.set('strength', String(result.strength));
+                  shareUrl.searchParams.set('relativeKey', result.relativeKey);
+                  shareUrl.searchParams.set('relativeScale', result.relativeScale);
+                  await navigator.clipboard.writeText(shareUrl.toString());
+                  showToast("Share link copied!", "success");
                 } catch {
                   showToast("Failed to copy", "error");
                 }

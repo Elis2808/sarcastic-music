@@ -27,6 +27,14 @@ export default function Home() {
     word?: string;
     url?: string;
     platform?: string;
+    key?: string;
+    scale?: string;
+    strength?: number;
+    relativeKey?: string;
+    relativeScale?: string;
+    bpm?: number;
+    timeSignature?: string;
+    beatCount?: number;
   }>({});
 
   // Sync with URL params for shareable links
@@ -37,11 +45,31 @@ export default function Home() {
     const word = params.get("word");
     const url = params.get("url");
     const platform = params.get("platform");
+    const key = params.get("key");
+    const scale = params.get("scale");
+    const strength = params.get("strength");
+    const relativeKey = params.get("relativeKey");
+    const relativeScale = params.get("relativeScale");
+    const bpm = params.get("bpm");
+    const timeSignature = params.get("timeSignature");
+    const beatCount = params.get("beatCount");
     
     if (tool && ["rhyme", "key", "bpm", "voice", "youtube", "dictionary", "converter"].includes(tool)) {
       setActivePage(tool);
-      if (word || url || platform) {
-        setRestoreState({ tool, word: word || undefined, url: url || undefined, platform: platform || undefined });
+      const newState: typeof restoreState = { tool };
+      if (word) newState.word = word;
+      if (url) newState.url = url;
+      if (platform) newState.platform = platform;
+      if (key) newState.key = key;
+      if (scale) newState.scale = scale;
+      if (strength) newState.strength = parseFloat(strength);
+      if (relativeKey) newState.relativeKey = relativeKey;
+      if (relativeScale) newState.relativeScale = relativeScale;
+      if (bpm) newState.bpm = parseFloat(bpm);
+      if (timeSignature) newState.timeSignature = timeSignature;
+      if (beatCount) newState.beatCount = parseInt(beatCount);
+      if (Object.keys(newState).length > 1) {
+        setRestoreState(newState);
       }
     }
   }, []);
@@ -136,8 +164,22 @@ export default function Home() {
       </nav>
 
       {activePage === "rhyme"      && <RhymeFinder onLookupWord={openDictionary} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word} />}
-      {activePage === "key"        && <KeyFinder initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
-      {activePage === "bpm"        && <BpmFinder initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
+      {activePage === "key"        && <KeyFinder 
+        initialUrl={restoreState.url} 
+        initialPlatform={restoreState.platform}
+        initialKey={restoreState.key}
+        initialScale={restoreState.scale}
+        initialStrength={restoreState.strength}
+        initialRelativeKey={restoreState.relativeKey}
+        initialRelativeScale={restoreState.relativeScale}
+      />}
+      {activePage === "bpm"        && <BpmFinder 
+        initialUrl={restoreState.url} 
+        initialPlatform={restoreState.platform}
+        initialBpm={restoreState.bpm}
+        initialTimeSignature={restoreState.timeSignature}
+        initialBeatCount={restoreState.beatCount}
+      />}
       {activePage === "voice"      && <VoiceRemover initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
       {activePage === "youtube"    && <Downloader initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
       {activePage === "converter"  && <FileConverter />}
