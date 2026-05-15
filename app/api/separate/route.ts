@@ -126,7 +126,7 @@ async function runReplicateWithTimeout(fileUrl: string, jobId: string, timeoutMs
   }, 15000); // Every 15 seconds
   
   try {
-    const replicatePromise = replicate.run("soykertje/spleeter", {
+    const replicatePromise = replicate.run("cjwbw/spleeter", {
       input: { audio: fileUrl, stem: "2stems" },
     });
     
