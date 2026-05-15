@@ -161,7 +161,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
   }, [fetchOne]);
 
   useEffect(() => {
-    const t = setTimeout(() => search(word), 300);
+    const t = setTimeout(() => search(word), 600);
     return () => clearTimeout(t);
   }, [word, search]);
 
@@ -318,9 +318,9 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-2 rounded-xl transition-all duration-200 text-sm outline-none ${
+                className={`px-3 py-2 rounded-xl text-sm outline-none ${
                   activeTab === tab
-                    ? "bg-black text-[#C9A84C] border border-[#C9A84C] shadow-[0_0_10px_rgba(201,168,76,0.5)]"
+                    ? "bg-black text-[#C9A84C] border border-[#C9A84C]"
                     : "bg-gray-800 text-gray-300 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 border border-transparent"
                 }`}
               >
@@ -344,9 +344,9 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
                   <button
                     key={filter}
                     onClick={() => setAdvancedFilter(filter)}
-                    className={`px-2 py-1 rounded-lg transition-all duration-200 text-xs outline-none ${
+                    className={`px-2 py-1 rounded-lg text-xs outline-none ${
                       advancedFilter === filter
-                        ? "bg-black text-[#C9A84C] border border-[#C9A84C] shadow-[0_0_8px_rgba(201,168,76,0.5)]"
+                        ? "bg-black text-[#C9A84C] border border-[#C9A84C]"
                         : "bg-gray-800/50 text-gray-400 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 border border-transparent"
                     }`}
                   >
@@ -387,12 +387,12 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
               </div>
             </div>
           ) : (
-            <div className="grid gap-6 w-full" style={{ gridTemplateColumns: `repeat(${wordList.length}, minmax(0, 1fr))` }}>
+            <div className="grid gap-4 w-full" style={{ gridTemplateColumns: `repeat(${Math.min(wordList.length, 3)}, minmax(280px, 1fr))` }}>
               {wordList.map((w) => {
                 const results = displayResultsMap[w] || [];
                 return (
-                  <div key={w} className="flex flex-col">
-                    <h2 className="text-center text-lg font-bold text-[#C9A84C] mb-3 capitalize border-b border-gray-700 pb-2">{w}</h2>
+                  <div key={w} className="flex flex-col min-w-0">
+                    <h2 className="text-center text-lg font-bold text-[#C9A84C] mb-3 capitalize border-b border-gray-700 pb-2 truncate">{w}</h2>
                     <div className="flex flex-wrap gap-2 justify-center max-h-96 overflow-y-auto pb-2">
                       {results.length === 0
                         ? <span className="text-gray-500 text-sm">No results</span>
