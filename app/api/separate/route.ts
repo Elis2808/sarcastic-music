@@ -200,11 +200,19 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
         const stemKeys = ["bass", "drums", "guitar", "other", "piano"] as const;
         const localPaths: string[] = [];
 
-        for (const key of stemKeys) {
+        // Download stems with progress updates
+        for (let i = 0; i < stemKeys.length; i++) {
+          const key = stemKeys[i];
           const url = await resolveUrl(output?.[key]);
           if (!url) continue;
+          console.log(`[separate:${jobId}] Downloading ${key} stem...`);
+          await writeJob(jobId, { 
+            status: "processing", 
+            progress: 80 + Math.floor((i / stemKeys.length) * 15), 
+            createdAt: Date.now() 
+          });
           const p = join(tmpdir(), `sep-${jobId}-${key}.mp3`);
-          await new Promise(r => setTimeout(r, 2000));
+          await new Promise(r => setTimeout(r, 1000));
           await downloadToTmp(url, p);
           localPaths.push(p);
           tmpFiles.push(p);
@@ -215,6 +223,8 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
         const mixedPath = join(tmpdir(), `sep-${jobId}-instrumental.mp3`);
 
         // ffmpeg amix: sum all stems into one file
+        console.log(`[separate:${jobId}] Mixing ${localPaths.length} stems with ffmpeg...`);
+        await writeJob(jobId, { status: "processing", progress: 95, createdAt: Date.now() });
         const inputs = localPaths.flatMap(p => ["-i", p]);
         await execFileAsync("ffmpeg", [
           "-y", ...inputs,
@@ -297,7 +307,8 @@ export async function GET(request: NextRequest) {
   if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
   if (job.status === "done" && job.dlName) {
-    await deleteJob(jobId);
+    // Delay deletion so frontend can poll a few more times without error
+    setTimeout(() => deleteJob(jobId).catch(() => {}), 30000);
     const safeFilename = job.dlName.replace(/[^\x00-\x7F]/g, "").replace(/[^a-zA-Z0-9._\-]/g, "_") || "download.mp3";
 
     // Both stems ready
