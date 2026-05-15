@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { addHistoryItem } from "../lib/history";
+import UrlDropZone from "./UrlDropZone";
+import { showToast } from "./Toast";
 
 interface DownloaderProps {
   initialUrl?: string;
@@ -156,8 +158,10 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
           fileName: ytInfo?.title,
         },
       });
-    } catch {
-      setYtError("Download failed. Please try again.");
+      showToast(`Downloaded ${format.toUpperCase()} successfully!`, "success");
+    } catch (e: any) {
+      setYtError(e.message || "Download failed");
+      showToast(e.message || "Download failed", "error");
     } finally {
       setYtDownloading(null);
     }
@@ -311,24 +315,34 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
         </button>
       </div>
 
-      <div className="flex gap-2 w-full max-w-xl max-sm:flex-col">
-        <input
-          value={ytUrl}
-          onChange={(e) => setYtUrl(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") fetchInfo(); }}
-          placeholder={PLATFORMS.find(p => p.name === selectedPlatform)?.placeholder}
-          className="flex-1 px-4 py-3 rounded-xl bg-black border border-gray-600 text-white outline-none focus:ring-2 focus:ring-[#C9A84C]"
-        />
-        <div className={`max-sm:w-full ${ytLoading ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
-          <button
-            onClick={fetchInfo}
-            disabled={ytLoading}
-            className="px-6 py-3 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2 w-full"
-          >
-            {ytLoading ? <span className="text-[#C9A84C]">Converting...</span> : "Convert"}
-          </button>
+      <UrlDropZone
+        onUrlDrop={(url) => {
+          setYtUrl(url);
+          const platform = PLATFORMS.find(p => url.toLowerCase().includes(p.name.toLowerCase()));
+          if (platform) setSelectedPlatform(platform.name);
+          showToast("URL dropped! Click Convert to download.", "info");
+        }}
+        className="w-full max-w-xl"
+      >
+        <div className="flex gap-2 w-full max-sm:flex-col">
+          <input
+            value={ytUrl}
+            onChange={(e) => setYtUrl(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") fetchInfo(); }}
+            placeholder={PLATFORMS.find(p => p.name === selectedPlatform)?.placeholder}
+            className="flex-1 px-4 py-3 rounded-xl bg-black border border-gray-600 text-white outline-none focus:ring-2 focus:ring-[#C9A84C]"
+          />
+          <div className={`max-sm:w-full ${ytLoading ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+            <button
+              onClick={fetchInfo}
+              disabled={ytLoading}
+              className="px-6 py-3 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2 w-full"
+            >
+              {ytLoading ? <span className="text-[#C9A84C]">Converting...</span> : "Convert"}
+            </button>
+          </div>
         </div>
-      </div>
+      </UrlDropZone>
 
       {ytError && <p className="mt-4 text-red-400 text-sm">{ytError}</p>}
 
