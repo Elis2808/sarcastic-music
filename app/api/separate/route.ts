@@ -21,6 +21,8 @@ type JobState = {
   error?: string;
   dlName?: string;
   stemUrl?: string;
+  vocalsUrl?: string;
+  noVocalsUrl?: string;
   progress?: number;
   createdAt: number;
 };
@@ -88,7 +90,7 @@ async function downloadToTmp(url: string, dest: string): Promise<void> {
   await writeFile(dest, Buffer.from(await res.arrayBuffer()));
 }
 
-async function runSeparation(jobId: string, audioPath: string, stem: string, originalName: string) {
+async function runSeparation(jobId: string, audioPath: string, stem: string, originalName: string, isBoth: boolean = false) {
   await writeJob(jobId, { status: "processing", createdAt: Date.now() });
   const tmpFiles: string[] = [];
   try {
@@ -109,6 +111,23 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
 
     let stemUrl: string | null = null;
 
+    if (isBoth) {
+      // Both stems — store both URLs from single job
+      const vocals = await resolveUrl(output?.vocals);
+      const noVocals = await resolveUrl(output?.no_vocals);
+      if (!vocals || !noVocals) throw new Error(`Missing stems in output: ${JSON.stringify(Object.keys(output ?? {}))}`);
+      
+      await writeJob(jobId, { 
+        status: "done", 
+        vocalsUrl: vocals,
+        noVocalsUrl: noVocals,
+        dlName: originalName,
+        createdAt: Date.now() 
+      });
+      console.log(`[separate:${jobId}] Done — both stems ready`);
+      return;
+    }
+    
     if (stem === "vocals") {
       // Vocals stem — direct from output
       stemUrl = await resolveUrl(output?.vocals);
@@ -182,7 +201,10 @@ export async function POST(request: NextRequest) {
   }
 
   const file = formData.get("file");
-  const stem = (formData.get("stem") as string) ?? "no_vocals";
+  let stem = (formData.get("stem") as string) ?? "no_vocals";
+  const isBoth = stem === "both";
+  // For 'both', we use 'vocals' setting since it returns both stems
+  if (isBoth) stem = "vocals";
 
   if (!file || !(file instanceof Blob)) {
     return Response.json({ error: "No file provided" }, { status: 400 });
@@ -203,8 +225,8 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Failed to save file" }, { status: 500 });
   }
 
-  // Fire and forget — runs in background, client polls for status
-  runSeparation(jobId, audioPath, stem, originalName);
+    // Fire and forget — runs in background, client polls for status
+    runSeparation(jobId, audioPath, stem, originalName, isBoth);
 
   return Response.json({ jobId });
 }
@@ -217,27 +239,39 @@ export async function GET(request: NextRequest) {
   const job = await readJob(jobId);
   if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
-  if (job.status === "done" && job.stemUrl && job.dlName) {
+  if (job.status === "done" && job.dlName) {
     await deleteJob(jobId);
     const safeFilename = job.dlName.replace(/[^\x00-\x7F]/g, "").replace(/[^a-zA-Z0-9._\-]/g, "_") || "download.mp3";
 
-    if (job.stemUrl.startsWith("file://")) {
-      // Locally mixed instrumental — must proxy since it's on disk
-      const localPath = job.stemUrl.slice(7);
-      const audioBuffer = await readFile(localPath).catch(() => Buffer.alloc(0));
-      unlink(localPath).catch(() => {});
-      if (!audioBuffer.length) return Response.json({ error: "Result file missing" }, { status: 500 });
-      return new Response(new Uint8Array(audioBuffer), {
-        headers: {
-          "Content-Type": "audio/mpeg",
-          "Content-Disposition": `attachment; filename="${safeFilename}"`,
-          "Content-Length": String(audioBuffer.length),
-        },
+    // Both stems ready
+    if (job.vocalsUrl && job.noVocalsUrl) {
+      return Response.json({ 
+        downloadUrl: job.noVocalsUrl, 
+        vocalsUrl: job.vocalsUrl,
+        filename: safeFilename 
       });
     }
 
-    // Remote Replicate URL — redirect browser directly for instant download
-    return Response.json({ downloadUrl: job.stemUrl, filename: safeFilename });
+    // Single stem (instrumental/no_vocals or vocals)
+    if (job.stemUrl) {
+      if (job.stemUrl.startsWith("file://")) {
+        // Locally mixed instrumental — must proxy since it's on disk
+        const localPath = job.stemUrl.slice(7);
+        const audioBuffer = await readFile(localPath).catch(() => Buffer.alloc(0));
+        unlink(localPath).catch(() => {});
+        if (!audioBuffer.length) return Response.json({ error: "Result file missing" }, { status: 500 });
+        return new Response(new Uint8Array(audioBuffer), {
+          headers: {
+            "Content-Type": "audio/mpeg",
+            "Content-Disposition": `attachment; filename="${safeFilename}"`,
+            "Content-Length": String(audioBuffer.length),
+          },
+        });
+      }
+
+      // Remote Replicate URL — redirect browser directly for instant download
+      return Response.json({ downloadUrl: job.stemUrl, filename: safeFilename });
+    }
   }
 
   if (job.status === "error") {

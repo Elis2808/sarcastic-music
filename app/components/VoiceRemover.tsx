@@ -37,7 +37,6 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
   const [processing, setProcessing] = useState<StemType | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [demucsProgress, setDemucsProgress] = useState(0);
-  const [demucsProgress2, setDemucsProgress2] = useState(0);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -125,7 +124,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
         const audioBlob = await linkRes.blob();
         const formData = new FormData();
         formData.append("file", audioBlob, "audio.mp3");
-        formData.append("stem", stem === "both" ? "no_vocals" : stem);
+        formData.append("stem", stem);
         
         const startRes = await fetch("/api/separate", { method: "POST", body: formData });
         const startData = await startRes.json();
@@ -148,7 +147,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
         // Process file upload
         const formData = new FormData();
         formData.append("file", file!);
-        formData.append("stem", stem === "both" ? "no_vocals" : stem);
+        formData.append("stem", stem);
         
         const startRes = await fetch("/api/separate", { method: "POST", body: formData });
         const startData = await startRes.json();
@@ -170,34 +169,8 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
         });
       }
 
-      // For "both" - need to start second job for vocals
-      let vocalsJobId: string | null = null;
-      if (stem === "both") {
-        if (linkUrl.trim()) {
-          const linkRes = await fetch("/api/youtube", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: linkUrl.trim(), format: "mp3" }),
-          });
-          const audioBlob = await linkRes.blob();
-          const formData = new FormData();
-          formData.append("file", audioBlob, "audio.mp3");
-          formData.append("stem", "vocals");
-          const startRes = await fetch("/api/separate", { method: "POST", body: formData });
-          const startData = await startRes.json();
-          vocalsJobId = startData.jobId;
-        } else {
-          const formData = new FormData();
-          formData.append("file", file!);
-          formData.append("stem", "vocals");
-          const startRes = await fetch("/api/separate", { method: "POST", body: formData });
-          const startData = await startRes.json();
-          vocalsJobId = startData.jobId;
-        }
-      }
-
-      // Poll for both jobs in parallel when both is selected
-      const pollJob = async (jid: string, setProgress: (p: number) => void): Promise<string> => {
+      // Poll for job completion
+      const pollJob = async (jid: string): Promise<{downloadUrl: string, vocalsUrl?: string}> => {
         const deadline = Date.now() + 8 * 60 * 1000;
         while (true) {
           if (Date.now() > deadline) throw new Error("Processing timed out.");
@@ -207,35 +180,31 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
           if (pollRes.status === 404) throw new Error("Job lost due to server restart. Please try again.");
           if (!pollRes.ok) throw new Error(pollData.error || "Processing failed");
           if (pollData.status === "error") throw new Error(pollData.error || "Processing failed");
-          if (typeof pollData.progress === "number") setProgress(pollData.progress);
-          if (pollData.downloadUrl) return pollData.downloadUrl;
+          if (typeof pollData.progress === "number") setDemucsProgress(pollData.progress);
+          if (pollData.downloadUrl) return pollData;
         }
       };
 
-      if (vocalsJobId && stem === "both") {
-        // Poll both jobs in parallel for Both
-        const [instrumentalUrl, vocalsUrl] = await Promise.all([
-          pollJob(jobId, setDemucsProgress),
-          pollJob(vocalsJobId, setDemucsProgress2)
-        ]);
+      const result = await pollJob(jobId);
+      
+      if (stem === "both" && result.vocalsUrl) {
+        // Download both stems
         const a1 = document.createElement("a");
-        a1.href = instrumentalUrl;
+        a1.href = result.downloadUrl;
         a1.download = `${(file?.name || "song").replace(/\.[^.]+$/, "")}_instrumental.mp3`;
         a1.click();
         
-        // Small delay between downloads
         await new Promise(r => setTimeout(r, 500));
         
         const a2 = document.createElement("a");
-        a2.href = vocalsUrl;
+        a2.href = result.vocalsUrl;
         a2.download = `${(file?.name || "song").replace(/\.[^.]+$/, "")}_vocals.mp3`;
         a2.click();
       } else {
-        // Single job
-        const instrumentalUrl = await pollJob(jobId, setDemucsProgress);
+        // Single stem
         const a1 = document.createElement("a");
-        a1.href = instrumentalUrl;
-        a1.download = `${(file?.name || "song").replace(/\.[^.]+$/, "")}_instrumental.mp3`;
+        a1.href = result.downloadUrl;
+        a1.download = `${(file?.name || "song").replace(/\.[^.]+$/, "")}_${stem === "vocals" ? "vocals" : "instrumental"}.mp3`;
         a1.click();
       }
     } catch (e: unknown) {
@@ -245,7 +214,6 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
       setProcessing(null);
       setElapsed(0);
       setDemucsProgress(0);
-      setDemucsProgress2(0);
     }
   }, [file, linkUrl]);
 
@@ -437,12 +405,12 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
             <div className="w-full">
               <div className="flex justify-between text-xs text-gray-500 mb-1">
                 <span>Processing</span>
-                <span>{Math.round(processing === "both" ? (demucsProgress + demucsProgress2) / 2 : demucsProgress)}%</span>
+                <span>{Math.round(demucsProgress)}%</span>
               </div>
               <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-300 bg-[#C9A84C]"
-                  style={{ width: `${processing === "both" ? (demucsProgress + demucsProgress2) / 2 : demucsProgress}%` }}
+                  style={{ width: `${demucsProgress}%` }}
                 />
               </div>
             </div>
