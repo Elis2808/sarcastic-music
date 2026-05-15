@@ -117,13 +117,13 @@ async function runReplicateWithTimeout(fileUrl: string, jobId: string, timeoutMs
       const job = await readJob(jobId);
       if (job && job.status === "processing" && job.progress && job.progress >= 20 && job.progress < 70) {
         progressBumpCount++;
-        // Increment by ~5% every 15 seconds, max 70%
-        const newProgress = Math.min(70, 20 + (progressBumpCount * 5));
+        // Increment by ~10% every 3 seconds, max 70% (feels faster)
+        const newProgress = Math.min(70, 20 + (progressBumpCount * 10));
         await writeJob(jobId, { ...job, progress: newProgress, createdAt: job.createdAt });
         console.log(`[separate:${jobId}] Still processing... ${newProgress}%`);
       }
     } catch {}
-  }, 15000); // Every 15 seconds
+  }, 3000); // Every 3 seconds for smoother updates
   
   try {
     const replicatePromise = replicate.run("cjwbw/demucs:25a173108cff36ef9f80f854c162d01df9e6528be175794b81158fa03836d953", {
