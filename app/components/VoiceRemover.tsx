@@ -39,6 +39,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
   const [elapsed, setElapsed] = useState(0);
   const [demucsProgress, setDemucsProgress] = useState(0);
   const [error, setError] = useState("");
+  const [pendingDownloads, setPendingDownloads] = useState<{instrumentalUrl?: string, vocalsUrl?: string, filename?: string} | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -189,30 +190,43 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
       const result = await pollJob(jobId);
       
       if (stem === "both" && result.vocalsUrl) {
-        // Download both stems sequentially with visual feedback
-        // First: Instrumental
+        // Store for manual download fallback (mobile Safari blocks auto-downloads)
+        const baseName = (file?.name || "song").replace(/\.[^.]+$/, "");
+        setPendingDownloads({
+          instrumentalUrl: result.downloadUrl,
+          vocalsUrl: result.vocalsUrl,
+          filename: baseName
+        });
+        
+        // Try auto-download (works on desktop, may fail on mobile Safari)
         setDownloadingStem("no_vocals");
         const a1 = document.createElement("a");
         a1.href = result.downloadUrl;
-        a1.download = `${(file?.name || "song").replace(/\.[^.]+$/, "")}_instrumental.mp3`;
+        a1.download = `${baseName}_instrumental.mp3`;
         a1.click();
         
         await new Promise(r => setTimeout(r, 1500));
         
-        // Then: Vocals
         setDownloadingStem("vocals");
         const a2 = document.createElement("a");
         a2.href = result.vocalsUrl;
-        a2.download = `${(file?.name || "song").replace(/\.[^.]+$/, "")}_vocals.mp3`;
+        a2.download = `${baseName}_vocals.mp3`;
         a2.click();
         
         await new Promise(r => setTimeout(r, 500));
         setDownloadingStem(null);
       } else {
         // Single stem
+        const baseName = (file?.name || "song").replace(/\.[^.]+$/, "");
+        setPendingDownloads({
+          instrumentalUrl: stem === "no_vocals" ? result.downloadUrl : undefined,
+          vocalsUrl: stem === "vocals" ? result.downloadUrl : undefined,
+          filename: baseName
+        });
+        
         const a1 = document.createElement("a");
         a1.href = result.downloadUrl;
-        a1.download = `${(file?.name || "song").replace(/\.[^.]+$/, "")}_${stem === "vocals" ? "vocals" : "instrumental"}.mp3`;
+        a1.download = `${baseName}_${stem === "vocals" ? "vocals" : "instrumental"}.mp3`;
         a1.click();
       }
     } catch (e: unknown) {
@@ -424,6 +438,41 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Download Ready - Manual fallback for mobile Safari */}
+      {pendingDownloads && (
+        <div className="mt-6 p-4 bg-[#C9A84C]/20 rounded-lg border border-[#C9A84C]">
+          <p className="text-[#C9A84C] font-semibold mb-3">🎉 Download Ready! (Tap buttons if auto-download didn&apos;t work)</p>
+          <div className="flex flex-wrap gap-3">
+            {pendingDownloads.instrumentalUrl && (
+              <a
+                href={pendingDownloads.instrumentalUrl}
+                download={`${pendingDownloads.filename}_instrumental.mp3`}
+                className="px-4 py-2 bg-[#C9A84C] text-[#151515] rounded-lg font-semibold hover:bg-[#C9A84C]/80 transition-colors"
+                onClick={() => {}}
+              >
+                📥 Instrumental
+              </a>
+            )}
+            {pendingDownloads.vocalsUrl && (
+              <a
+                href={pendingDownloads.vocalsUrl}
+                download={`${pendingDownloads.filename}_vocals.mp3`}
+                className="px-4 py-2 bg-[#C9A84C] text-[#151515] rounded-lg font-semibold hover:bg-[#C9A84C]/80 transition-colors"
+                onClick={() => {}}
+              >
+                🎤 Vocals
+              </a>
+            )}
+          </div>
+          <button
+            onClick={() => setPendingDownloads(null)}
+            className="mt-3 text-sm text-gray-400 hover:text-white underline"
+          >
+            Dismiss
+          </button>
         </div>
       )}
     </div>

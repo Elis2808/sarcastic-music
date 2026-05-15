@@ -196,8 +196,8 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
 
       if (!stemUrl) {
         // two_stems not supported — mix bass + drums + other with ffmpeg
-        console.log(`[separate:${jobId}] No no_vocals key — mixing bass+drums+other for instrumental`);
-        const stemKeys = ["bass", "drums", "other"] as const;
+        console.log(`[separate:${jobId}] No no_vocals key — mixing all non-vocal stems for instrumental`);
+        const stemKeys = ["bass", "drums", "guitar", "other", "piano"] as const;
         const localPaths: string[] = [];
 
         for (const key of stemKeys) {
