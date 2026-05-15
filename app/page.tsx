@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import KeyFinder from "./components/KeyFinder";
 import BpmFinder from "./components/BpmFinder";
 import VoiceRemover from "./components/VoiceRemover";
@@ -11,6 +11,7 @@ import Dictionary from "./components/Dictionary";
 import HistoryMenu from "./components/HistoryMenu";
 import { addHistoryItem, type HistoryItem } from "./lib/history";
 import ToastContainer from "./components/Toast";
+import { showToast } from "./components/Toast";
 
 type Page = "rhyme" | "key" | "bpm" | "voice" | "youtube" | "dictionary" | "converter";
 
@@ -27,6 +28,36 @@ export default function Home() {
     url?: string;
     platform?: string;
   }>({});
+
+  // Sync with URL params for shareable links
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tool = params.get("tool") as Page;
+    const word = params.get("word");
+    const url = params.get("url");
+    const platform = params.get("platform");
+    
+    if (tool && ["rhyme", "key", "bpm", "voice", "youtube", "dictionary", "converter"].includes(tool)) {
+      setActivePage(tool);
+      if (word || url || platform) {
+        setRestoreState({ tool, word: word || undefined, url: url || undefined, platform: platform || undefined });
+      }
+    }
+  }, []);
+
+  // Update URL when navigating
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams();
+    params.set("tool", activePage);
+    if (restoreState.word) params.set("word", restoreState.word);
+    if (restoreState.url) params.set("url", restoreState.url);
+    if (restoreState.platform) params.set("platform", restoreState.platform);
+    
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, "", newUrl);
+  }, [activePage, restoreState]);
 
   function navigateTo(page: Page, state?: { word?: string; url?: string; platform?: string }) {
     setPreviousPage(activePage);
@@ -109,7 +140,7 @@ export default function Home() {
       {activePage === "bpm"        && <BpmFinder initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
       {activePage === "voice"      && <VoiceRemover initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
       {activePage === "youtube"    && <Downloader initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
-      {activePage === "converter"  && <FileConverter />}
+      {activePage === "converter"  && <FileConverter initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
       {activePage === "dictionary" && (
         <Dictionary
           initialWord={dictWord}
