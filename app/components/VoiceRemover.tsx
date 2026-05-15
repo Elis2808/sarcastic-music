@@ -2,6 +2,9 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { addHistoryItem } from "../lib/history";
+import { addRecentFile } from "../lib/recentFiles";
+import UrlDropZone from "./UrlDropZone";
+import { showToast } from "./Toast";
 
 type StemType = "no_vocals" | "vocals" | "both";
 
@@ -300,42 +303,52 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
 
       {/* Drop zone - only show when no link entered */}
       {!linkUrl && (
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={onDrop}
-          onClick={() => !file && inputRef.current?.click()}
-          className={`w-full max-w-xl max-sm:h-40 h-52 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all duration-200 ${
-            file
-              ? "border-[#C9A84C] bg-[#C9A84C]/5 cursor-default"
-              : dragging
-              ? "border-[#C9A84C] bg-[#C9A84C]/10 scale-[1.02] cursor-copy"
-              : "border-gray-600 bg-gray-900 hover:border-[#C9A84C] hover:bg-black cursor-pointer"
-          }`}
+        <UrlDropZone
+          onUrlDrop={(url) => {
+            setLinkUrl(url);
+            const platform = PLATFORMS.find(p => url.toLowerCase().includes(p.id));
+            if (platform) setSelectedPlatform(platform.id);
+            showToast("URL dropped! Click Process to start separation.", "info");
+          }}
+          className="w-full max-w-xl"
         >
-          {file ? (
-            <>
-              <svg className="w-10 h-10 text-[#C9A84C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-              </svg>
-              <p className="text-white font-medium text-sm">{file.name}</p>
-              <button
-                onClick={(e) => { e.stopPropagation(); setFile(null); setError(""); }}
-                className="text-gray-500 hover:text-red-400 text-xs transition-colors"
-              >
-                Remove file
-              </button>
-            </>
-          ) : (
-            <>
-              <svg className={`w-10 h-10 transition-colors ${dragging ? "text-[#C9A84C]" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-              </svg>
-              <p className="text-gray-400 text-sm">{dragging ? "Drop It!" : "Or drop an audio file here"}</p>
-            </>
-          )}
-          <input ref={inputRef} type="file" accept="audio/*" className="hidden" onChange={onFileChange} />
-        </div>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            onClick={() => !file && inputRef.current?.click()}
+            className={`w-full max-sm:h-40 h-52 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all duration-200 ${
+              file
+                ? "border-[#C9A84C] bg-[#C9A84C]/5 cursor-default"
+                : dragging
+                ? "border-[#C9A84C] bg-[#C9A84C]/10 scale-[1.02] cursor-copy"
+                : "border-gray-600 bg-gray-900 hover:border-[#C9A84C] hover:bg-black cursor-pointer"
+            }`}
+          >
+            {file ? (
+              <>
+                <svg className="w-10 h-10 text-[#C9A84C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                </svg>
+                <p className="text-white font-medium text-sm">{file.name}</p>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setFile(null); setError(""); }}
+                  className="text-gray-500 hover:text-red-400 text-xs transition-colors"
+                >
+                  Remove file
+                </button>
+              </>
+            ) : (
+              <>
+                <svg className={`w-10 h-10 transition-colors ${dragging ? "text-[#C9A84C]" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                </svg>
+                <p className="text-gray-400 text-sm text-center px-4">{dragging ? "Drop It!" : "Drop audio file or URL here"}</p>
+              </>
+            )}
+            <input ref={inputRef} type="file" accept="audio/*" className="hidden" onChange={onFileChange} />
+          </div>
+        </UrlDropZone>
       )}
 
       {/* Error */}
