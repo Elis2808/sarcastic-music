@@ -126,7 +126,7 @@ async function runReplicateWithTimeout(fileUrl: string, jobId: string, timeoutMs
   }, 15000); // Every 15 seconds
   
   try {
-    const replicatePromise = replicate.run("soykertje/spleeter:7c5d63f42eb95d6e7b8c4b6e3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3", {
+    const replicatePromise = replicate.run("soykertje/spleeter:3df0078aec72e9f395fa257141caf0fcfcf10517b0200842943f356a394c4f32", {
       input: { audio: fileUrl, stem: "2stems" },
     });
     
@@ -157,7 +157,7 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
     const mime = MIME_MAP[ext] ?? "audio/mpeg";
     const uploadedFile = await replicate.files.create(new Blob([fileBytes], { type: mime }));
     const fileUrl = (uploadedFile as any).urls?.get ?? (uploadedFile as any).url;
-    console.log(`[separate:${jobId}] Uploaded. Running htdemucs on Replicate GPU...`);
+    console.log(`[separate:${jobId}] Uploaded. Running Spleeter on Replicate...`);
     await writeJob(jobId, { status: "processing", progress: 20, createdAt: Date.now() });
 
     const output = await runReplicateWithTimeout(fileUrl, jobId) as any;
@@ -167,38 +167,25 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
 
     let stemUrl: string | null = null;
 
-    // Handle both 'vocals' and 'vocal' (model varies)
-    const vocalsUrl = await resolveUrl(output?.vocals) || await resolveUrl(output?.vocal);
-    
-    // Check if we have separate no_vocals or need to mix instrumental
-    let noVocalsUrl = await resolveUrl(output?.no_vocals);
+    // Spleeter returns 'vocals' and 'accompaniment' (instrumental) directly
+    const vocalsUrl = await resolveUrl(output?.vocals);
+    const accompanimentUrl = await resolveUrl(output?.accompaniment); // instrumental
     
     if (isBoth) {
       // For 'both', we need both vocal and instrumental
       if (!vocalsUrl) throw new Error(`No vocal stem found. Keys: ${JSON.stringify(Object.keys(output ?? {}))}`);
+      if (!accompanimentUrl) throw new Error(`No accompaniment stem found. Keys: ${JSON.stringify(Object.keys(output ?? {}))}`);
       
-      // Store all stem URLs for potential mixing
       const jobData: JobState = { 
         status: "done", 
         vocalsUrl: vocalsUrl,
+        noVocalsUrl: accompanimentUrl, // Spleeter's instrumental = accompaniment
         dlName: `${originalName}_instrumental.mp3`,
         createdAt: Date.now() 
       };
       
-      if (noVocalsUrl) {
-        jobData.noVocalsUrl = noVocalsUrl;
-      } else {
-        // Store individual stems for mixing later
-        jobData.bassUrl = await resolveUrl(output?.bass) || undefined;
-        jobData.drumsUrl = await resolveUrl(output?.drums) || undefined;
-        jobData.guitarUrl = await resolveUrl(output?.guitar) || undefined;
-        jobData.otherUrl = await resolveUrl(output?.other) || undefined;
-        jobData.pianoUrl = await resolveUrl(output?.piano) || undefined;
-        console.log(`[separate:${jobId}] No no_vocals key — stored stems for mixing`);
-      }
-      
       await writeJob(jobId, jobData);
-      console.log(`[separate:${jobId}] Done — both stems ready`);
+      console.log(`[separate:${jobId}] Done — both stems ready (Spleeter)`);
       return;
     }
     
@@ -208,52 +195,9 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
       if (!stemUrl) throw new Error(`No vocal stem found. Keys: ${JSON.stringify(Object.keys(output ?? {}))}`);
 
     } else {
-      // Instrumental — try no_vocals key first
-      stemUrl = noVocalsUrl;
-
-      if (!stemUrl) {
-        // two_stems not supported — mix bass + drums + other with ffmpeg
-        console.log(`[separate:${jobId}] No no_vocals key — mixing all non-vocal stems for instrumental`);
-        const stemKeys = ["bass", "drums", "guitar", "other", "piano"] as const;
-        const localPaths: string[] = [];
-
-        // Download stems with progress updates
-        for (let i = 0; i < stemKeys.length; i++) {
-          const key = stemKeys[i];
-          const url = await resolveUrl(output?.[key]);
-          if (!url) continue;
-          console.log(`[separate:${jobId}] Downloading ${key} stem...`);
-          await writeJob(jobId, { 
-            status: "processing", 
-            progress: 80 + Math.floor((i / stemKeys.length) * 15), 
-            createdAt: Date.now() 
-          });
-          const p = join(tmpdir(), `sep-${jobId}-${key}.mp3`);
-          await new Promise(r => setTimeout(r, 1000));
-          await downloadToTmp(url, p);
-          localPaths.push(p);
-          tmpFiles.push(p);
-        }
-
-        if (localPaths.length === 0) throw new Error("No stems available to build instrumental");
-
-        const mixedPath = join(tmpdir(), `sep-${jobId}-instrumental.mp3`);
-
-        // ffmpeg amix: sum all stems into one file
-        console.log(`[separate:${jobId}] Mixing ${localPaths.length} stems with ffmpeg...`);
-        await writeJob(jobId, { status: "processing", progress: 95, createdAt: Date.now() });
-        const inputs = localPaths.flatMap(p => ["-i", p]);
-        await execFileAsync("ffmpeg", [
-          "-y", ...inputs,
-          "-filter_complex", `amix=inputs=${localPaths.length}:duration=longest:normalize=0`,
-          "-c:a", "libmp3lame", "-b:a", "256k", mixedPath,
-        ], { timeout: 120000 });
-
-        const dlName = `${originalName}_instrumental.mp3`;
-        await writeJob(jobId, { status: "done", stemUrl: `file://${mixedPath}`, dlName, createdAt: Date.now() });
-        console.log(`[separate:${jobId}] Instrumental mixed locally — done`);
-        return;
-      }
+      // Instrumental — Spleeter returns 'accompaniment' directly
+      stemUrl = accompanimentUrl;
+      if (!stemUrl) throw new Error(`No accompaniment stem found. Keys: ${JSON.stringify(Object.keys(output ?? {}))}`);
     }
 
     const dlName = `${originalName}_${stem === "no_vocals" ? "instrumental" : "vocals"}.mp3`;
@@ -331,71 +275,13 @@ export async function GET(request: NextRequest) {
     }
     const safeFilename = job.dlName.replace(/[^\x00-\x7F]/g, "").replace(/[^a-zA-Z0-9._\-]/g, "_") || "download.mp3";
 
-    // Both stems ready
+    // Both stems ready (Spleeter returns both directly)
     if (job.vocalsUrl && job.noVocalsUrl) {
       return Response.json({ 
         downloadUrl: job.noVocalsUrl, 
         vocalsUrl: job.vocalsUrl,
         filename: safeFilename 
       });
-    }
-
-    // Both stems but need to mix instrumental on-demand
-    if (job.vocalsUrl && !job.noVocalsUrl && (job.bassUrl || job.drumsUrl || job.guitarUrl || job.otherUrl || job.pianoUrl)) {
-      try {
-        // Check if already mixed (stored in JOB_DIR for persistence)
-        const mixedPath = join(JOB_DIR, `${jobId}-instrumental.mp3`);
-        
-        // If not already mixed, do it now
-        if (!existsSync(mixedPath)) {
-          console.log(`[separate:${jobId}] Mixing instrumental on-demand...`);
-          
-          // Mix instrumental from individual stems
-          const stemKeys = ["bass", "drums", "guitar", "other", "piano"] as const;
-          const localPaths: string[] = [];
-          const tmpFiles: string[] = [];
-
-          for (const key of stemKeys) {
-            const url = job[`${key}Url` as keyof JobState] as string | undefined;
-            if (!url) continue;
-            const p = join(tmpdir(), `sep-${jobId}-${key}.mp3`);
-            await new Promise(r => setTimeout(r, 1000));
-            await downloadToTmp(url, p);
-            localPaths.push(p);
-            tmpFiles.push(p);
-          }
-
-          if (localPaths.length === 0) throw new Error("No stems available to build instrumental");
-
-          const inputs = localPaths.flatMap(p => ["-i", p]);
-          await execFileAsync("ffmpeg", [
-            "-y", ...inputs,
-            "-filter_complex", `amix=inputs=${localPaths.length}:duration=longest:normalize=0`,
-            "-c:a", "libmp3lame", "-b:a", "256k", mixedPath,
-          ], { timeout: 120000 });
-
-          // Cleanup temp stem files
-          for (const f of tmpFiles) unlink(f).catch(() => {});
-          
-          // Save to job so we don't remix on next poll
-          await writeJob(jobId, { 
-            ...job, 
-            noVocalsUrl: `file://${mixedPath}`,
-            createdAt: job.createdAt 
-          });
-          console.log(`[separate:${jobId}] Instrumental mixed and saved`);
-        }
-
-        // Return as JSON with both URLs (instrumental proxied, vocals remote)
-        return Response.json({ 
-          downloadUrl: `file://${mixedPath}`,
-          vocalsUrl: job.vocalsUrl,
-          filename: safeFilename 
-        });
-      } catch (err: any) {
-        console.error(`[separate:${jobId}] Error mixing instrumental:`, err.message);
-        return Response.json({ error: "Failed to mix instrumental" }, { status: 500 });
-      }
     }
 
     // Single stem (instrumental/no_vocals or vocals)
