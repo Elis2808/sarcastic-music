@@ -22,6 +22,8 @@ export default function BpmFinder() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkMode, setLinkMode] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -56,6 +58,25 @@ export default function BpmFinder() {
           mask-composite: exclude;
           animation: btn-sweep 1.4s linear infinite;
         }
+        /* Circular sweep wrapper */
+        .circle-sweep-wrapper {
+          position: relative;
+          border-radius: 50%;
+          padding: 3px;
+          background: #111;
+        }
+        .circle-sweep-wrapper::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          padding: 3px;
+          background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg);
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          animation: btn-sweep 1.4s linear infinite;
+        }
       `;
       document.head.appendChild(style);
     }
@@ -66,6 +87,8 @@ export default function BpmFinder() {
     setError("");
     setResult(null);
     setFileName(file.name);
+    setLinkUrl("");
+    setLinkMode(false);
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -79,6 +102,38 @@ export default function BpmFinder() {
       setLoading(false);
     }
   }, []);
+
+  const processLink = useCallback(async () => {
+    if (!linkUrl.trim()) return;
+    setLoading(true);
+    setError("");
+    setResult(null);
+    setFileName(linkUrl);
+    try {
+      // Fetch audio from URL
+      const audioRes = await fetch("/api/fetch-audio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: linkUrl.trim() }),
+      });
+      if (!audioRes.ok) {
+        const err = await audioRes.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to fetch audio from URL");
+      }
+      const audioBlob = await audioRes.blob();
+      const file = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/detect-bpm", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "BPM detection failed");
+      setResult(data);
+    } catch (e: any) {
+      setError(e.message || "Could not detect BPM. Make sure it's a valid audio URL.");
+    } finally {
+      setLoading(false);
+    }
+  }, [linkUrl]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -102,16 +157,58 @@ export default function BpmFinder() {
     <div className="flex flex-col items-center w-full pt-8 px-4 max-sm:pt-6 max-sm:px-3 select-none">
       <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">BPM Finder</h1>
 
+      {/* Mode toggle */}
+      {!result && !loading && (
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={() => setLinkMode(false)}
+            className={`text-sm transition-all duration-200 cursor-pointer ${!linkMode ? "text-[#C9A84C] drop-shadow-[0_0_8px_rgba(201,168,76,0.8)]" : "text-gray-500 hover:text-gray-400"}`}
+          >File</button>
+          <div
+            onClick={() => setLinkMode(!linkMode)}
+            className="relative w-12 h-2.5 rounded-full bg-gray-700 cursor-pointer"
+          >
+            <span className={`absolute top-0 left-0 w-2.5 h-2.5 rounded-full bg-[#C9A84C] transition-transform duration-75 pointer-events-none ${linkMode ? "translate-x-9" : "translate-x-0"}`} />
+          </div>
+          <button
+            onClick={() => setLinkMode(true)}
+            className={`text-sm transition-all duration-200 cursor-pointer ${linkMode ? "text-[#C9A84C] drop-shadow-[0_0_8px_rgba(201,168,76,0.8)]" : "text-gray-500 hover:text-gray-400"}`}
+          >Link</button>
+        </div>
+      )}
+
+      {/* Link input */}
+      {!result && !loading && linkMode && (
+        <div className="w-full max-w-xl mb-4">
+          <div className="flex gap-2">
+            <input
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") processLink(); }}
+              placeholder="Paste audio URL (YouTube, SoundCloud, etc.)"
+              className="flex-1 px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-sm outline-none focus:ring-2 focus:ring-[#C9A84C]"
+            />
+            <button
+              onClick={processLink}
+              disabled={!linkUrl.trim() || loading}
+              className="px-4 py-3 rounded-xl bg-[#C9A84C] text-black font-semibold text-sm hover:bg-[#b8973d] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Analyze
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Drop zone - hide when result shown */}
-      {!result && (
+      {!result && !loading && !linkMode && (
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           onClick={() => inputRef.current?.click()}
-          className={`w-full max-w-xl max-sm:h-40 h-52 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200 ${
+          className={`w-full max-w-xl max-sm:h-40 h-52 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors ${
             dragging
-              ? "border-[#C9A84C] bg-[#C9A84C]/10 scale-[1.02]"
+              ? "border-[#C9A84C] bg-[#C9A84C]/10"
               : "border-gray-600 bg-gray-900 hover:border-[#C9A84C] hover:bg-black"
           }`}
         >
@@ -144,11 +241,9 @@ export default function BpmFinder() {
         <div className="mt-8 flex flex-col items-center gap-5 w-full max-w-xs">
           <p className="text-gray-500 text-xs uppercase tracking-widest">Detected Tempo</p>
 
-          {/* BPM circle with gold spinning effect */}
-          <div className="btn-sweep-wrapper p-[3px] rounded-full">
-            <div
-              className="w-44 h-44 rounded-full flex flex-col items-center justify-center bg-black transition-all duration-500"
-            >
+          {/* BPM circle with gold spinning circular border */}
+          <div className="circle-sweep-wrapper">
+            <div className="w-44 h-44 rounded-full flex flex-col items-center justify-center bg-black">
               <span className="text-5xl font-bold text-[#C9A84C]">{bpmDisplay}</span>
               <span className="text-sm text-gray-300 mt-1">BPM</span>
             </div>
@@ -173,14 +268,12 @@ export default function BpmFinder() {
 
           <p className="text-gray-600 text-xs">{fileName}</p>
 
-          <div className="btn-sweep-wrapper">
-            <button
-              onClick={() => { setResult(null); setFileName(""); }}
-              className="px-4 py-2 rounded-[10px] bg-black border border-[#C9A84C] hover:bg-gray-900 text-white text-xs font-medium transition-all duration-200 outline-none"
-            >
-              Analyze another file
-            </button>
-          </div>
+          <button
+            onClick={() => { setResult(null); setFileName(""); setLinkUrl(""); }}
+            className="px-4 py-2 rounded-xl bg-gray-800 border border-gray-600 hover:border-[#C9A84C] hover:bg-gray-700 text-white text-xs font-medium transition-all duration-200 outline-none"
+          >
+            Analyze another file
+          </button>
         </div>
       )}
     </div>
