@@ -31,6 +31,8 @@ type JobState = {
   pianoUrl?: string;
   progress?: number;
   createdAt: number;
+  // Track if deletion is already scheduled
+  deletionScheduled?: boolean;
 };
 
 async function ensureJobDir() {
@@ -318,8 +320,11 @@ export async function GET(request: NextRequest) {
   if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
   if (job.status === "done" && job.dlName) {
-    // Delay deletion so frontend can poll a few more times without error
-    setTimeout(() => deleteJob(jobId).catch(() => {}), 30000);
+    // Delay deletion so frontend can poll more times without error (2 min)
+    if (!job.deletionScheduled) {
+      await writeJob(jobId, { ...job, deletionScheduled: true, createdAt: job.createdAt });
+      setTimeout(() => deleteJob(jobId).catch(() => {}), 120000);
+    }
     const safeFilename = job.dlName.replace(/[^\x00-\x7F]/g, "").replace(/[^a-zA-Z0-9._\-]/g, "_") || "download.mp3";
 
     // Both stems ready
