@@ -54,15 +54,7 @@ export default function ToastContainer() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`pointer-events-auto px-4 py-3 rounded-xl shadow-lg text-sm font-medium animate-fadeIn bg-black border ${
-            toast.type === "success"
-              ? "border-[#C9A84C] text-[#C9A84C]"
-              : toast.type === "error"
-              ? "border-red-500 text-red-400"
-              : toast.type === "warning"
-              ? "border-orange-500 text-orange-400"
-              : "border-gray-600 text-gray-300"
-          }`}
+          className={`pointer-events-auto px-4 py-3 rounded-xl shadow-lg text-sm font-medium animate-fadeIn bg-black border border-[#C9A84C] text-[#C9A84C]`}
         >
           <div className="flex items-center gap-2">
             {toast.type === "success" && (
