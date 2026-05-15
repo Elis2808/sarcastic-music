@@ -444,7 +444,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
       {/* Download Ready - Manual fallback for mobile Safari */}
       {pendingDownloads && (
         <div className="mt-6 p-4 bg-[#C9A84C]/20 rounded-lg border border-[#C9A84C]">
-          <p className="text-[#C9A84C] font-semibold mb-3">🎉 Download Ready! (Tap buttons if auto-download didn&apos;t work)</p>
+          <p className="text-[#C9A84C] font-semibold mb-3">Download Ready! (Tap buttons if auto-download didn&apos;t work)</p>
           <div className="flex flex-wrap gap-3">
             {pendingDownloads.instrumentalUrl && (
               <a
@@ -453,7 +453,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
                 className="px-4 py-2 bg-[#C9A84C] text-[#151515] rounded-lg font-semibold hover:bg-[#C9A84C]/80 transition-colors"
                 onClick={() => {}}
               >
-                📥 Instrumental
+                Instrumental
               </a>
             )}
             {pendingDownloads.vocalsUrl && (
@@ -463,7 +463,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
                 className="px-4 py-2 bg-[#C9A84C] text-[#151515] rounded-lg font-semibold hover:bg-[#C9A84C]/80 transition-colors"
                 onClick={() => {}}
               >
-                🎤 Vocals
+                Vocals
               </a>
             )}
           </div>
