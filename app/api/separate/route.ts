@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { writeFile, unlink, readFile, mkdir, readdir } from "fs/promises";
+import { existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { randomUUID } from "crypto";
@@ -342,42 +343,52 @@ export async function GET(request: NextRequest) {
     // Both stems but need to mix instrumental on-demand
     if (job.vocalsUrl && !job.noVocalsUrl && (job.bassUrl || job.drumsUrl || job.guitarUrl || job.otherUrl || job.pianoUrl)) {
       try {
-        // Mix instrumental from individual stems
-        const stemKeys = ["bass", "drums", "guitar", "other", "piano"] as const;
-        const localPaths: string[] = [];
-        const tmpFiles: string[] = [];
+        // Check if already mixed (stored in JOB_DIR for persistence)
+        const mixedPath = join(JOB_DIR, `${jobId}-instrumental.mp3`);
+        
+        // If not already mixed, do it now
+        if (!existsSync(mixedPath)) {
+          console.log(`[separate:${jobId}] Mixing instrumental on-demand...`);
+          
+          // Mix instrumental from individual stems
+          const stemKeys = ["bass", "drums", "guitar", "other", "piano"] as const;
+          const localPaths: string[] = [];
+          const tmpFiles: string[] = [];
 
-        for (const key of stemKeys) {
-          const url = job[`${key}Url` as keyof JobState] as string | undefined;
-          if (!url) continue;
-          const p = join(tmpdir(), `sep-${jobId}-${key}.mp3`);
-          await new Promise(r => setTimeout(r, 1000));
-          await downloadToTmp(url, p);
-          localPaths.push(p);
-          tmpFiles.push(p);
+          for (const key of stemKeys) {
+            const url = job[`${key}Url` as keyof JobState] as string | undefined;
+            if (!url) continue;
+            const p = join(tmpdir(), `sep-${jobId}-${key}.mp3`);
+            await new Promise(r => setTimeout(r, 1000));
+            await downloadToTmp(url, p);
+            localPaths.push(p);
+            tmpFiles.push(p);
+          }
+
+          if (localPaths.length === 0) throw new Error("No stems available to build instrumental");
+
+          const inputs = localPaths.flatMap(p => ["-i", p]);
+          await execFileAsync("ffmpeg", [
+            "-y", ...inputs,
+            "-filter_complex", `amix=inputs=${localPaths.length}:duration=longest:normalize=0`,
+            "-c:a", "libmp3lame", "-b:a", "256k", mixedPath,
+          ], { timeout: 120000 });
+
+          // Cleanup temp stem files
+          for (const f of tmpFiles) unlink(f).catch(() => {});
+          
+          // Save to job so we don't remix on next poll
+          await writeJob(jobId, { 
+            ...job, 
+            noVocalsUrl: `file://${mixedPath}`,
+            createdAt: job.createdAt 
+          });
+          console.log(`[separate:${jobId}] Instrumental mixed and saved`);
         }
-
-        if (localPaths.length === 0) throw new Error("No stems available to build instrumental");
-
-        const mixedPath = join(tmpdir(), `sep-${jobId}-instrumental.mp3`);
-        const inputs = localPaths.flatMap(p => ["-i", p]);
-        await execFileAsync("ffmpeg", [
-          "-y", ...inputs,
-          "-filter_complex", `amix=inputs=${localPaths.length}:duration=longest:normalize=0`,
-          "-c:a", "libmp3lame", "-b:a", "256k", mixedPath,
-        ], { timeout: 120000 });
-
-        // Cleanup temp stem files
-        for (const f of tmpFiles) unlink(f).catch(() => {});
-
-        // Read and return the mixed instrumental
-        const audioBuffer = await readFile(mixedPath);
-        // Delay file deletion to match job deletion timing
-        setTimeout(() => unlink(mixedPath).catch(() => {}), 35000);
 
         // Return as JSON with both URLs (instrumental proxied, vocals remote)
         return Response.json({ 
-          downloadUrl: `file://${mixedPath}`, // Will be handled by client as proxied
+          downloadUrl: `file://${mixedPath}`,
           vocalsUrl: job.vocalsUrl,
           filename: safeFilename 
         });
