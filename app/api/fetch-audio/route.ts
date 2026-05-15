@@ -47,11 +47,75 @@ function getPlatform(url: string): string {
 
 const BASE_ARGS = ["--no-playlist", "--no-cache-dir", "--socket-timeout", "8", "--retries", "2"];
 
-// ─── Unified spawn with timeout ───────────────────────────────────────────────
-function spawnYtDlp(
-  args: string[],
-  timeoutMs: number
-): Promise<{ stdout: string; stderr: string; code: number; audioPath?: string }> {
+// ─── Proxy configuration (same as /api/youtube) ────────────────────────────────
+const PROXIES = [
+  { host: "185.236.92.225", port: 5278, user: "xqruyjao", pass: "4yel99ysr22z", client: "android" },
+  { host: "185.236.92.62", port: 5997, user: "xqruyjao", pass: "4yel99ysr22z", client: "android" },
+  { host: "91.124.50.19", port: 5732, user: "xqruyjao", pass: "4yel99ysr22z", client: "ios" },
+  { host: "91.124.50.92", port: 6114, user: "xqruyjao", pass: "4yel99ysr22z", client: "web" },
+  { host: "185.236.93.217", port: 6967, user: "xqruyjao", pass: "4yel99ysr22z", client: "android" },
+  { host: "185.236.93.234", port: 5125, user: "xqruyjao", pass: "4yel99ysr22z", client: "web" },
+  { host: "185.236.93.105", port: 5759, user: "xqruyjao", pass: "4yel99ysr22z", client: "ios" },
+];
+
+const proxyScores = new Map<string, number>();
+PROXIES.forEach(p => proxyScores.set(`${p.host}:${p.port}`, 0));
+
+function markBlocked(proxy: typeof PROXIES[0]) {
+  const key = `${proxy.host}:${proxy.port}`;
+  const current = proxyScores.get(key) ?? 0;
+  proxyScores.set(key, current - 1);
+}
+
+function getProxyList() {
+  return [...PROXIES].sort((a, b) => {
+    const scoreA = proxyScores.get(`${a.host}:${a.port}`) ?? 0;
+    const scoreB = proxyScores.get(`${b.host}:${b.port}`) ?? 0;
+    return scoreB - scoreA;
+  });
+}
+
+async function runYtDlp(args: string[], timeoutMs: number): Promise<{ stdout: string; stderr: string; code: number }> {
+  const isYouTube = args.some(a => /youtube|youtu\.be/.test(a.toLowerCase()));
+  
+  if (!isYouTube) {
+    // Non-YouTube: try direct first
+    const direct = await tryOnce(args, timeoutMs);
+    if (direct.code === 0) return direct;
+    // Then try with proxies
+  }
+  
+  // Try with proxies (rotating clients)
+  const proxyList = getProxyList();
+  let lastError = "All proxies failed";
+  
+  for (const proxy of proxyList) {
+    const proxyUrl = `http://${proxy.user}:${proxy.pass}@${proxy.host}:${proxy.port}`;
+    const clientArgs = [
+      ...args,
+      "--extractor-args", `youtube:player_client=${proxy.client}`,
+      "--proxy", proxyUrl,
+    ];
+    
+    console.log(`[fetch-audio] trying ${proxy.client}+${proxyUrl}...`);
+    const result = await tryOnce(clientArgs, timeoutMs);
+    
+    if (result.code === 0) {
+      console.log(`[fetch-audio] ${proxy.client}+${proxyUrl} exit: 0`);
+      return result;
+    }
+    
+    console.log(`[fetch-audio] ${proxy.client}+${proxyUrl} exit: ${result.code}`);
+    if (result.stderr?.includes("429") || result.stderr?.includes("bot") || result.stderr?.includes("sign in")) {
+      markBlocked(proxy);
+    }
+    lastError = result.stderr || `Exit code ${result.code}`;
+  }
+  
+  return { stdout: "", stderr: lastError, code: 1 };
+}
+
+async function tryOnce(args: string[], timeoutMs: number): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolve) => {
     const child = spawn("yt-dlp", args, { stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
@@ -59,16 +123,28 @@ function spawnYtDlp(
     let done = false;
 
     const timer = setTimeout(() => {
-      if (!done) { done = true; child.kill("SIGKILL"); resolve({ stdout, stderr: stderr + "\n[TIMEOUT]", code: -1 }); }
+      if (!done) {
+        done = true;
+        child.kill("SIGKILL");
+        resolve({ stdout, stderr: stderr + "\n[TIMEOUT]", code: -1 });
+      }
     }, timeoutMs);
 
-    child.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
-    child.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
+    child.stdout?.on("data", (d: Buffer) => { stdout += d.toString(); });
+    child.stderr?.on("data", (d: Buffer) => { stderr += d.toString(); });
     child.on("error", (e: Error) => {
-      if (!done) { done = true; clearTimeout(timer); resolve({ stdout: "", stderr: e.message, code: -1 }); }
+      if (!done) {
+        done = true;
+        clearTimeout(timer);
+        resolve({ stdout: "", stderr: e.message, code: -1 });
+      }
     });
     child.on("close", (code: number | null) => {
-      if (!done) { done = true; clearTimeout(timer); resolve({ stdout, stderr, code: code ?? -1 }); }
+      if (!done) {
+        done = true;
+        clearTimeout(timer);
+        resolve({ stdout, stderr, code: code ?? -1 });
+      }
     });
   });
 }
@@ -81,7 +157,7 @@ export async function POST(request: NextRequest) {
 
   const { url } = body;
   if (!url || !isValidUrl(url)) {
-    return new Response("Invalid or unsupported URL. Supported: YouTube, SoundCloud, TikTok, Instagram, Facebook, Twitter, Vimeo, Twitch, Spotify, Apple Music, Bandcamp", { status: 400 });
+    return new Response("Invalid or unsupported URL. Supported: YouTube, SoundCloud, TikTok, Instagram, Facebook, Twitter, Vimeo, Twitch, Bandcamp", { status: 400 });
   }
 
   if (activeJobs >= MAX_JOBS) {
@@ -104,7 +180,7 @@ export async function POST(request: NextRequest) {
   const finalPath = join(tmpDir, "audio.mp3");
 
   try {
-    // Download best audio and convert to mp3
+    // Download best audio and convert to mp3 with proxy support
     const dlArgs = [
       "-f", "bestaudio/best",
       "--no-part",
@@ -116,7 +192,7 @@ export async function POST(request: NextRequest) {
     ];
 
     console.log("[fetch-audio] downloading...");
-    const result = await spawnYtDlp(dlArgs, 60000);
+    const result = await runYtDlp(dlArgs, 90000); // 90s timeout for proxy retries
     console.log("[fetch-audio] exit:", result.code);
 
     if (result.code !== 0) {
@@ -126,7 +202,6 @@ export async function POST(request: NextRequest) {
     // Check file exists
     const fs = await import("fs");
     if (!fs.existsSync(finalPath)) {
-      // Try to find the downloaded file
       const files = fs.readdirSync(tmpDir);
       const audioFile = files.find(f => f.startsWith("audio."));
       if (!audioFile) {

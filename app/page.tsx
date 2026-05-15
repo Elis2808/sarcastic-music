@@ -140,7 +140,7 @@ export default function Home() {
       {activePage === "bpm"        && <BpmFinder initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
       {activePage === "voice"      && <VoiceRemover initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
       {activePage === "youtube"    && <Downloader initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
-      {activePage === "converter"  && <FileConverter initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
+      {activePage === "converter"  && <FileConverter />}
       {activePage === "dictionary" && (
         <Dictionary
           initialWord={dictWord}
