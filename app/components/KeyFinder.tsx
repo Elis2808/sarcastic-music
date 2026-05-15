@@ -2,6 +2,9 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { addHistoryItem } from "../lib/history";
+import { addRecentFile } from "../lib/recentFiles";
+import UrlDropZone from "./UrlDropZone";
+import { showToast } from "./Toast";
 
 interface KeyFinderProps {
   initialUrl?: string;
@@ -148,6 +151,13 @@ export default function KeyFinder({ initialUrl, initialPlatform }: KeyFinderProp
         title: file.name,
         details: `Key: ${res.key} ${res.scale}`,
       });
+      // Add to recent files
+      addRecentFile({
+        name: file.name,
+        type: file.type || "audio/mpeg",
+        size: file.size,
+        tool: "key",
+      });
     } catch (e) {
       console.error(e);
       setError("Could not detect key. Make sure it's a valid audio file.");
@@ -192,8 +202,10 @@ export default function KeyFinder({ initialUrl, initialPlatform }: KeyFinderProp
           platform: selectedPlatform,
         },
       });
+      showToast(`Key detected: ${res.key} ${res.scale}`, "success");
     } catch (err: any) {
       setError(err.message || "Analysis failed");
+      showToast(err.message || "Analysis failed", "error");
     } finally {
       setLoading(false);
     }
@@ -316,25 +328,37 @@ export default function KeyFinder({ initialUrl, initialPlatform }: KeyFinderProp
 
       {/* Drop zone - hide when result shown */}
       {!result && !loading && !linkMode && (
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={onDrop}
-          onClick={() => inputRef.current?.click()}
-          className={`w-full max-w-xl max-sm:h-40 h-52 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors ${
-            dragging
-              ? "border-[#C9A84C] bg-[#C9A84C]/10"
-              : "border-gray-600 bg-gray-900 hover:border-[#C9A84C] hover:bg-black"
-          }`}
+        <UrlDropZone 
+          onUrlDrop={(url) => {
+            setLinkUrl(url);
+            setLinkMode(true);
+            // Auto-select platform based on URL
+            const platform = PLATFORMS.find(p => url.toLowerCase().includes(p.id));
+            if (platform) setSelectedPlatform(platform.id);
+            showToast("URL dropped! Click Analyze to detect key.", "info");
+          }}
+          className="w-full max-w-xl"
         >
-          <svg className={`w-10 h-10 transition-colors ${dragging ? "text-[#C9A84C]" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-          </svg>
-          <p className="text-gray-400 text-sm">
-            {dragging ? "Drop It!" : "Drop An Audio File To Detect The Song Key"}
-          </p>
-          <input ref={inputRef} type="file" accept="audio/*" className="hidden" onChange={onFileChange} />
-        </div>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            onClick={() => inputRef.current?.click()}
+            className={`w-full max-sm:h-40 h-52 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors ${
+              dragging
+                ? "border-[#C9A84C] bg-[#C9A84C]/10"
+                : "border-gray-600 bg-gray-900 hover:border-[#C9A84C] hover:bg-black"
+            }`}
+          >
+            <svg className={`w-10 h-10 transition-colors ${dragging ? "text-[#C9A84C]" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+            </svg>
+            <p className="text-gray-400 text-sm text-center px-4">
+              {dragging ? "Drop It!" : "Drop Audio File or URL To Detect The Song Key"}
+            </p>
+            <input ref={inputRef} type="file" accept="audio/*" className="hidden" onChange={onFileChange} />
+          </div>
+        </UrlDropZone>
       )}
 
       {/* Loading */}
@@ -387,6 +411,43 @@ export default function KeyFinder({ initialUrl, initialPlatform }: KeyFinderProp
           </div>
 
           <p className="text-gray-500 text-xs mt-1">{fileName}</p>
+
+          {/* Action buttons */}
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(`${result.key} ${result.scale}`);
+                  showToast("Key copied to clipboard!", "success");
+                } catch {
+                  showToast("Failed to copy", "error");
+                }
+              }}
+              className="px-3 py-2 rounded-xl bg-gray-800 border border-gray-600 hover:border-[#C9A84C] hover:bg-gray-700 text-white text-xs font-medium transition-all duration-200 outline-none flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Copy Key
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const shareData = `${result.key} ${result.scale} (detected with Sarcastic Music)`;
+                  await navigator.clipboard.writeText(shareData);
+                  showToast("Share data copied!", "success");
+                } catch {
+                  showToast("Failed to copy", "error");
+                }
+              }}
+              className="px-3 py-2 rounded-xl bg-gray-800 border border-gray-600 hover:border-[#C9A84C] hover:bg-gray-700 text-white text-xs font-medium transition-all duration-200 outline-none flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              Share
+            </button>
+          </div>
 
           <button
             onClick={() => { setResult(null); setFileName(""); setLinkUrl(""); }}

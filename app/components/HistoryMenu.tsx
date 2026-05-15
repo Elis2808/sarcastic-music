@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { getHistory, clearHistory, deleteHistoryItem, formatTimestamp, getHistoryIcon, type HistoryItem } from "../lib/history";
+import { showToast } from "./Toast";
 
 interface HistoryMenuProps {
   onSelect?: (item: HistoryItem) => void;
@@ -60,6 +61,40 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
     setHistory(getHistory());
   }
 
+  function exportToJSON() {
+    const data = getHistory();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sarcastic-music-history-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("History exported as JSON", "success");
+    setIsOpen(false);
+  }
+
+  function exportToCSV() {
+    const data = getHistory();
+    const headers = ["Date", "Type", "Title", "Details"];
+    const rows = data.map((item) => [
+      new Date(item.timestamp).toLocaleString(),
+      item.type,
+      item.title,
+      item.details || "",
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sarcastic-music-history-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("History exported as CSV", "success");
+    setIsOpen(false);
+  }
+
   return (
     <div ref={menuRef} className="relative">
       {/* Menu Button */}
@@ -79,15 +114,33 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
       {/* Dropdown Menu */}
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-gray-900 rounded-xl border border-gray-700 shadow-2xl z-50 overflow-hidden">
-          <div className="p-3 border-b border-gray-800 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-white">History</h3>
+          <div className="p-3 border-b border-gray-800">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-white">History</h3>
+              {history.length > 0 && (
+                <button
+                  onClick={handleClear}
+                  className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
             {history.length > 0 && (
-              <button
-                onClick={handleClear}
-                className="text-xs text-red-400 hover:text-red-300 transition-colors"
-              >
-                Clear all
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={exportToJSON}
+                  className="text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
+                >
+                  Export JSON
+                </button>
+                <button
+                  onClick={exportToCSV}
+                  className="text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
+                >
+                  Export CSV
+                </button>
+              </div>
             )}
           </div>
 

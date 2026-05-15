@@ -10,6 +10,7 @@ import RhymeFinder from "./components/RhymeFinder";
 import Dictionary from "./components/Dictionary";
 import HistoryMenu from "./components/HistoryMenu";
 import { addHistoryItem, type HistoryItem } from "./lib/history";
+import ToastContainer from "./components/Toast";
 
 type Page = "rhyme" | "key" | "bpm" | "voice" | "youtube" | "dictionary" | "converter";
 
@@ -115,6 +116,7 @@ export default function Home() {
           onBack={previousPage === "rhyme" ? () => { setLastClickedRhymeWord(dictWord.toLowerCase()); navigateTo("rhyme"); } : undefined}
         />
       )}
+      <ToastContainer />
     </main>
   );
 }
