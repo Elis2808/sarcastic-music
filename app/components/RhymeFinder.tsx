@@ -161,7 +161,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
   }, [fetchOne]);
 
   useEffect(() => {
-    const t = setTimeout(() => search(word), 600);
+    const t = setTimeout(() => search(word), 250);
     return () => clearTimeout(t);
   }, [word, search]);
 
@@ -318,11 +318,11 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-2 rounded-xl text-sm outline-none ${
+                className={`px-3 py-2 rounded-xl text-sm ${
                   activeTab === tab
                     ? "bg-black text-[#C9A84C] border border-[#C9A84C]"
                     : "bg-gray-800 text-gray-300 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 border border-transparent"
-                }`}
+                } focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]/50`}
               >
                 {tab === "top" ? "Top" : tab === "all" ? "All" : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
@@ -344,11 +344,11 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
                   <button
                     key={filter}
                     onClick={() => setAdvancedFilter(filter)}
-                    className={`px-2 py-1 rounded-lg text-xs outline-none ${
+                    className={`px-2 py-1 rounded-lg text-xs ${
                       advancedFilter === filter
                         ? "bg-black text-[#C9A84C] border border-[#C9A84C]"
                         : "bg-gray-800/50 text-gray-400 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 border border-transparent"
-                    }`}
+                    } focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]/50`}
                   >
                     {filter.charAt(0).toUpperCase() + filter.slice(1)}
                   </button>
