@@ -66,6 +66,31 @@ export default function Downloader() {
           animation: btn-sweep 1.4s linear infinite;
           will-change: transform;
         }
+        /* Circular sweep wrapper */
+        .circle-sweep-wrapper {
+          position: relative;
+          display: inline-block;
+          border-radius: 50%;
+          padding: 3px;
+          background: #111;
+          line-height: 0;
+        }
+        .circle-sweep-wrapper::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          border-radius: 50%;
+          padding: 3px;
+          background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg);
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          animation: btn-sweep 1.4s linear infinite;
+          will-change: transform;
+        }
       `;
       document.head.appendChild(style);
     }
@@ -291,7 +316,7 @@ export default function Downloader() {
           {analysisResult.type === "bpm" && (
             <div className="flex flex-col items-center gap-2">
               <p className="text-gray-500 text-xs uppercase tracking-widest">Detected BPM</p>
-              <div className="btn-sweep-wrapper p-[3px] rounded-full">
+              <div className="circle-sweep-wrapper">
                 <div className="w-24 h-24 rounded-full flex flex-col items-center justify-center bg-black">
                   <span className="text-3xl font-bold text-[#C9A84C]">{Math.round(analysisResult.data.bpm)}</span>
                   <span className="text-xs text-gray-300">BPM</span>
@@ -303,7 +328,7 @@ export default function Downloader() {
           {analysisResult.type === "key" && (
             <div className="flex flex-col items-center gap-2">
               <p className="text-gray-500 text-xs uppercase tracking-widest">Detected Key</p>
-              <div className="btn-sweep-wrapper p-[3px] rounded-full">
+              <div className="circle-sweep-wrapper">
                 <div className="w-24 h-24 rounded-full flex flex-col items-center justify-center bg-black">
                   <span className="text-3xl font-bold text-[#C9A84C]">{analysisResult.data.key}</span>
                   <span className="text-xs text-gray-300 capitalize">{analysisResult.data.scale}</span>
