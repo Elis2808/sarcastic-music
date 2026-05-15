@@ -2,6 +2,22 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 
+const PLATFORMS = [
+  { id: "youtube", label: "YouTube", placeholder: "Paste YouTube URL here" },
+  { id: "soundcloud", label: "SoundCloud", placeholder: "Paste SoundCloud URL here" },
+  { id: "tiktok", label: "TikTok", placeholder: "Paste TikTok URL here" },
+  { id: "instagram", label: "Instagram", placeholder: "Paste Instagram URL here" },
+  { id: "facebook", label: "Facebook", placeholder: "Paste Facebook URL here" },
+  { id: "twitter", label: "Twitter/X", placeholder: "Paste Twitter/X URL here" },
+  { id: "reddit", label: "Reddit", placeholder: "Paste Reddit URL here" },
+  { id: "bandcamp", label: "Bandcamp", placeholder: "Paste Bandcamp URL here" },
+  { id: "mixcloud", label: "Mixcloud", placeholder: "Paste Mixcloud URL here" },
+  { id: "dailymotion", label: "Dailymotion", placeholder: "Paste Dailymotion URL here" },
+  { id: "imgur", label: "Imgur", placeholder: "Paste Imgur URL here" },
+  { id: "vimeo", label: "Vimeo", placeholder: "Paste Vimeo URL here" },
+  { id: "twitch", label: "Twitch", placeholder: "Paste Twitch URL here" },
+];
+
 type BpmResult = {
   bpm: number;
   timeSignature: string;
@@ -24,6 +40,7 @@ export default function BpmFinder() {
   const [fileName, setFileName] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [linkMode, setLinkMode] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -182,6 +199,55 @@ export default function BpmFinder() {
         </div>
       )}
 
+      {/* Platform selector - only in link mode */}
+      {!result && !loading && linkMode && (
+        <div className="flex items-center gap-2 mb-4 w-full max-w-xl">
+          <button
+            onClick={() => {
+              const container = document.getElementById('bpm-platform-scroll');
+              if (container) container.scrollBy({ left: -150, behavior: 'smooth' });
+            }}
+            className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-[#C9A84C] transition-all duration-200 flex-shrink-0"
+            aria-label="Scroll left"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          <div id="bpm-platform-scroll" className="flex-1 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-2 px-1">
+              {PLATFORMS.map((platform) => (
+                <button
+                  key={platform.id}
+                  onClick={() => setSelectedPlatform(platform.id === selectedPlatform ? "" : platform.id)}
+                  className={`px-3 py-1.5 rounded-xl bg-black border text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                    selectedPlatform === platform.id
+                      ? "border-[#C9A84C] text-[#C9A84C]"
+                      : "border-gray-600 text-white hover:border-[#C9A84C] hover:text-[#C9A84C]"
+                  }`}
+                >
+                  {platform.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              const container = document.getElementById('bpm-platform-scroll');
+              if (container) container.scrollBy({ left: 150, behavior: 'smooth' });
+            }}
+            className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-[#C9A84C] transition-all duration-200 flex-shrink-0"
+            aria-label="Scroll right"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Link input */}
       {!result && !loading && linkMode && (
         <div className="w-full max-w-xl mb-4">
@@ -190,7 +256,9 @@ export default function BpmFinder() {
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") processLink(); }}
-              placeholder="Paste audio URL (YouTube, SoundCloud, etc.)"
+              placeholder={selectedPlatform 
+                ? PLATFORMS.find(p => p.id === selectedPlatform)?.placeholder || "Paste link here"
+                : "Paste audio URL (YouTube, SoundCloud, etc.)"}
               className="flex-1 px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-sm outline-none focus:ring-2 focus:ring-[#C9A84C]"
             />
             <button
