@@ -35,6 +35,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
   const [linkUrl, setLinkUrl] = useState(initialUrl || "");
   const [selectedPlatform, setSelectedPlatform] = useState(initialPlatform || "");
   const [processing, setProcessing] = useState<StemType | null>(null);
+  const [downloadingStem, setDownloadingStem] = useState<"no_vocals" | "vocals" | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [demucsProgress, setDemucsProgress] = useState(0);
   const [error, setError] = useState("");
@@ -188,18 +189,25 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
       const result = await pollJob(jobId);
       
       if (stem === "both" && result.vocalsUrl) {
-        // Download both stems
+        // Download both stems sequentially with visual feedback
+        // First: Instrumental
+        setDownloadingStem("no_vocals");
         const a1 = document.createElement("a");
         a1.href = result.downloadUrl;
         a1.download = `${(file?.name || "song").replace(/\.[^.]+$/, "")}_instrumental.mp3`;
         a1.click();
         
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 1500));
         
+        // Then: Vocals
+        setDownloadingStem("vocals");
         const a2 = document.createElement("a");
         a2.href = result.vocalsUrl;
         a2.download = `${(file?.name || "song").replace(/\.[^.]+$/, "")}_vocals.mp3`;
         a2.click();
+        
+        await new Promise(r => setTimeout(r, 500));
+        setDownloadingStem(null);
       } else {
         // Single stem
         const a1 = document.createElement("a");
@@ -212,6 +220,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
     } finally {
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
       setProcessing(null);
+      setDownloadingStem(null);
       setElapsed(0);
       setDemucsProgress(0);
     }
@@ -355,7 +364,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
           {/* Main buttons with Both in middle */}
           <div className="flex items-center gap-3 w-full">
             {/* Instrumental */}
-            <div className={`flex-1 ${processing === "no_vocals" || processing === "both" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+            <div className={`flex-1 ${processing === "no_vocals" || processing === "both" || downloadingStem === "no_vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
               <button
                 onClick={() => download("no_vocals")}
                 disabled={processing !== null}
@@ -386,7 +395,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
             </div>
 
             {/* Vocals */}
-            <div className={`flex-1 ${processing === "vocals" || processing === "both" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+            <div className={`flex-1 ${processing === "vocals" || processing === "both" || downloadingStem === "vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
               <button
                 onClick={() => download("vocals")}
                 disabled={processing !== null}
