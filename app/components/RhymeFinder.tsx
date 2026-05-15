@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
 type RhymeData = {
   results: { word: string; category: string }[];
@@ -165,13 +165,63 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
     return () => clearTimeout(t);
   }, [word, search]);
 
+  // Memoized word type cache computation
+  const memoizedWordTypes = useMemo(() => {
+    const cache: Record<string, string[]> = {};
+    wordList.forEach(w => {
+      rhymeMap[w]?.allResults.forEach(r => {
+        const lw = r.word.toLowerCase();
+        if (!cache[lw]) {
+          cache[lw] = getWordTypes(r.word, wordTypeCache);
+        }
+      });
+    });
+    return cache;
+  }, [rhymeMap, wordList, wordTypeCache]);
+
   function getCachedWordTypes(w: string): string[] {
+    const lw = w.toLowerCase();
+    if (memoizedWordTypes[lw]) return memoizedWordTypes[lw];
+    if (wordTypeCache[lw]) return wordTypeCache[lw];
     const types = getWordTypes(w, wordTypeCache);
-    if (!wordTypeCache[w.toLowerCase()]) {
-      setWordTypeCache(prev => ({ ...prev, [w.toLowerCase()]: types }));
-    }
+    setWordTypeCache(prev => ({ ...prev, [lw]: types }));
     return types;
   }
+
+  // Memoized display results to avoid recalculation on every render
+  const displayResultsMap = useMemo(() => {
+    const map: Record<string, { word: string; category: string }[]> = {};
+    wordList.forEach(w => {
+      const data = rhymeMap[w];
+      if (!data) return;
+      
+      let results: { word: string; category: string }[] = [];
+      switch (activeTab) {
+        case "top":     results = data.results; break;
+        case "perfect": results = data.categories.perfect.map(r => ({ word: r, category: "perfect" })); break;
+        case "sounding":results = data.categories.sounding.map(r => ({ word: r, category: "sounding" })); break;
+        case "near":    results = data.categories.near.map(r => ({ word: r, category: "near" })); break;
+        case "all":     results = data.allResults; break;
+      }
+      
+      if (rhymeMode === "advanced" && advancedFilter !== "all") {
+        results = results.filter(r => getCachedWordTypes(r.word).includes(advancedFilter));
+      }
+      
+      if (rhymeFilter.trim()) {
+        const filter = rhymeFilter.toLowerCase();
+        results = results.filter(r => r.word.toLowerCase().includes(filter));
+      }
+      
+      map[w] = results;
+    });
+    return map;
+  }, [rhymeMap, wordList, activeTab, rhymeMode, advancedFilter, rhymeFilter, memoizedWordTypes]);
+
+  // Memoized total results count
+  const totalResultsCount = useMemo(() => {
+    return wordList.reduce((sum, w) => sum + (displayResultsMap[w]?.length || 0), 0);
+  }, [wordList, displayResultsMap]);
 
   function handleWordClick(w: string) {
     setLastClickedWord(w.toLowerCase());
@@ -204,26 +254,6 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
         {r.word}
       </span>
     );
-  }
-
-  function getDisplayResults(data: RhymeData) {
-    let results: { word: string; category: string }[] = [];
-    switch (activeTab) {
-      case "top":     results = data.results; break;
-      case "perfect": results = data.categories.perfect.map(r => ({ word: r, category: "perfect" })); break;
-      case "sounding":results = data.categories.sounding.map(r => ({ word: r, category: "sounding" })); break;
-      case "near":    results = data.categories.near.map(r => ({ word: r, category: "near" })); break;
-      case "all":     results = data.allResults; break;
-    }
-    if (rhymeMode === "advanced" && advancedFilter !== "all") {
-      results = results.filter(r => getCachedWordTypes(r.word).includes(advancedFilter));
-    }
-    // Apply text filter
-    if (rhymeFilter.trim()) {
-      const filter = rhymeFilter.toLowerCase();
-      results = results.filter(r => r.word.toLowerCase().includes(filter));
-    }
-    return results;
   }
 
   return (
@@ -341,30 +371,25 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
           {!isLoading && wordList.length > 0 && (
             <div className="text-center mb-2">
               <span className="text-xs text-gray-500">
-                {(() => {
-                  const total = wordList.reduce((sum, w) => sum + getDisplayResults(rhymeMap[w]).length, 0);
-                  return `${total} result${total !== 1 ? 's' : ''}`;
-                })()}
+                {totalResultsCount} result{totalResultsCount !== 1 ? 's' : ''}
               </span>
             </div>
           )}
 
           {isLoading ? (
             <div className="flex justify-center py-8">
-              <div className="text-green-400 text-sm animate-pulse">Searching...</div>
+              <div className="text-green-400 text-sm">Searching...</div>
             </div>
           ) : wordList.length === 1 ? (
             <div className="mt-2 w-full pb-8 max-h-96 overflow-y-auto">
-              <div className="flex gap-2 flex-wrap justify-center animate-fadeIn">
-                {getDisplayResults(rhymeMap[wordList[0]]).map((r, i) => renderWordPill(r, i, false))}
+              <div className="flex gap-2 flex-wrap justify-center">
+                {displayResultsMap[wordList[0]]?.map((r, i) => renderWordPill(r, i, false))}
               </div>
             </div>
           ) : (
             <div className="grid gap-6 w-full" style={{ gridTemplateColumns: `repeat(${wordList.length}, minmax(0, 1fr))` }}>
               {wordList.map((w) => {
-                const data = rhymeMap[w];
-                if (!data) return null;
-                const results = getDisplayResults(data);
+                const results = displayResultsMap[w] || [];
                 return (
                   <div key={w} className="flex flex-col">
                     <h2 className="text-center text-lg font-bold text-[#C9A84C] mb-3 capitalize border-b border-gray-700 pb-2">{w}</h2>
