@@ -5,19 +5,19 @@ import { useState, useRef, useCallback, useEffect } from "react";
 type StemType = "no_vocals" | "vocals" | "both";
 
 const PLATFORMS = [
-  { id: "youtube", label: "YouTube" },
-  { id: "soundcloud", label: "SoundCloud" },
-  { id: "tiktok", label: "TikTok" },
-  { id: "instagram", label: "Instagram" },
-  { id: "facebook", label: "Facebook" },
-  { id: "twitter", label: "Twitter/X" },
-  { id: "reddit", label: "Reddit" },
-  { id: "bandcamp", label: "Bandcamp" },
-  { id: "mixcloud", label: "Mixcloud" },
-  { id: "dailymotion", label: "Dailymotion" },
-  { id: "imgur", label: "Imgur" },
-  { id: "vimeo", label: "Vimeo" },
-  { id: "twitch", label: "Twitch" },
+  { id: "youtube", label: "YouTube", placeholder: "Paste YouTube URL here" },
+  { id: "soundcloud", label: "SoundCloud", placeholder: "Paste SoundCloud URL here" },
+  { id: "tiktok", label: "TikTok", placeholder: "Paste TikTok URL here" },
+  { id: "instagram", label: "Instagram", placeholder: "Paste Instagram URL here" },
+  { id: "facebook", label: "Facebook", placeholder: "Paste Facebook URL here" },
+  { id: "twitter", label: "Twitter/X", placeholder: "Paste Twitter/X URL here" },
+  { id: "reddit", label: "Reddit", placeholder: "Paste Reddit URL here" },
+  { id: "bandcamp", label: "Bandcamp", placeholder: "Paste Bandcamp URL here" },
+  { id: "mixcloud", label: "Mixcloud", placeholder: "Paste Mixcloud URL here" },
+  { id: "dailymotion", label: "Dailymotion", placeholder: "Paste Dailymotion URL here" },
+  { id: "imgur", label: "Imgur", placeholder: "Paste Imgur URL here" },
+  { id: "vimeo", label: "Vimeo", placeholder: "Paste Vimeo URL here" },
+  { id: "twitch", label: "Twitch", placeholder: "Paste Twitch URL here" },
 ];
 
 export default function VoiceRemover() {
@@ -29,6 +29,7 @@ export default function VoiceRemover() {
   const [demucsProgress, setDemucsProgress] = useState(0);
   const [downloadPct, setDownloadPct] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [selectedPlatform, setSelectedPlatform] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -202,7 +203,9 @@ export default function VoiceRemover() {
 
   return (
     <div className="flex flex-col items-center w-full pt-8 px-4 select-none max-sm:pt-6 max-sm:px-3">
-      <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">Song Splitter</h1>
+      <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">
+        {selectedPlatform ? `${PLATFORMS.find(p => p.id === selectedPlatform)?.label || ''} Song Splitter` : "Song Splitter"}
+      </h1>
 
       {/* Platform selector with scroll arrows */}
       <div className="flex items-center gap-2 mb-4 w-full max-w-xl">
@@ -224,8 +227,12 @@ export default function VoiceRemover() {
             {PLATFORMS.map((platform) => (
               <button
                 key={platform.id}
-                onClick={() => setLinkUrl('')}
-                className="px-3 py-1.5 rounded-xl bg-black border border-gray-600 hover:border-[#C9A84C] hover:text-[#C9A84C] text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 text-white"
+                onClick={() => setSelectedPlatform(platform.id === selectedPlatform ? "" : platform.id)}
+                className={`px-3 py-1.5 rounded-xl bg-black border text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                  selectedPlatform === platform.id
+                    ? "border-[#C9A84C] text-[#C9A84C]"
+                    : "border-gray-600 text-white hover:border-[#C9A84C] hover:text-[#C9A84C]"
+                }`}
               >
                 {platform.label}
               </button>
@@ -253,7 +260,9 @@ export default function VoiceRemover() {
           <input
             value={linkUrl}
             onChange={(e) => { setLinkUrl(e.target.value); setFile(null); }}
-            placeholder="Paste audio link here (YouTube, SoundCloud, TikTok, etc.)"
+            placeholder={selectedPlatform 
+              ? PLATFORMS.find(p => p.id === selectedPlatform)?.placeholder || "Paste link here"
+              : "Paste audio link here (YouTube, SoundCloud, TikTok, etc.)"}
             className="w-full px-4 py-3 rounded-xl bg-black border border-gray-600 text-white outline-none focus:ring-2 focus:ring-[#C9A84C]"
           />
           {linkUrl && (
