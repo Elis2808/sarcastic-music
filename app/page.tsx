@@ -8,6 +8,8 @@ import FileConverter from "./components/FileConverter";
 import Downloader from "./components/Downloader";
 import RhymeFinder from "./components/RhymeFinder";
 import Dictionary from "./components/Dictionary";
+import HistoryMenu from "./components/HistoryMenu";
+import { addHistoryItem } from "./lib/history";
 
 type Page = "rhyme" | "key" | "bpm" | "voice" | "youtube" | "dictionary" | "converter";
 
@@ -15,6 +17,7 @@ export default function Home() {
   const [activePage, setActivePage] = useState<Page>("rhyme");
   const [previousPage, setPreviousPage] = useState<Page | null>(null);
   const [dictWord, setDictWord] = useState("");
+  const [lastClickedRhymeWord, setLastClickedRhymeWord] = useState("");
 
   function navigateTo(page: Page) {
     setPreviousPage(activePage);
@@ -23,6 +26,12 @@ export default function Home() {
 
   function openDictionary(word: string) {
     setDictWord(word);
+    setLastClickedRhymeWord(word.toLowerCase());
+    addHistoryItem({
+      type: "dictionary_lookup",
+      title: word,
+      details: "Dictionary lookup",
+    });
     navigateTo("dictionary");
   }
 
@@ -38,7 +47,10 @@ export default function Home() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center bg-black text-white pt-8">
-      <img src="/logo.png" alt="Sarcastic Music" className="mb-8 h-10 object-contain" />
+      <div className="flex items-center gap-4 mb-8">
+        <img src="/logo.png" alt="Sarcastic Music" className="h-10 object-contain" />
+        <HistoryMenu />
+      </div>
 
       <nav className="flex gap-2 mb-6 max-sm:flex-wrap max-sm:justify-center">
         {NAV_ITEMS.map(({ page, label }) => (
@@ -56,7 +68,7 @@ export default function Home() {
         ))}
       </nav>
 
-      {activePage === "rhyme"      && <RhymeFinder onLookupWord={openDictionary} />}
+      {activePage === "rhyme"      && <RhymeFinder onLookupWord={openDictionary} highlightWord={lastClickedRhymeWord} />}
       {activePage === "key"        && <KeyFinder />}
       {activePage === "bpm"        && <BpmFinder />}
       {activePage === "voice"      && <VoiceRemover />}
@@ -65,7 +77,7 @@ export default function Home() {
       {activePage === "dictionary" && (
         <Dictionary
           initialWord={dictWord}
-          onBack={previousPage === "rhyme" ? () => navigateTo("rhyme") : undefined}
+          onBack={previousPage === "rhyme" ? () => { setLastClickedRhymeWord(dictWord.toLowerCase()); navigateTo("rhyme"); } : undefined}
         />
       )}
     </main>

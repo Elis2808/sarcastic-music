@@ -11,9 +11,16 @@ type RhymeData = {
 
 interface Props {
   onLookupWord: (word: string) => void;
+  highlightWord?: string;
 }
 
 const CATEGORY_COLOR: Record<string, string> = {
+  perfect: "#4ade80",    // green-400
+  sounding: "#60a5fa",   // blue-400
+  near: "#f87171",       // red-400
+};
+
+const CATEGORY_TEXT_CLASS: Record<string, string> = {
   perfect: "text-green-400",
   sounding: "text-blue-400",
   near: "text-red-400",
@@ -40,19 +47,47 @@ function getWordTypes(word: string, cache: Record<string, string[]>): string[] {
   return types;
 }
 
-export default function RhymeFinder({ onLookupWord }: Props) {
+export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
   const [word, setWord] = useState("");
+  const [lastClickedWord, setLastClickedWord] = useState(highlightWord || "");
   const [wordList, setWordList] = useState<string[]>([]);
   const [rhymeMap, setRhymeMap] = useState<Record<string, RhymeData>>({});
   const [activeTab, setActiveTab] = useState<"top" | "all" | "perfect" | "sounding" | "near">("top");
   const [isLoading, setIsLoading] = useState(false);
-  const [lastClickedWord, setLastClickedWord] = useState("");
   const [rhymeMode, setRhymeMode] = useState<"basic" | "advanced">("basic");
   const [advancedFilter, setAdvancedFilter] = useState<"all" | "noun" | "verb" | "adjective" | "slang" | "name">("all");
   const [isDraggingSlider, setIsDraggingSlider] = useState(false);
   const [wordTypeCache, setWordTypeCache] = useState<Record<string, string[]>>({});
   const sliderTrackRef = useRef<HTMLDivElement | null>(null);
   const lastClickedRef = useRef<HTMLSpanElement | null>(null);
+
+  // Add CSS animation for rotating borders
+  useEffect(() => {
+    const id = "rhyme-sweep-style";
+    if (!document.getElementById(id)) {
+      const style = document.createElement("style");
+      style.id = id;
+      style.textContent = `
+        @property --sweep-angle {
+          syntax: "<angle>";
+          initial-value: 0deg;
+          inherits: false;
+        }
+        @keyframes rhyme-sweep {
+          from { --sweep-angle: 0deg; }
+          to { --sweep-angle: 360deg; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
+  // Update lastClickedWord when highlightWord prop changes
+  useEffect(() => {
+    if (highlightWord) {
+      setLastClickedWord(highlightWord.toLowerCase());
+    }
+  }, [highlightWord]);
 
   useEffect(() => {
     if (rhymeMode === "basic") setAdvancedFilter("all");
@@ -130,28 +165,44 @@ export default function RhymeFinder({ onLookupWord }: Props) {
 
   function renderWordPill(r: { word: string; category: string }, i: number, small = false) {
     const isSelected = lastClickedWord === r.word.toLowerCase();
-    const bgClass = isSelected
+    const rhymeColor = CATEGORY_COLOR[r.category] || "#ffffff";
+    const rhymeTextClass = CATEGORY_TEXT_CLASS[r.category] || "text-white";
+
+    // Get word types for advanced mode
+    const wordTypes = getCachedWordTypes(r.word);
+    const primaryType = wordTypes[0] || "noun";
+    const posColor = ADVANCED_COLOR[primaryType] || "text-white";
+
+    // Basic mode: text color = rhyme quality color
+    // Advanced mode: text color = part-of-speech color
+    const textColorClass = rhymeMode === "advanced" ? posColor : rhymeTextClass;
+
+    // Wrapper style with rotating border based on rhyme quality
+    const wrapperStyle: React.CSSProperties = {
+      background: `conic-gradient(from var(--sweep-angle, 0deg), ${rhymeColor}, ${rhymeColor}40, ${rhymeColor})`,
+      borderRadius: "0.5rem",
+      padding: "2px",
+      animation: "rhyme-sweep 2s linear infinite",
+    };
+
+    // Inner pill style
+    const innerClass = isSelected
       ? "bg-black border border-[#C9A84C] shadow-[0_0_10px_rgba(201,168,76,0.5)]"
-      : "bg-gray-800 border border-transparent hover:border-[#C9A84C] hover:shadow-[0_0_8px_rgba(201,168,76,0.3)]";
-    const catColor = CATEGORY_COLOR[r.category] || "text-white";
-    const advColor = rhymeMode === "advanced" && advancedFilter !== "all" ? ADVANCED_COLOR[advancedFilter] : catColor;
-    const mid = Math.ceil(r.word.length / 2);
+      : "bg-gray-900 border border-transparent";
 
     return (
       <span
         key={i}
         ref={isSelected ? lastClickedRef : null}
         onClick={() => handleWordClick(r.word)}
-        className={`${small ? "px-3 py-1 text-sm" : "px-4 py-2 text-lg"} rounded transition-all duration-200 transform hover:scale-105 cursor-pointer ${bgClass}`}
+        className="inline-block"
+        style={wrapperStyle}
       >
-        {rhymeMode === "advanced" && advancedFilter !== "all" ? (
-          <>
-            <span className={catColor}>{r.word.slice(0, mid)}</span>
-            <span className={advColor}>{r.word.slice(mid)}</span>
-          </>
-        ) : (
-          <span className={catColor}>{r.word}</span>
-        )}
+        <span
+          className={`${small ? "px-3 py-1 text-sm" : "px-4 py-2 text-lg"} rounded transition-all duration-200 transform hover:scale-105 cursor-pointer block ${innerClass} ${textColorClass}`}
+        >
+          {r.word}
+        </span>
       </span>
     );
   }
