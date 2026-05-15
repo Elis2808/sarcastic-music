@@ -364,7 +364,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
           {/* Main buttons with Both in middle */}
           <div className="flex items-center gap-3 w-full">
             {/* Instrumental */}
-            <div className={`flex-1 ${processing === "no_vocals" || processing === "both" || downloadingStem === "no_vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+            <div className={`flex-1 ${downloadingStem === "no_vocals" || (processing === "both" && !downloadingStem) || processing === "no_vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
               <button
                 onClick={() => download("no_vocals")}
                 disabled={processing !== null}
@@ -395,7 +395,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
             </div>
 
             {/* Vocals */}
-            <div className={`flex-1 ${processing === "vocals" || processing === "both" || downloadingStem === "vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+            <div className={`flex-1 ${downloadingStem === "vocals" || (processing === "both" && !downloadingStem) || processing === "vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
               <button
                 onClick={() => download("vocals")}
                 disabled={processing !== null}
