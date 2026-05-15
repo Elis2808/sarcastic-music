@@ -364,7 +364,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
           {/* Main buttons with Both in middle */}
           <div className="flex items-center gap-3 w-full">
             {/* Instrumental */}
-            <div className={`flex-1 ${downloadingStem === "no_vocals" || (processing === "both" && !downloadingStem) || processing === "no_vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+            <div className={`flex-1 ${downloadingStem === "no_vocals" || processing === "no_vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
               <button
                 onClick={() => download("no_vocals")}
                 disabled={processing !== null}
@@ -383,7 +383,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
               <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-[2px] bg-gradient-to-r from-gray-600 to-[#C9A84C]" />
               <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-[2px] bg-gradient-to-l from-gray-600 to-[#C9A84C]" />
               
-              <div className={`${processing === null ? "" : "rounded-lg p-[2px] bg-gray-600"}`}>
+              <div className={`${processing === "both" && !downloadingStem ? "btn-sweep-wrapper" : processing === null ? "" : "rounded-lg p-[2px] bg-gray-600"}`}>
                 <button
                   onClick={() => download("both")}
                   disabled={processing !== null}
@@ -395,7 +395,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
             </div>
 
             {/* Vocals */}
-            <div className={`flex-1 ${downloadingStem === "vocals" || (processing === "both" && !downloadingStem) || processing === "vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+            <div className={`flex-1 ${downloadingStem === "vocals" || processing === "vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
               <button
                 onClick={() => download("vocals")}
                 disabled={processing !== null}
