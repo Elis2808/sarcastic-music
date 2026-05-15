@@ -2,10 +2,17 @@
 
 export type HistoryItem = {
   id: string;
-  type: "rhyme_search" | "dictionary_lookup" | "download" | "bpm_detect" | "key_detect" | "song_split";
+  type: "rhyme_search" | "dictionary_lookup" | "download" | "bpm_detect" | "key_detect" | "song_split" | "link_search";
   title: string;
   details?: string;
   timestamp: number;
+  data?: {
+    url?: string;
+    word?: string;
+    platform?: string;
+    fileName?: string;
+    tool: "rhyme" | "key" | "bpm" | "voice" | "youtube" | "dictionary";
+  };
 };
 
 const STORAGE_KEY = "sarcastic_music_history";
@@ -86,6 +93,7 @@ export function getHistoryIcon(type: HistoryItem["type"]): string {
     bpm_detect: "🎵",
     key_detect: "🎹",
     song_split: "✂️",
+    link_search: "🔗",
   };
   return icons[type] || "📌";
 }

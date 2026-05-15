@@ -9,9 +9,12 @@ type RhymeData = {
   totalFound: number;
 };
 
+import { addHistoryItem } from "../lib/history";
+
 interface Props {
   onLookupWord: (word: string) => void;
   highlightWord?: string;
+  initialWord?: string;
 }
 
 const CATEGORY_TEXT_CLASS: Record<string, string> = {
@@ -41,7 +44,7 @@ function getWordTypes(word: string, cache: Record<string, string[]>): string[] {
   return types;
 }
 
-export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
+export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }: Props) {
   const [word, setWord] = useState("");
   const [lastClickedWord, setLastClickedWord] = useState(highlightWord || "");
   const [wordList, setWordList] = useState<string[]>([]);
@@ -99,6 +102,14 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
     }
   }, [highlightWord]);
 
+  // Set initial word from history
+  useEffect(() => {
+    if (initialWord) {
+      setWord(initialWord);
+      search(initialWord);
+    }
+  }, [initialWord]);
+
   useEffect(() => {
     if (rhymeMode === "basic") setAdvancedFilter("all");
   }, [rhymeMode]);
@@ -153,6 +164,19 @@ export default function RhymeFinder({ onLookupWord, highlightWord }: Props) {
       words.forEach((w, i) => { map[w] = results[i]; });
       setWordList(words);
       setRhymeMap(map);
+      
+      // Add to history
+      if (words.length > 0) {
+        addHistoryItem({
+          type: "rhyme_search",
+          title: words.join(" "),
+          details: `${words.length} word${words.length > 1 ? 's' : ''} searched`,
+          data: {
+            tool: "rhyme",
+            word: input.trim(),
+          },
+        });
+      }
     } catch (err) {
       console.error("Search error:", err);
     } finally {

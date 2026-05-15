@@ -1,6 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { addHistoryItem } from "../lib/history";
+
+interface DownloaderProps {
+  initialUrl?: string;
+  initialPlatform?: string;
+}
 
 const PLATFORMS = [
   { name: "YouTube",     placeholder: "Paste YouTube URL here" },
@@ -26,9 +32,9 @@ function formatDuration(seconds: string) {
   return `${m}:${rem.toString().padStart(2, "0")}`;
 }
 
-export default function Downloader() {
-  const [selectedPlatform, setSelectedPlatform] = useState("YouTube");
-  const [ytUrl, setYtUrl] = useState("");
+export default function Downloader({ initialUrl, initialPlatform }: DownloaderProps) {
+  const [selectedPlatform, setSelectedPlatform] = useState(initialPlatform || "YouTube");
+  const [ytUrl, setYtUrl] = useState(initialUrl || "");
   const [ytInfo, setYtInfo] = useState<{ title: string; author: string; lengthSeconds: string; thumbnail: string } | null>(null);
   const [ytLoading, setYtLoading] = useState(false);
   const [ytError, setYtError] = useState("");
@@ -137,6 +143,19 @@ export default function Downloader() {
       a.download = `${ytInfo?.title || "download"}.${format}`;
       a.click();
       URL.revokeObjectURL(a.href);
+      
+      // Add to history
+      addHistoryItem({
+        type: "download",
+        title: ytInfo?.title || "download",
+        details: `${format.toUpperCase()} from ${selectedPlatform}`,
+        data: {
+          tool: "youtube",
+          url: ytUrl,
+          platform: selectedPlatform,
+          fileName: ytInfo?.title,
+        },
+      });
     } catch {
       setYtError("Download failed. Please try again.");
     } finally {

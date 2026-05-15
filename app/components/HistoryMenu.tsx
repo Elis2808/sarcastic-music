@@ -3,7 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { getHistory, clearHistory, deleteHistoryItem, formatTimestamp, getHistoryIcon, type HistoryItem } from "../lib/history";
 
-export default function HistoryMenu() {
+interface HistoryMenuProps {
+  onSelect?: (item: HistoryItem) => void;
+}
+
+export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [hasNew, setHasNew] = useState(false);
@@ -100,18 +104,34 @@ export default function HistoryMenu() {
                 {history.map((item) => (
                   <div
                     key={item.id}
-                    className="p-3 hover:bg-gray-800/50 transition-colors flex items-start gap-3 group"
+                    onClick={() => {
+                      if (onSelect) {
+                        onSelect(item);
+                        setIsOpen(false);
+                      }
+                    }}
+                    className={`p-3 hover:bg-gray-800/50 transition-colors flex items-start gap-3 group ${onSelect ? 'cursor-pointer' : ''}`}
                   >
                     <span className="text-lg flex-shrink-0">{getHistoryIcon(item.type)}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white truncate">{item.title}</p>
+                      <p className="text-sm text-white truncate flex items-center gap-2">
+                        {item.title}
+                        {onSelect && item.data && (
+                          <svg className="w-3 h-3 text-[#C9A84C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                          </svg>
+                        )}
+                      </p>
                       {item.details && (
                         <p className="text-xs text-gray-500 truncate">{item.details}</p>
                       )}
                       <p className="text-xs text-gray-600 mt-0.5">{formatTimestamp(item.timestamp)}</p>
                     </div>
                     <button
-                      onClick={() => handleDelete(item.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(item.id);
+                      }}
                       className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-700 rounded text-gray-500 hover:text-red-400"
                       aria-label="Delete"
                     >

@@ -1,6 +1,12 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { addHistoryItem } from "../lib/history";
+
+interface BpmFinderProps {
+  initialUrl?: string;
+  initialPlatform?: string;
+}
 
 const PLATFORMS = [
   { id: "youtube", label: "YouTube", placeholder: "Paste YouTube URL here" },
@@ -32,15 +38,15 @@ function bpmCategory(bpm: number): { label: string; color: string } {
   return           { label: "Very Fast",  color: "#e74c3c" };
 }
 
-export default function BpmFinder() {
+export default function BpmFinder({ initialUrl, initialPlatform }: BpmFinderProps) {
   const [dragging, setDragging] = useState(false);
   const [result, setResult] = useState<BpmResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
-  const [linkUrl, setLinkUrl] = useState("");
-  const [linkMode, setLinkMode] = useState(false);
-  const [selectedPlatform, setSelectedPlatform] = useState("");
+  const [linkUrl, setLinkUrl] = useState(initialUrl || "");
+  const [linkMode, setLinkMode] = useState(!!initialUrl);
+  const [selectedPlatform, setSelectedPlatform] = useState(initialPlatform || "");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -118,6 +124,11 @@ export default function BpmFinder() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "BPM detection failed");
       setResult(data);
+      addHistoryItem({
+        type: "bpm_detect",
+        title: file.name,
+        details: `BPM: ${data.bpm}`,
+      });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not detect BPM.");
     } finally {
@@ -150,12 +161,24 @@ export default function BpmFinder() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "BPM detection failed");
       setResult(data);
+      
+      // Add to history
+      addHistoryItem({
+        type: "bpm_detect",
+        title: linkUrl.substring(0, 50) + (linkUrl.length > 50 ? '...' : ''),
+        details: `BPM: ${data.bpm}`,
+        data: {
+          tool: "bpm",
+          url: linkUrl,
+          platform: selectedPlatform,
+        },
+      });
     } catch (e: any) {
       setError(e.message || "Could not detect BPM. Make sure it's a valid audio URL.");
     } finally {
       setLoading(false);
     }
-  }, [linkUrl]);
+  }, [linkUrl, selectedPlatform]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();

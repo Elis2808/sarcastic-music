@@ -9,7 +9,7 @@ import Downloader from "./components/Downloader";
 import RhymeFinder from "./components/RhymeFinder";
 import Dictionary from "./components/Dictionary";
 import HistoryMenu from "./components/HistoryMenu";
-import { addHistoryItem } from "./lib/history";
+import { addHistoryItem, type HistoryItem } from "./lib/history";
 
 type Page = "rhyme" | "key" | "bpm" | "voice" | "youtube" | "dictionary" | "converter";
 
@@ -18,10 +18,45 @@ export default function Home() {
   const [previousPage, setPreviousPage] = useState<Page | null>(null);
   const [dictWord, setDictWord] = useState("");
   const [lastClickedRhymeWord, setLastClickedRhymeWord] = useState("");
+  
+  // History restore state
+  const [restoreState, setRestoreState] = useState<{
+    tool?: Page;
+    word?: string;
+    url?: string;
+    platform?: string;
+  }>({});
 
-  function navigateTo(page: Page) {
+  function navigateTo(page: Page, state?: { word?: string; url?: string; platform?: string }) {
     setPreviousPage(activePage);
     setActivePage(page);
+    if (state) {
+      setRestoreState(state);
+    }
+  }
+
+  // Handle history item selection
+  function handleHistorySelect(item: HistoryItem) {
+    if (!item.data?.tool) return;
+    
+    const tool = item.data.tool;
+    const toolMap: Record<string, Page> = {
+      rhyme: "rhyme",
+      key: "key",
+      bpm: "bpm",
+      voice: "voice",
+      youtube: "youtube",
+      dictionary: "dictionary",
+    };
+    
+    const page = toolMap[tool];
+    if (!page) return;
+    
+    navigateTo(page, {
+      word: item.data.word,
+      url: item.data.url,
+      platform: item.data.platform,
+    });
   }
 
   function openDictionary(word: string) {
@@ -49,7 +84,7 @@ export default function Home() {
     <main className="relative flex min-h-screen flex-col items-center bg-black text-white pt-8">
       <div className="flex items-center gap-4 mb-8">
         <img src="/logo.png" alt="Sarcastic Music" className="h-10 object-contain" />
-        <HistoryMenu />
+        <HistoryMenu onSelect={handleHistorySelect} />
       </div>
 
       <nav className="flex gap-2 mb-6 w-full max-w-4xl px-4 overflow-x-auto scrollbar-hide max-sm:snap-x max-sm:snap-mandatory">
@@ -68,11 +103,11 @@ export default function Home() {
         ))}
       </nav>
 
-      {activePage === "rhyme"      && <RhymeFinder onLookupWord={openDictionary} highlightWord={lastClickedRhymeWord} />}
-      {activePage === "key"        && <KeyFinder />}
-      {activePage === "bpm"        && <BpmFinder />}
-      {activePage === "voice"      && <VoiceRemover />}
-      {activePage === "youtube"    && <Downloader />}
+      {activePage === "rhyme"      && <RhymeFinder onLookupWord={openDictionary} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word} />}
+      {activePage === "key"        && <KeyFinder initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
+      {activePage === "bpm"        && <BpmFinder initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
+      {activePage === "voice"      && <VoiceRemover initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
+      {activePage === "youtube"    && <Downloader initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
       {activePage === "converter"  && <FileConverter />}
       {activePage === "dictionary" && (
         <Dictionary

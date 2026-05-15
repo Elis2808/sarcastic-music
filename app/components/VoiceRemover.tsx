@@ -1,8 +1,14 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { addHistoryItem } from "../lib/history";
 
 type StemType = "no_vocals" | "vocals" | "both";
+
+interface VoiceRemoverProps {
+  initialUrl?: string;
+  initialPlatform?: string;
+}
 
 const PLATFORMS = [
   { id: "youtube", label: "YouTube", placeholder: "Paste YouTube URL here" },
@@ -20,16 +26,16 @@ const PLATFORMS = [
   { id: "twitch", label: "Twitch", placeholder: "Paste Twitch URL here" },
 ];
 
-export default function VoiceRemover() {
+export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemoverProps) {
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [linkUrl, setLinkUrl] = useState("");
+  const [linkUrl, setLinkUrl] = useState(initialUrl || "");
+  const [selectedPlatform, setSelectedPlatform] = useState(initialPlatform || "");
   const [processing, setProcessing] = useState<StemType | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [demucsProgress, setDemucsProgress] = useState(0);
   const [downloadPct, setDownloadPct] = useState<number | null>(null);
   const [error, setError] = useState("");
-  const [selectedPlatform, setSelectedPlatform] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -133,6 +139,20 @@ export default function VoiceRemover() {
         const startData = await startRes.json();
         if (!startRes.ok) throw new Error(startData.error || "Failed to start processing");
         jobId = startData.jobId;
+
+        // Add to history
+        const displayName = file?.name || linkUrl.substring(0, 50) + (linkUrl.length > 50 ? '...' : '');
+        addHistoryItem({
+          type: "song_split",
+          title: displayName,
+          details: stem === "both" ? "Vocals + Instrumental" : stem === "vocals" ? "Vocals only" : "Instrumental only",
+          data: {
+            tool: "voice",
+            url: linkUrl || undefined,
+            platform: selectedPlatform || undefined,
+            fileName: file?.name,
+          },
+        });
       }
 
       // For "both" - need to start second job for vocals

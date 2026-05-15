@@ -1,6 +1,12 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { addHistoryItem } from "../lib/history";
+
+interface KeyFinderProps {
+  initialUrl?: string;
+  initialPlatform?: string;
+}
 
 const PLATFORMS = [
   { id: "youtube", label: "YouTube", placeholder: "Paste YouTube URL here" },
@@ -55,15 +61,15 @@ async function detectKey(file: File): Promise<KeyResult> {
   return res.json();
 }
 
-export default function KeyFinder() {
+export default function KeyFinder({ initialUrl, initialPlatform }: KeyFinderProps) {
   const [dragging, setDragging] = useState(false);
   const [result, setResult] = useState<KeyResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
-  const [linkUrl, setLinkUrl] = useState("");
-  const [linkMode, setLinkMode] = useState(false);
-  const [selectedPlatform, setSelectedPlatform] = useState("");
+  const [linkUrl, setLinkUrl] = useState(initialUrl || "");
+  const [linkMode, setLinkMode] = useState(!!initialUrl);
+  const [selectedPlatform, setSelectedPlatform] = useState(initialPlatform || "");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -137,6 +143,11 @@ export default function KeyFinder() {
     try {
       const res = await detectKey(file);
       setResult(res);
+      addHistoryItem({
+        type: "key_detect",
+        title: file.name,
+        details: `Key: ${res.key} ${res.scale}`,
+      });
     } catch (e) {
       console.error(e);
       setError("Could not detect key. Make sure it's a valid audio file.");
@@ -160,19 +171,33 @@ export default function KeyFinder() {
       });
       if (!audioRes.ok) {
         const err = await audioRes.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to fetch audio from URL");
+        throw new Error(err.error || "Failed to fetch audio");
       }
+
       const audioBlob = await audioRes.blob();
-      const file = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
-      const res = await detectKey(file);
+      const audioFile = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
+      
+      const res = await detectKey(audioFile);
       setResult(res);
-    } catch (e: any) {
-      console.error(e);
-      setError(e.message || "Could not detect key. Make sure it's a valid audio URL.");
+      setFileName(linkUrl);
+      
+      // Add to history
+      addHistoryItem({
+        type: "key_detect",
+        title: linkUrl.substring(0, 50) + (linkUrl.length > 50 ? '...' : ''),
+        details: `Key: ${res.key} ${res.scale}`,
+        data: {
+          tool: "key",
+          url: linkUrl,
+          platform: selectedPlatform,
+        },
+      });
+    } catch (err: any) {
+      setError(err.message || "Analysis failed");
     } finally {
       setLoading(false);
     }
-  }, [linkUrl]);
+  }, [linkUrl, selectedPlatform]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
