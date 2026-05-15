@@ -165,7 +165,7 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
   }
 }
 
-const MAX_CONCURRENT = 20;
+const MAX_CONCURRENT = 3;
 
 // POST /api/separate — start a job, return jobId immediately
 export async function POST(request: NextRequest) {

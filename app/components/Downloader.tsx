@@ -376,7 +376,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
 
       {/* Analysis Results */}
       {analysisResult && (
-        <div className="mt-4 w-full max-w-xl bg-gray-900 rounded-xl p-4 border border-[#C9A84C]/30">
+        <div className="mt-4 w-full max-w-xl">
           {analysisResult.type === "bpm" && (
             <div className="flex flex-col items-center gap-2">
               <p className="text-gray-500 text-xs uppercase tracking-widest">Detected BPM</p>
