@@ -39,7 +39,6 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
   const [ytUrl, setYtUrl] = useState(initialUrl || "");
   const [ytInfo, setYtInfo] = useState<{ title: string; author: string; lengthSeconds: string; thumbnail: string } | null>(null);
   const [ytLoading, setYtLoading] = useState(false);
-  const [ytError, setYtError] = useState("");
   const [ytDownloading, setYtDownloading] = useState<"mp3" | "mp4" | null>(null);
   const [analyzing, setAnalyzing] = useState<"bpm" | "key" | "split" | null>(null);
   const [analysisResult, setAnalysisResult] = useState<{type: "bpm" | "key"; data: any} | null>(null);
@@ -112,15 +111,17 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
   async function fetchInfo() {
     if (!ytUrl.trim()) return;
     setYtLoading(true);
-    setYtError("");
     setYtInfo(null);
     try {
       const res = await fetch(`/api/youtube?url=${encodeURIComponent(ytUrl)}`);
       const data = await res.json();
-      if (!res.ok) setYtError(data.error || "Something went wrong.");
-      else setYtInfo(data);
+      if (!res.ok) {
+        showToast("Invalid link. Update and try again.", "error");
+      } else {
+        setYtInfo(data);
+      }
     } catch {
-      setYtError("Network error. Please try again.");
+      showToast("Network error. Please try again.", "error");
     } finally {
       setYtLoading(false);
     }
@@ -136,7 +137,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
       });
       if (!res.ok) {
         const data = await res.json();
-        setYtError(data.error || "Download failed.");
+        showToast(data.error || "Download failed.", "error");
         return;
       }
       const blob = await res.blob();
@@ -160,7 +161,6 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
       });
       showToast(`Downloaded ${format.toUpperCase()} successfully!`, "success");
     } catch (e: any) {
-      setYtError(e.message || "Download failed");
       showToast(e.message || "Download failed", "error");
     } finally {
       setYtDownloading(null);
@@ -170,7 +170,6 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
   async function analyzeBpm() {
     if (!ytUrl.trim()) return;
     setAnalyzing("bpm");
-    setYtError("");
     setAnalysisResult(null);
     try {
       // Download audio first
@@ -188,7 +187,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
       if (!bpmRes.ok) throw new Error(data.error || "BPM detection failed");
       setAnalysisResult({ type: "bpm", data });
     } catch (e: any) {
-      setYtError(e.message || "BPM analysis failed");
+      // Error toast shown in analyzeBpm
     } finally {
       setAnalyzing(null);
     }
@@ -197,7 +196,6 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
   async function analyzeKey() {
     if (!ytUrl.trim()) return;
     setAnalyzing("key");
-    setYtError("");
     setAnalysisResult(null);
     try {
       const res = await fetch("/api/youtube", {
@@ -214,7 +212,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
       if (!keyRes.ok) throw new Error(data.error || "Key detection failed");
       setAnalysisResult({ type: "key", data });
     } catch (e: any) {
-      setYtError(e.message || "Key analysis failed");
+      // Error toast shown in analyzeKey
     } finally {
       setAnalyzing(null);
     }
@@ -223,7 +221,6 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
   async function splitSong() {
     if (!ytUrl.trim()) return;
     setAnalyzing("split");
-    setYtError("");
     try {
       const res = await fetch("/api/youtube", {
         method: "POST",
@@ -258,7 +255,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
         }
       }
     } catch (e: any) {
-      setYtError(e.message || "Split failed");
+      // Error toast shown in splitSong
     } finally {
       setAnalyzing(null);
     }
@@ -343,8 +340,6 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
           </div>
         </div>
       </UrlDropZone>
-
-      {ytError && <p className="mt-4 text-red-400 text-sm">{ytError}</p>}
 
       {/* Analyze buttons - always show when URL entered */}
       {ytUrl.trim() && (

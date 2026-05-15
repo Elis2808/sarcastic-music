@@ -128,6 +128,7 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
           const url = await resolveUrl(output?.[key]);
           if (!url) continue;
           const p = join(tmpdir(), `sep-${jobId}-${key}.mp3`);
+          await new Promise(r => setTimeout(r, 2000));
           await downloadToTmp(url, p);
           localPaths.push(p);
           tmpFiles.push(p);
@@ -164,7 +165,7 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
   }
 }
 
-const MAX_CONCURRENT = 10;
+const MAX_CONCURRENT = 20;
 
 // POST /api/separate — start a job, return jobId immediately
 export async function POST(request: NextRequest) {

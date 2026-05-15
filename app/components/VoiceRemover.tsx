@@ -200,7 +200,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
         const deadline = Date.now() + 8 * 60 * 1000;
         while (true) {
           if (Date.now() > deadline) throw new Error("Processing timed out.");
-          await new Promise(r => setTimeout(r, 4000));
+          await new Promise(r => setTimeout(r, 2000));
           const pollRes = await fetch(`/api/separate?id=${jid}`);
           const pollData = await pollRes.json().catch(() => ({}));
           if (pollRes.status === 404) continue;
@@ -378,16 +378,10 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
                 disabled={processing !== null}
                 className="w-full px-4 py-3 rounded-[10px] bg-black border border-[#C9A84C] hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 outline-none"
               >
-                {processing === "no_vocals" ? (
-                  <span className="text-[#C9A84C] text-xs">Processing…</span>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4 text-[#C9A84C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                    </svg>
-                    <span className="text-xs">Instrumental</span>
-                  </>
-                )}
+                <svg className="w-4 h-4 text-[#C9A84C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                </svg>
+                <span className="text-xs">Instrumental</span>
               </button>
             </div>
 
@@ -403,11 +397,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
                   disabled={processing !== null}
                   className="px-3 py-2 rounded-[6px] bg-black border border-gray-500 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none whitespace-nowrap"
                 >
-                  {processing === "both" ? (
-                    <span className="text-[#C9A84C]">Both…</span>
-                  ) : (
-                    "Both"
-                  )}
+                  Both
                 </button>
               </div>
             </div>
@@ -419,21 +409,29 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
                 disabled={processing !== null}
                 className="w-full px-4 py-3 rounded-[10px] bg-black border border-gray-500 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 outline-none"
               >
-                {processing === "vocals" ? (
-                  <span className="text-[#C9A84C] text-xs">Processing…</span>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                    </svg>
-                    <span className="text-xs">Vocals</span>
-                  </>
-                )}
+                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+                <span className="text-xs">Vocals</span>
               </button>
             </div>
           </div>
 
-          <p className="text-gray-600 text-xs mt-2 text-center">Processing may take 30–60 seconds on GPU</p>
+          {/* Progress bar - shows when processing */}
+          {processing && (
+            <div className="w-full">
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>Processing</span>
+                <span>{Math.round(demucsProgress)}%</span>
+              </div>
+              <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-300 bg-[#C9A84C]"
+                  style={{ width: `${demucsProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
