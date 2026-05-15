@@ -279,5 +279,12 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: job.error || "Separation failed" }, { status: 500 });
   }
 
+  // Timeout check: if processing/pending for >10 min without progress, mark as failed
+  const ageMs = Date.now() - job.createdAt;
+  if ((job.status === "processing" || job.status === "pending") && ageMs > 10 * 60 * 1000) {
+    await writeJob(jobId, { ...job, status: "error", error: "Processing timed out" });
+    return Response.json({ error: "Processing timed out" }, { status: 500 });
+  }
+
   return Response.json({ status: job.status, progress: job.progress ?? 0 });
 }
