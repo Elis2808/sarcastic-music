@@ -204,7 +204,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
           await new Promise(r => setTimeout(r, 2000));
           const pollRes = await fetch(`/api/separate?id=${jid}`);
           const pollData = await pollRes.json().catch(() => ({}));
-          if (pollRes.status === 404) continue;
+          if (pollRes.status === 404) throw new Error("Job lost due to server restart. Please try again.");
           if (!pollRes.ok) throw new Error(pollData.error || "Processing failed");
           if (pollData.status === "error") throw new Error(pollData.error || "Processing failed");
           if (typeof pollData.progress === "number") setProgress(pollData.progress);
