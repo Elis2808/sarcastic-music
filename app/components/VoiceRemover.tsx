@@ -37,7 +37,6 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
   const [processing, setProcessing] = useState<StemType | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [demucsProgress, setDemucsProgress] = useState(0);
-  const [downloadPct, setDownloadPct] = useState<number | null>(null);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -104,7 +103,6 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
     setProcessing(stem);
     setElapsed(0);
     setDemucsProgress(0);
-    setDownloadPct(null);
     setError("");
 
     timerRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
@@ -132,6 +130,19 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
         const startData = await startRes.json();
         if (!startRes.ok) throw new Error(startData.error || "Failed to start processing");
         jobId = startData.jobId;
+
+        // Add to history for link processing
+        const displayName = linkUrl.substring(0, 50) + (linkUrl.length > 50 ? '...' : '');
+        addHistoryItem({
+          type: "song_split",
+          title: displayName,
+          details: stem === "both" ? "Vocals + Instrumental" : stem === "vocals" ? "Vocals only" : "Instrumental only",
+          data: {
+            tool: "voice",
+            url: linkUrl,
+            platform: selectedPlatform || undefined,
+          },
+        });
       } else {
         // Process file upload
         const formData = new FormData();
@@ -220,7 +231,6 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
       setProcessing(null);
       setElapsed(0);
       setDemucsProgress(0);
-      setDownloadPct(null);
     }
   }, [file, linkUrl]);
 

@@ -119,12 +119,12 @@ export default function Home() {
         <HistoryMenu onSelect={handleHistorySelect} />
       </div>
 
-      <nav className="flex gap-2 mb-6 w-full max-w-4xl px-4 overflow-x-auto scrollbar-hide max-sm:snap-x max-sm:snap-mandatory">
+      <nav className="flex gap-2 max-sm:gap-1 max-sm:overflow-x-auto max-sm:snap-x max-sm:px-2 max-sm:pb-2">
         {NAV_ITEMS.map(({ page, label }) => (
           <button
             key={page}
             onClick={() => navigateTo(page)}
-            className={`px-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#C9A84C] transition-colors whitespace-nowrap flex-shrink-0 max-sm:snap-start ${
+            className={`px-4 py-2 rounded-xl text-sm outline-none transition-colors whitespace-nowrap flex-shrink-0 max-sm:snap-start ${
               activePage === page
                 ? "bg-black text-white border border-[#C9A84C]"
                 : "bg-gray-800 text-gray-300 hover:bg-gray-700"
