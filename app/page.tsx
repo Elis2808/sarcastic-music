@@ -20,6 +20,7 @@ export default function Home() {
   const [previousPage, setPreviousPage] = useState<Page | null>(null);
   const [dictWord, setDictWord] = useState("");
   const [lastClickedRhymeWord, setLastClickedRhymeWord] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   
   // History restore state
   const [restoreState, setRestoreState] = useState<{
@@ -142,9 +143,60 @@ export default function Home() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center bg-black text-white pt-8">
-      <div className="flex items-center justify-between w-full max-w-4xl px-4 sm:gap-12 sm:justify-start mb-8">
+      <div className="flex items-center justify-between w-full max-w-4xl px-4 mb-8">
+        {/* Hamburger Menu Button */}
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-white transition-all duration-200"
+          aria-label="Open menu"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        {/* Logo */}
         <img src="/logo.png" alt="Sarcastic Music" className="h-10 object-contain" />
+
+        {/* History Menu */}
         <HistoryMenu onSelect={handleHistorySelect} />
+
+        {/* Dropdown Menu Overlay */}
+        {menuOpen && (
+          <div className="absolute top-20 left-4 right-4 sm:left-auto sm:right-auto sm:w-64 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden">
+            <div className="p-2">
+              <p className="text-gray-500 text-xs uppercase tracking-wider px-3 py-2">Tools</p>
+              {NAV_ITEMS.map(({ page, label }) => (
+                <button
+                  key={page}
+                  onClick={() => {
+                    if (page === "rhyme") {
+                      window.location.reload();
+                    } else {
+                      navigateTo(page);
+                    }
+                    setMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                    activePage === page
+                      ? "bg-[#C9A84C]/20 text-[#C9A84C]"
+                      : "text-white hover:bg-gray-800"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Click outside to close */}
+        {menuOpen && (
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setMenuOpen(false)}
+          />
+        )}
       </div>
 
       <nav className="flex gap-2 max-sm:gap-1 max-sm:overflow-x-auto max-sm:snap-x max-sm:px-2 max-sm:pb-2">
