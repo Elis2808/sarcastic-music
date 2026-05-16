@@ -199,7 +199,7 @@ export default function Home() {
         )}
       </div>
 
-      <nav className="flex gap-2 max-sm:gap-1 max-sm:overflow-x-auto max-sm:snap-x max-sm:px-2 max-sm:pb-2">
+      <nav className="flex flex-wrap justify-center gap-2 max-sm:gap-1.5 max-sm:px-2">
         {NAV_ITEMS.map(({ page, label }) => (
           <button
             key={page}
@@ -210,7 +210,7 @@ export default function Home() {
                 navigateTo(page);
               }
             }}
-            className={`px-4 py-2 rounded-xl text-sm outline-none transition-colors whitespace-nowrap flex-shrink-0 max-sm:snap-start ${
+            className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm outline-none transition-colors whitespace-nowrap ${
               activePage === page
                 ? "bg-black text-white border border-[#C9A84C]"
                 : "bg-gray-800 text-gray-300 hover:bg-gray-700"
