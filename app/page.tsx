@@ -159,16 +159,24 @@ export default function Home() {
         <img 
           src="/logo.png" 
           alt="Sarcastic Music" 
-          className="h-10 object-contain cursor-pointer hover:opacity-80 transition-opacity"
+          className="h-10 object-contain cursor-pointer hover:opacity-80 transition-opacity relative z-40"
           onClick={() => window.location.reload()}
         />
 
         {/* History Menu */}
         <HistoryMenu onSelect={handleHistorySelect} />
 
+        {/* Click outside overlay - behind menu */}
+        {menuOpen && (
+          <div
+            className="fixed inset-0 z-30"
+            onClick={() => setMenuOpen(false)}
+          />
+        )}
+
         {/* Dropdown Menu Overlay */}
         {menuOpen && (
-          <div className="absolute top-20 left-4 right-4 sm:left-auto sm:right-auto sm:w-64 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden">
+          <div className="absolute top-16 left-0 right-0 sm:left-auto sm:right-auto sm:w-64 mx-4 sm:mx-0 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden">
             <div className="p-2">
               <p className="text-gray-500 text-xs uppercase tracking-wider px-3 py-2">Tools</p>
               {NAV_ITEMS.map(({ page, label }) => (
@@ -193,14 +201,6 @@ export default function Home() {
               ))}
             </div>
           </div>
-        )}
-
-        {/* Click outside to close */}
-        {menuOpen && (
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setMenuOpen(false)}
-          />
         )}
       </div>
 
