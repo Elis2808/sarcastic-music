@@ -176,7 +176,7 @@ export default function Home() {
 
         {/* Dropdown Menu Overlay */}
         {menuOpen && (
-          <div className="absolute top-14 left-0 sm:left-0 sm:right-auto sm:w-40 w-40 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl z-50 overflow-hidden">
+          <div className="absolute left-0 top-full mt-2 w-40 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden">
             <div className="p-1">
               {NAV_ITEMS.map(({ page, label }) => (
                 <button
