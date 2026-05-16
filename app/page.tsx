@@ -156,7 +156,12 @@ export default function Home() {
         </button>
 
         {/* Logo */}
-        <img src="/logo.png" alt="Sarcastic Music" className="h-10 object-contain" />
+        <img 
+          src="/logo.png" 
+          alt="Sarcastic Music" 
+          className="h-10 object-contain cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => window.location.reload()}
+        />
 
         {/* History Menu */}
         <HistoryMenu onSelect={handleHistorySelect} />
