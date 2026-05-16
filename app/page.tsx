@@ -151,7 +151,13 @@ export default function Home() {
         {NAV_ITEMS.map(({ page, label }) => (
           <button
             key={page}
-            onClick={() => navigateTo(page)}
+            onClick={() => {
+              if (page === "rhyme") {
+                window.location.reload();
+              } else {
+                navigateTo(page);
+              }
+            }}
             className={`px-4 py-2 rounded-xl text-sm outline-none transition-colors whitespace-nowrap flex-shrink-0 max-sm:snap-start ${
               activePage === page
                 ? "bg-black text-white border border-[#C9A84C]"

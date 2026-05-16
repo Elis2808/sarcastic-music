@@ -43,6 +43,62 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Auto-scroll effect for stem buttons
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    
+    let scrollAmount = 0;
+    const scrollStep = 0.5; // pixels per frame
+    let direction = 1;
+    let rafId: number;
+    
+    const autoScroll = () => {
+      if (!container) return;
+      
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      
+      if (maxScroll <= 0) {
+        rafId = requestAnimationFrame(autoScroll);
+        return;
+      }
+      
+      scrollAmount += scrollStep * direction;
+      
+      // Reverse direction at ends
+      if (scrollAmount >= maxScroll) {
+        direction = -1;
+        scrollAmount = maxScroll;
+      } else if (scrollAmount <= 0) {
+        direction = 1;
+        scrollAmount = 0;
+      }
+      
+      container.scrollLeft = scrollAmount;
+      rafId = requestAnimationFrame(autoScroll);
+    };
+    
+    // Pause on hover
+    const handleMouseEnter = () => cancelAnimationFrame(rafId);
+    const handleMouseLeave = () => { rafId = requestAnimationFrame(autoScroll); };
+    
+    container.addEventListener('mouseenter', handleMouseEnter);
+    container.addEventListener('mouseleave', handleMouseLeave);
+    container.addEventListener('touchstart', handleMouseEnter, { passive: true });
+    container.addEventListener('touchend', handleMouseLeave, { passive: true });
+    
+    rafId = requestAnimationFrame(autoScroll);
+    
+    return () => {
+      cancelAnimationFrame(rafId);
+      container.removeEventListener('mouseenter', handleMouseEnter);
+      container.removeEventListener('mouseleave', handleMouseLeave);
+      container.removeEventListener('touchstart', handleMouseEnter);
+      container.removeEventListener('touchend', handleMouseLeave);
+    };
+  }, []);
+
   useEffect(() => {
     const id = "btn-sweep-style";
     if (!document.getElementById(id)) {
