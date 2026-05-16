@@ -144,16 +144,51 @@ export default function Home() {
   return (
     <main className="relative flex min-h-screen flex-col items-center bg-black text-white pt-8">
       <div className="flex items-center justify-between w-full max-w-4xl px-4 mb-8">
-        {/* Hamburger Menu Button */}
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-white transition-all duration-200"
-          aria-label="Open menu"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
+        {/* Hamburger Menu Button + Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-white transition-all duration-200"
+            aria-label="Open menu"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
+          {/* Click outside overlay */}
+          {menuOpen && (
+            <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+          )}
+
+          {/* Dropdown */}
+          {menuOpen && (
+            <div className="absolute left-0 top-full mt-2 w-40 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden">
+              <div className="p-1">
+                {NAV_ITEMS.map(({ page, label }) => (
+                  <button
+                    key={page}
+                    onClick={() => {
+                      if (page === "rhyme" && activePage === "rhyme") {
+                        window.location.reload();
+                      } else {
+                        navigateTo(page);
+                        setMenuOpen(false);
+                      }
+                    }}
+                    className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors ${
+                      activePage === page
+                        ? "bg-[#C9A84C]/20 text-[#C9A84C]"
+                        : "text-white hover:bg-gray-800"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Logo */}
         <img 
@@ -165,42 +200,6 @@ export default function Home() {
 
         {/* History Menu */}
         <HistoryMenu onSelect={handleHistorySelect} />
-
-        {/* Click outside overlay - behind menu */}
-        {menuOpen && (
-          <div
-            className="fixed inset-0 z-30"
-            onClick={() => setMenuOpen(false)}
-          />
-        )}
-
-        {/* Dropdown Menu Overlay */}
-        {menuOpen && (
-          <div className="absolute left-0 top-full mt-2 w-40 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden">
-            <div className="p-1">
-              {NAV_ITEMS.map(({ page, label }) => (
-                <button
-                  key={page}
-                  onClick={() => {
-                    if (page === "rhyme" && activePage === "rhyme") {
-                      window.location.reload();
-                    } else {
-                      navigateTo(page);
-                      setMenuOpen(false);
-                    }
-                  }}
-                  className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors ${
-                    activePage === page
-                      ? "bg-[#C9A84C]/20 text-[#C9A84C]"
-                      : "text-white hover:bg-gray-800"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       <nav className="flex flex-wrap justify-center gap-2 max-sm:gap-1.5 max-sm:px-2">
