@@ -142,7 +142,7 @@ export default function Home() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center bg-black text-white pt-8">
-      <div className="flex items-center gap-4 mb-8">
+      <div className="flex items-center justify-between w-full max-w-4xl px-4 sm:gap-12 sm:justify-start mb-8">
         <img src="/logo.png" alt="Sarcastic Music" className="h-10 object-contain" />
         <HistoryMenu onSelect={handleHistorySelect} />
       </div>
