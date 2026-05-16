@@ -183,12 +183,12 @@ export default function Home() {
                 <button
                   key={page}
                   onClick={() => {
-                    if (page === "rhyme") {
+                    if (page === "rhyme" && activePage === "rhyme") {
                       window.location.reload();
                     } else {
                       navigateTo(page);
+                      setMenuOpen(false);
                     }
-                    setMenuOpen(false);
                   }}
                   className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                     activePage === page
@@ -209,7 +209,7 @@ export default function Home() {
           <button
             key={page}
             onClick={() => {
-              if (page === "rhyme") {
+              if (page === "rhyme" && activePage === "rhyme") {
                 window.location.reload();
               } else {
                 navigateTo(page);
