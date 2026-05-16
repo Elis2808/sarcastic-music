@@ -8,12 +8,13 @@ import FileConverter from "./components/FileConverter";
 import Downloader from "./components/Downloader";
 import RhymeFinder from "./components/RhymeFinder";
 import Dictionary from "./components/Dictionary";
+import AudioMaster from "./components/AudioMaster";
 import HistoryMenu from "./components/HistoryMenu";
 import { addHistoryItem, type HistoryItem } from "./lib/history";
 import ToastContainer from "./components/Toast";
 import { showToast } from "./components/Toast";
 
-type Page = "rhyme" | "key" | "bpm" | "voice" | "youtube" | "dictionary" | "converter";
+type Page = "rhyme" | "key" | "bpm" | "voice" | "youtube" | "dictionary" | "converter" | "master";
 
 export default function Home() {
   const [activePage, setActivePage] = useState<Page>("rhyme");
@@ -108,6 +109,7 @@ export default function Home() {
       voice: "voice",
       youtube: "youtube",
       dictionary: "dictionary",
+      master: "master",
     };
     
     const page = toolMap[tool];
@@ -132,11 +134,12 @@ export default function Home() {
   }
 
   const NAV_ITEMS: { page: Page; label: string }[] = [
+    { page: "youtube",   label: "Downloader" },
     { page: "rhyme",     label: "Rhyme Finder" },
+    { page: "master",    label: "Audio Master" },
+    { page: "voice",     label: "Song Splitter" },
     { page: "key",       label: "Key Finder" },
     { page: "bpm",       label: "BPM Finder" },
-    { page: "voice",     label: "Song Splitter" },
-    { page: "youtube",   label: "Downloader" },
     { page: "converter", label: "File Converter" },
     { page: "dictionary",label: "Dictionary" },
   ];
@@ -241,6 +244,7 @@ export default function Home() {
         initialTimeSignature={restoreState.timeSignature}
         initialBeatCount={restoreState.beatCount}
       />}
+      {activePage === "master"     && <AudioMaster initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
       {activePage === "voice"      && <VoiceRemover initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
       {activePage === "youtube"    && <Downloader initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
       {activePage === "converter"  && <FileConverter />}

@@ -2,7 +2,7 @@
 
 export type HistoryItem = {
   id: string;
-  type: "rhyme_search" | "dictionary_lookup" | "download" | "bpm_detect" | "key_detect" | "song_split" | "link_search";
+  type: "rhyme_search" | "dictionary_lookup" | "download" | "bpm_detect" | "key_detect" | "song_split" | "link_search" | "audio_master";
   title: string;
   details?: string;
   timestamp: number;
@@ -11,7 +11,7 @@ export type HistoryItem = {
     word?: string;
     platform?: string;
     fileName?: string;
-    tool: "rhyme" | "key" | "bpm" | "voice" | "youtube" | "dictionary";
+    tool: "rhyme" | "key" | "bpm" | "voice" | "youtube" | "dictionary" | "master";
   };
 };
 
@@ -94,6 +94,7 @@ export function getHistoryIcon(type: HistoryItem["type"]): string {
     key_detect: "🎹",
     song_split: "✂️",
     link_search: "🔗",
+    audio_master: "🎚️",
   };
   return icons[type] || "📌";
 }
