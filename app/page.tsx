@@ -176,9 +176,8 @@ export default function Home() {
 
         {/* Dropdown Menu Overlay */}
         {menuOpen && (
-          <div className="absolute top-16 left-0 right-0 sm:left-auto sm:right-auto sm:w-64 mx-4 sm:mx-0 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden">
-            <div className="p-2">
-              <p className="text-gray-500 text-xs uppercase tracking-wider px-3 py-2">Tools</p>
+          <div className="absolute top-14 left-0 sm:left-0 sm:right-auto sm:w-40 w-40 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl z-50 overflow-hidden">
+            <div className="p-1">
               {NAV_ITEMS.map(({ page, label }) => (
                 <button
                   key={page}
@@ -190,7 +189,7 @@ export default function Home() {
                       setMenuOpen(false);
                     }
                   }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                  className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors ${
                     activePage === page
                       ? "bg-[#C9A84C]/20 text-[#C9A84C]"
                       : "text-white hover:bg-gray-800"
