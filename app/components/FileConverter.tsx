@@ -101,7 +101,7 @@ export default function FileConverter() {
         { id: "mov-mp4", label: "MOV to MP4", accept: ".mov" },
         { id: "avi-mp4", label: "AVI to MP4", accept: ".avi" },
         { id: "wmv-mp4", label: "WMV to MP4", accept: ".wmv" },
-        { id: "video-mp3", label: "Video to Audio Only", accept: "video/*" },
+        { id: "video-mp3", label: "MP4 to MP3", accept: ".mp4,.mov,.avi,.wmv,.mkv,video/*" },
         { id: "compress-video", label: "Compress Video", accept: "video/*" },
       ]
     },
