@@ -146,7 +146,7 @@ export default function Home() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center bg-black text-white pt-8">
-      <div className="flex items-center justify-between w-full max-w-4xl px-4 mb-8">
+      <div className="flex items-center justify-between w-full max-w-4xl px-4 mb-6">
         {/* Hamburger Menu Button + Dropdown */}
         <div className="relative">
           <button
@@ -205,7 +205,7 @@ export default function Home() {
         <HistoryMenu onSelect={handleHistorySelect} />
       </div>
 
-      <nav className="flex flex-wrap justify-center gap-2 max-sm:gap-1.5 max-sm:px-2">
+      <nav className="flex flex-wrap justify-center gap-2 max-sm:gap-1.5 max-sm:px-2 mb-6">
         {NAV_ITEMS.map(({ page, label }) => (
           <button
             key={page}

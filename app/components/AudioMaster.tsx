@@ -4,27 +4,14 @@ import { useState, useRef, useCallback } from "react";
 import { addHistoryItem } from "../lib/history";
 import { showToast } from "./Toast";
 
-const PLATFORMS = [
-  { id: "youtube", label: "YouTube", placeholder: "Paste YouTube URL here" },
-  { id: "soundcloud", label: "SoundCloud", placeholder: "Paste SoundCloud URL here" },
-  { id: "tiktok", label: "TikTok", placeholder: "Paste TikTok URL here" },
-  { id: "instagram", label: "Instagram", placeholder: "Paste Instagram URL here" },
-  { id: "facebook", label: "Facebook", placeholder: "Paste Facebook URL here" },
-  { id: "twitter", label: "Twitter/X", placeholder: "Paste Twitter/X URL here" },
-  { id: "spotify", label: "Spotify", placeholder: "Paste Spotify URL here" },
-  { id: "vimeo", label: "Vimeo", placeholder: "Paste Vimeo URL here" },
-];
-
 interface AudioMasterProps {
   initialUrl?: string;
   initialPlatform?: string;
 }
 
-export default function AudioMaster({ initialUrl, initialPlatform }: AudioMasterProps) {
+export default function AudioMaster({ initialUrl: _initialUrl, initialPlatform: _initialPlatform }: AudioMasterProps) {
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [linkUrl, setLinkUrl] = useState(initialUrl || "");
-  const [selectedPlatform, setSelectedPlatform] = useState(initialPlatform || "");
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
@@ -32,30 +19,21 @@ export default function AudioMaster({ initialUrl, initialPlatform }: AudioMaster
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const selectedPlat = PLATFORMS.find(p => p.id === selectedPlatform);
-  const placeholder = selectedPlat?.placeholder || "Paste a link here";
-
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragging(false);
     const dropped = e.dataTransfer.files[0];
-    if (dropped) { setFile(dropped); setLinkUrl(""); }
+    if (dropped) setFile(dropped);
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
-    if (f) { setFile(f); setLinkUrl(""); }
-  }
-
-  function handleUrlFromDropZone(url: string, platform?: string) {
-    setLinkUrl(url);
-    setFile(null);
-    if (platform) setSelectedPlatform(platform);
+    if (f) setFile(f);
   }
 
   const master = useCallback(async () => {
-    if (!file && !linkUrl.trim()) {
-      setError("Please upload a file or paste a link.");
+    if (!file) {
+      setError("Please upload an audio file.");
       return;
     }
     setError("");
@@ -74,12 +52,7 @@ export default function AudioMaster({ initialUrl, initialPlatform }: AudioMaster
 
     try {
       const form = new FormData();
-      if (file) {
-        form.append("file", file);
-      } else {
-        form.append("url", linkUrl.trim());
-        form.append("platform", selectedPlatform);
-      }
+      form.append("file", file);
 
       const res = await fetch("/api/master", { method: "POST", body: form });
 
@@ -104,9 +77,9 @@ export default function AudioMaster({ initialUrl, initialPlatform }: AudioMaster
 
       addHistoryItem({
         type: "audio_master",
-        title: file?.name || linkUrl,
+        title: file.name,
         details: "Audio mastered",
-        data: { tool: "master", url: linkUrl, platform: selectedPlatform },
+        data: { tool: "master" },
       });
 
       showToast("Mastered file downloaded!", "success");
@@ -119,42 +92,14 @@ export default function AudioMaster({ initialUrl, initialPlatform }: AudioMaster
       if (timerRef.current) clearInterval(timerRef.current);
       setProcessing(false);
     }
-  }, [file, linkUrl, selectedPlatform]);
+  }, [file]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white pt-6 sm:pt-10 px-3 sm:px-4">
+    <div className="flex flex-col items-center bg-black text-white pt-8 pb-12 px-4 w-full min-h-screen">
       <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-white">Audio Master</h1>
-      <p className="text-gray-400 text-sm mb-6 text-center max-w-sm">
-        Professional mastering — loudness normalization, EQ, compression & limiting
+      <p className="text-gray-400 text-sm mb-8 text-center max-w-sm px-2">
+        Professional mastering — EQ, compression, loudness & limiting
       </p>
-
-      {/* Platform Selector */}
-      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-2 mb-3 max-w-full px-1" style={{ scrollbarWidth: "none" }}>
-        {PLATFORMS.map(p => (
-          <button
-            key={p.id}
-            onClick={() => setSelectedPlatform(p.id === selectedPlatform ? "" : p.id)}
-            className={`px-3 py-1.5 rounded-xl border text-xs transition-all whitespace-nowrap flex-shrink-0 ${
-              selectedPlatform === p.id
-                ? "border-[#C9A84C] text-[#C9A84C] bg-[#C9A84C]/10"
-                : "border-gray-600 text-gray-300 hover:border-[#C9A84C] hover:text-[#C9A84C]"
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {/* URL Input */}
-      <div className="relative w-full max-w-xl mb-3">
-        <input
-          type="text"
-          value={linkUrl}
-          onChange={e => { setLinkUrl(e.target.value); setFile(null); }}
-          placeholder={placeholder}
-          className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#C9A84C] transition-colors"
-        />
-      </div>
 
       {/* File Upload */}
       <div
@@ -162,15 +107,21 @@ export default function AudioMaster({ initialUrl, initialPlatform }: AudioMaster
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className={`w-full max-w-xl border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all mb-6 ${
-          dragging ? "border-[#C9A84C] bg-[#C9A84C]/5" : "border-gray-700 hover:border-gray-500"
+        className={`w-full max-w-md border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all mb-6 ${
+          dragging ? "border-[#C9A84C] bg-[#C9A84C]/5" : file ? "border-[#C9A84C]/50 bg-[#C9A84C]/5" : "border-gray-700 hover:border-gray-500"
         }`}
       >
         <input ref={inputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileChange} />
         {file ? (
-          <p className="text-sm text-[#C9A84C]">{file.name}</p>
+          <>
+            <p className="text-sm text-[#C9A84C] font-medium truncate">{file.name}</p>
+            <p className="text-xs text-gray-500 mt-1">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
+          </>
         ) : (
-          <p className="text-sm text-gray-400">Drop audio file here or click to browse</p>
+          <>
+            <p className="text-sm text-gray-300 font-medium">Drop audio file here</p>
+            <p className="text-xs text-gray-500 mt-1">or tap to browse</p>
+          </>
         )}
       </div>
 

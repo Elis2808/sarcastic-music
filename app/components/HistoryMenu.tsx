@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { getHistory, clearHistory, deleteHistoryItem, formatTimestamp, getHistoryIcon, type HistoryItem } from "../lib/history";
+import { getHistory, clearHistory, deleteHistoryItem, formatTimestamp, type HistoryItem } from "../lib/history";
 import { showToast } from "./Toast";
 
 interface HistoryMenuProps {
@@ -61,37 +61,23 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
     setHistory(getHistory());
   }
 
-  function exportToJSON() {
+  function exportToTxt() {
     const data = getHistory();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const lines = data.map((item) => {
+      const date = new Date(item.timestamp).toLocaleString();
+      let line = `[${date}] ${item.title}`;
+      if (item.details) line += ` — ${item.details}`;
+      return line;
+    });
+    const text = lines.join("\n");
+    const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `sarcastic-music-history-${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `sarcastic-music-history-${new Date().toISOString().split("T")[0]}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast("History exported as JSON", "success");
-    setIsOpen(false);
-  }
-
-  function exportToCSV() {
-    const data = getHistory();
-    const headers = ["Date", "Type", "Title", "Details"];
-    const rows = data.map((item) => [
-      new Date(item.timestamp).toLocaleString(),
-      item.type,
-      item.title,
-      item.details || "",
-    ]);
-    const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `sarcastic-music-history-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast("History exported as CSV", "success");
+    showToast("History exported", "success");
     setIsOpen(false);
   }
 
@@ -127,20 +113,12 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
               )}
             </div>
             {history.length > 0 && (
-              <div className="flex gap-2">
-                <button
-                  onClick={exportToJSON}
-                  className="text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
-                >
-                  Export JSON
-                </button>
-                <button
-                  onClick={exportToCSV}
-                  className="text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
-                >
-                  Export CSV
-                </button>
-              </div>
+              <button
+                onClick={exportToTxt}
+                className="text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
+              >
+                Export .txt
+              </button>
             )}
           </div>
 
@@ -165,7 +143,6 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
                     }}
                     className={`p-3 hover:bg-gray-800/50 transition-colors flex items-start gap-3 group ${onSelect ? 'cursor-pointer' : ''}`}
                   >
-                    <span className="text-lg flex-shrink-0">{getHistoryIcon(item.type)}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white truncate flex items-center gap-2">
                         {item.title}
