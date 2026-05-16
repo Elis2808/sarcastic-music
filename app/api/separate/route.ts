@@ -236,7 +236,8 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
 
         if (localPaths.length === 0) throw new Error("No stems available to build instrumental");
 
-        const mixedPath = join(tmpdir(), `sep-${jobId}-instrumental.mp3`);
+        // Save mixed instrumental to persistent JOB_DIR (not tmpdir which gets wiped on restart)
+        const mixedPath = join(JOB_DIR, `${jobId}-instrumental.mp3`);
 
         // ffmpeg amix: sum all stems into one file
         console.log(`[separate:${jobId}] Mixing ${localPaths.length} stems with ffmpeg...`);
@@ -250,6 +251,10 @@ async function runSeparation(jobId: string, audioPath: string, stem: string, ori
 
         const dlName = `${originalName}_instrumental.mp3`;
         await writeJob(jobId, { status: "done", stemUrl: `file://${mixedPath}`, dlName, createdAt: Date.now() });
+        
+        // Delay file deletion to match job deletion (10 min)
+        setTimeout(() => unlink(mixedPath).catch(() => {}), 600000);
+        
         console.log(`[separate:${jobId}] Instrumental mixed locally — done`);
         return;
       }
@@ -323,10 +328,10 @@ export async function GET(request: NextRequest) {
   if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
   if (job.status === "done" && job.dlName) {
-    // Delay deletion so frontend can poll more times without error (2 min)
+    // Delay deletion so frontend can poll more times without error (10 min for safety)
     if (!job.deletionScheduled) {
       await writeJob(jobId, { ...job, deletionScheduled: true, createdAt: job.createdAt });
-      setTimeout(() => deleteJob(jobId).catch(() => {}), 120000);
+      setTimeout(() => deleteJob(jobId).catch(() => {}), 600000); // 10 minutes
     }
     const safeFilename = job.dlName.replace(/[^\x00-\x7F]/g, "").replace(/[^a-zA-Z0-9._\-]/g, "_") || "download.mp3";
 
@@ -337,6 +342,64 @@ export async function GET(request: NextRequest) {
         vocalsUrl: job.vocalsUrl,
         filename: safeFilename 
       });
+    }
+
+    // Both stems but need to mix instrumental on-demand
+    if (job.vocalsUrl && !job.noVocalsUrl && (job.bassUrl || job.drumsUrl || job.guitarUrl || job.otherUrl || job.pianoUrl)) {
+      try {
+        // Check if already mixed (stored in JOB_DIR for persistence)
+        const mixedPath = join(JOB_DIR, `${jobId}-instrumental.mp3`);
+        
+        // If not already mixed, do it now
+        if (!existsSync(mixedPath)) {
+          console.log(`[separate:${jobId}] Mixing instrumental on-demand...`);
+          
+          // Mix instrumental from individual stems
+          const stemKeys = ["bass", "drums", "guitar", "other", "piano"] as const;
+          const localPaths: string[] = [];
+          const tmpFiles: string[] = [];
+
+          for (const key of stemKeys) {
+            const url = job[`${key}Url` as keyof JobState] as string | undefined;
+            if (!url) continue;
+            const p = join(tmpdir(), `sep-${jobId}-${key}.mp3`);
+            await new Promise(r => setTimeout(r, 1000));
+            await downloadToTmp(url, p);
+            localPaths.push(p);
+            tmpFiles.push(p);
+          }
+
+          if (localPaths.length === 0) throw new Error("No stems available to build instrumental");
+
+          const inputs = localPaths.flatMap(p => ["-i", p]);
+          await execFileAsync("ffmpeg", [
+            "-y", ...inputs,
+            "-filter_complex", `amix=inputs=${localPaths.length}:duration=longest:normalize=0`,
+            "-c:a", "libmp3lame", "-b:a", "256k", mixedPath,
+          ], { timeout: 120000 });
+
+          // Cleanup temp stem files
+          for (const f of tmpFiles) unlink(f).catch(() => {});
+          
+          // Save to job so we don't remix on next poll
+          await writeJob(jobId, { 
+            ...job, 
+            noVocalsUrl: `file://${mixedPath}`,
+            createdAt: job.createdAt 
+          });
+          console.log(`[separate:${jobId}] Instrumental mixed and saved`);
+        }
+
+        // Return as JSON with both URLs (instrumental proxied, vocals remote)
+        return Response.json({ 
+          downloadUrl: `file://${mixedPath}`,
+          vocalsUrl: job.vocalsUrl,
+          filename: safeFilename 
+        });
+      } catch (err: any) {
+        console.error(`[separate:${jobId}] Error mixing instrumental:`, err.message);
+        return Response.json({ error: "Failed to mix instrumental" }, { status: 500 });
+      }
     }
 
     // Single stem (instrumental/no_vocals or vocals)
