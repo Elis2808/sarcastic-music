@@ -154,18 +154,26 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
 
     function onEnd(e: TouchEvent) {
       dragging.current = false;
+      hoveredIdx.current = -1;
+      btnRefs.current.forEach(b => { if (b) b.style.transform = "scale(1)"; });
+
       if (didDrag.current) {
-        // navigate to wherever pill landed
         const trackRect = el!.getBoundingClientRect();
         const x = e.changedTouches[0].clientX;
         const trackSpaceX = x - trackRect.left - autoPos.current;
         const nearest = nearestBtn(trackSpaceX);
         if (nearest) {
           navigateFn.current(items[nearest.idx].page);
+          // snap pill to landed position with animation
+          movePillToBtn(nearest.btn, true);
+        } else {
+          // fallback: snap back to current active page
+          movePillToPage(activeRef.current, true);
         }
+      } else {
+        // tap with no drag — restore pill to active page
+        movePillToPage(activeRef.current, true);
       }
-      hoveredIdx.current = -1;
-      btnRefs.current.forEach(b => { if (b) b.style.transform = "scale(1)"; });
     }
 
     el.addEventListener("touchstart", onStart, { passive: true });
