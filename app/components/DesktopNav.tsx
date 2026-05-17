@@ -18,7 +18,7 @@ export default function DesktopNav({ items, activePage, onNavigate }: Props) {
         backgroundColor: "rgba(20,20,24,0.48)",
         backdropFilter: "blur(14px) saturate(160%)",
         WebkitBackdropFilter: "blur(14px) saturate(160%)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.07)",
         boxShadow: "0 4px 14px rgba(0,0,0,0.14)",
       }}
     >
@@ -35,12 +35,12 @@ export default function DesktopNav({ items, activePage, onNavigate }: Props) {
               letterSpacing: "-0.015em",
               WebkitFontSmoothing: "antialiased",
               color: isActive ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
-              backgroundColor: isActive ? "rgba(201,168,76,0.06)" : "transparent",
+              backgroundColor: isActive ? "rgba(201,168,76,0.13)" : "transparent",
               transition: "color 160ms ease-out, background-color 160ms ease-out, opacity 160ms ease-out",
             }}
             onMouseEnter={e => {
               if (!isActive) {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.045)";
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.06)";
                 (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.75)";
               }
             }}

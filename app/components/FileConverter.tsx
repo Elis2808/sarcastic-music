@@ -437,11 +437,13 @@ export default function FileConverter() {
               setFiles([]);
               setError("");
             }}
-            className={`px-4 py-2 rounded-xl transition-all duration-200 text-sm outline-none flex-shrink-0 ${
-              activeCategory === cat
-                ? "bg-black text-[#C9A84C] border border-[#C9A84C] shadow-[0_0_10px_rgba(201,168,76,0.5)]"
-                : "bg-gray-800 text-gray-300 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 border border-transparent"
-            }`}
+            className="px-4 py-2 rounded-full text-sm outline-none flex-shrink-0"
+            style={{
+              backgroundColor: activeCategory === cat ? "rgba(201,168,76,0.13)" : "transparent",
+              color: activeCategory === cat ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
+              border: "1px solid " + (activeCategory === cat ? "rgba(201,168,76,0.25)" : "rgba(255,255,255,0.06)"),
+              transition: "color 160ms ease-out, background-color 160ms ease-out, border-color 160ms ease-out",
+            }}
           >
             {CATEGORIES[cat].label}
           </button>
@@ -460,11 +462,13 @@ export default function FileConverter() {
               setPdfPageRange("");
               setPdfTotalPages(null);
             }}
-            className={`px-4 py-2 rounded-xl text-sm transition-all duration-200 outline-none flex-shrink-0 ${
-              activeConversion === out.id
-                ? "bg-black text-[#C9A84C] border border-[#C9A84C] shadow-[0_0_10px_rgba(201,168,76,0.4)]"
-                : "bg-gray-800 text-gray-300 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 border border-transparent"
-            }`}
+            className="px-4 py-2 rounded-full text-sm outline-none flex-shrink-0"
+            style={{
+              backgroundColor: activeConversion === out.id ? "rgba(201,168,76,0.13)" : "transparent",
+              color: activeConversion === out.id ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
+              border: "1px solid " + (activeConversion === out.id ? "rgba(201,168,76,0.25)" : "rgba(255,255,255,0.06)"),
+              transition: "color 160ms ease-out, background-color 160ms ease-out, border-color 160ms ease-out",
+            }}
           >
             {out.label}
           </button>

@@ -426,11 +426,13 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
                     if (tab === "top") { setActiveTab("top"); return; }
                     setActiveTab(isActive ? "top" : tab);
                   }}
-                  className={`px-3 py-2 rounded-xl text-sm ${
-                    isActive
-                      ? "bg-black text-[#C9A84C] border border-[#C9A84C]"
-                      : "bg-gray-800 text-gray-300 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 border border-transparent"
-                  } focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]/50`}
+                  className="px-3 py-2 rounded-full text-sm outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]/50"
+                  style={{
+                    backgroundColor: isActive ? "rgba(201,168,76,0.13)" : "transparent",
+                    color: isActive ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
+                    border: "1px solid " + (isActive ? "rgba(201,168,76,0.25)" : "rgba(255,255,255,0.06)"),
+                    transition: "color 160ms ease-out, background-color 160ms ease-out, border-color 160ms ease-out",
+                  }}
                 >
                   {tab === "top" ? "Top" : tab === "all" ? "All" : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
@@ -454,11 +456,13 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
                   <button
                     key={filter}
                     onClick={() => setAdvancedFilter(prev => prev === filter ? "all" : filter)}
-                    className={`px-2 py-1 rounded-lg text-xs ${
-                      advancedFilter === filter
-                        ? "bg-black text-[#C9A84C] border border-[#C9A84C]"
-                        : "bg-gray-800/50 text-gray-400 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 border border-transparent"
-                    } focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]/50`}
+                    className="px-2 py-1 rounded-full text-xs outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]/50"
+                    style={{
+                      backgroundColor: advancedFilter === filter ? "rgba(201,168,76,0.13)" : "transparent",
+                      color: advancedFilter === filter ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
+                      border: "1px solid " + (advancedFilter === filter ? "rgba(201,168,76,0.25)" : "rgba(255,255,255,0.06)"),
+                      transition: "color 160ms ease-out, background-color 160ms ease-out, border-color 160ms ease-out",
+                    }}
                   >
                     {filter.charAt(0).toUpperCase() + filter.slice(1)}
                   </button>

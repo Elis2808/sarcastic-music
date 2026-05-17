@@ -193,20 +193,31 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
   const doubled = [...items, ...items];
 
   return (
-    <div className="sm:hidden w-full mb-6 overflow-hidden">
+    <div
+      className="sm:hidden w-full mb-6 overflow-hidden rounded-full"
+      style={{
+        backgroundColor: "rgba(20,20,24,0.48)",
+        backdropFilter: "blur(14px) saturate(160%)",
+        WebkitBackdropFilter: "blur(14px) saturate(160%)",
+        border: "1px solid rgba(255,255,255,0.07)",
+        boxShadow: "0 4px 14px rgba(0,0,0,0.14)",
+        height: 46,
+        padding: "4px 6px",
+      }}
+    >
       <div
         ref={trackRef}
-        className="relative flex gap-1.5 px-2"
-        style={{ width: "max-content", willChange: "transform" }}
+        className="relative flex gap-1"
+        style={{ width: "max-content", willChange: "transform", height: "100%" }}
       >
-        {/* Gold sliding pill */}
+        {/* Glass active pill */}
         <div
           ref={pillRef}
-          className="absolute top-0 left-0 rounded-lg pointer-events-none"
+          className="absolute top-0 left-0 rounded-full pointer-events-none"
           style={{
-            background: "rgba(201,168,76,0.18)",
-            border: "2px solid #C9A84C",
-            boxShadow: "0 0 14px rgba(201,168,76,0.45)",
+            height: "100%",
+            backgroundColor: "rgba(201,168,76,0.13)",
+            transition: "background-color 160ms ease-out",
           }}
         />
 
@@ -221,10 +232,13 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
                 if (el) allBtnRefs.current[i] = { el, idx: itemIdx };
                 if (isFirst && el) btnRefs.current[itemIdx] = el;
               }}
-              style={{ willChange: "transform" }}
-              className={`relative z-10 px-3 py-1.5 rounded-lg text-xs outline-none whitespace-nowrap border-2 border-transparent flex-shrink-0 ${
-                isActive ? "text-[#C9A84C] font-semibold" : "text-gray-400"
-              }`}
+              style={{
+                willChange: "transform",
+                height: "100%",
+                color: isActive ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
+                transition: "color 160ms ease-out",
+              }}
+              className="relative z-10 px-4 rounded-full text-xs font-medium outline-none whitespace-nowrap flex-shrink-0 flex items-center"
             >
               {label}
             </button>

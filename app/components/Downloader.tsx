@@ -299,11 +299,13 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
               <button
                 key={platform.name}
                 onClick={() => setSelectedPlatform(platform.name)}
-                className={`px-3 py-1.5 rounded-xl bg-black border text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                  selectedPlatform === platform.name
-                    ? "border-[#C9A84C] text-[#C9A84C]"
-                    : "border-gray-600 text-white hover:border-[#C9A84C] hover:text-[#C9A84C]"
-                }`}
+                className="px-3 py-1.5 rounded-full text-xs outline-none whitespace-nowrap flex-shrink-0"
+                style={{
+                  backgroundColor: selectedPlatform === platform.name ? "rgba(201,168,76,0.13)" : "transparent",
+                  color: selectedPlatform === platform.name ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
+                  border: "1px solid " + (selectedPlatform === platform.name ? "rgba(201,168,76,0.25)" : "rgba(255,255,255,0.06)"),
+                  transition: "color 160ms ease-out, background-color 160ms ease-out, border-color 160ms ease-out",
+                }}
               >
                 {platform.name}
               </button>
