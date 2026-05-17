@@ -50,6 +50,13 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="beforeInteractive"
         />
+        <Script
+          src="https://acscdn.com/script/aclib.js"
+          strategy="afterInteractive"
+        />
+        <Script id="adcash-autotag" strategy="afterInteractive">
+          {`aclib.runAutoTag({ zoneId: 'vdvqbhdy3u' });`}
+        </Script>
       </head>
       <body className="min-h-full flex flex-col">
         {children}
