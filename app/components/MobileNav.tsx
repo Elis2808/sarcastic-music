@@ -58,13 +58,19 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
   }
 
   // ── find nearest button to a raw track-space X ───────────────────
+  // The track is doubled, so wrap trackX into the first-copy range
+  // so taps anywhere in the scrolling loop hit a valid ref
   function nearestBtn(trackX: number): { btn: HTMLButtonElement; idx: number } | null {
+    const hw = halfW.current;
+    // Normalise into [0, halfW) so second-copy positions fold back onto first copy
+    let normalX = trackX % (hw || 1);
+    if (normalX < 0) normalX += hw;
     let best: { btn: HTMLButtonElement; idx: number } | null = null;
     let bestDist = Infinity;
     btnRefs.current.forEach((btn, idx) => {
       if (!btn) return;
       const center = btn.offsetLeft + btn.offsetWidth / 2;
-      const dist = Math.abs(trackX - center);
+      const dist = Math.abs(normalX - center);
       if (dist < bestDist) { bestDist = dist; best = { btn, idx }; }
     });
     return best;
