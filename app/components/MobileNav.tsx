@@ -14,7 +14,6 @@ const BASE_SPEED = 0.6;
 
 export default function MobileNav({ items, activePage, onNavigate }: MobileNavProps) {
   const trackRef = useRef<HTMLDivElement>(null);
-  const pillRef  = useRef<HTMLDivElement>(null);
   const rafRef   = useRef<number>(0);
   const btnRefs  = useRef<HTMLButtonElement[]>([]);
 
@@ -39,22 +38,9 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
   const activeRef    = useRef(activePage);
   activeRef.current  = activePage;
 
-  // ── pill positioning ──────────────────────────────────────────────
-  function movePillToBtn(btn: HTMLButtonElement, animated: boolean) {
-    const pill = pillRef.current;
-    if (!pill) return;
-    pill.style.transition = animated
-      ? "transform 0.3s cubic-bezier(0.34,1.5,0.64,1), width 0.2s ease, height 0.2s ease"
-      : "none";
-    pill.style.width  = `${btn.offsetWidth}px`;
-    pill.style.height = `${btn.offsetHeight}px`;
-    pill.style.transform = `translateX(${btn.offsetLeft}px)`;
-  }
-
-  function movePillToPage(page: string, animated: boolean) {
-    const idx = items.findIndex(it => it.page === page);
-    const btn = btnRefs.current[idx];
-    if (btn) movePillToBtn(btn, animated);
+  // ── no-op pill positioning (kept for touch end snap-back) ──────────
+  function movePillToPage(_page: string, _animated: boolean) {
+    // border-based active state — no pill element needed
   }
 
   // ── find which button the finger landed on by screen hit-test ──────
@@ -78,12 +64,6 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
     });
     return best;
   }
-
-  // ── pill follows active page ──────────────────────────────────────
-  useEffect(() => {
-    const id = setTimeout(() => movePillToPage(activePage, true), 60);
-    return () => clearTimeout(id);
-  }, [activePage]);
 
   // ── RAF loop + touch listeners ───────────────────────────────────
   useEffect(() => {
@@ -210,17 +190,6 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
         className="relative flex gap-1"
         style={{ width: "max-content", willChange: "transform", height: "100%" }}
       >
-        {/* Glass active pill */}
-        <div
-          ref={pillRef}
-          className="absolute top-0 left-0 rounded-full pointer-events-none"
-          style={{
-            height: "100%",
-            backgroundColor: "rgba(201,168,76,0.13)",
-            transition: "background-color 160ms ease-out",
-          }}
-        />
-
         {doubled.map(({ page, label }, i) => {
           const isFirst = i < items.length;
           const itemIdx = i % items.length;
@@ -235,8 +204,10 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
               style={{
                 willChange: "transform",
                 height: "100%",
-                color: isActive ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
-                transition: "color 160ms ease-out",
+                color: isActive ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
+                border: isActive ? "1px solid rgba(201,168,76,0.6)" : "1px solid transparent",
+                backgroundColor: "transparent",
+                transition: "color 160ms ease-out, border-color 160ms ease-out",
               }}
               className="relative z-10 px-4 rounded-full text-xs font-medium outline-none whitespace-nowrap flex-shrink-0 flex items-center"
             >
