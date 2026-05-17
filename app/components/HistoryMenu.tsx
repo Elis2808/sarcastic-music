@@ -86,10 +86,10 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
       {/* Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors border border-gray-700 hover:border-[#C9A84C]"
+        className="relative p-2 rounded-xl bg-black border border-[#C9A84C]/40 hover:border-[#C9A84C] text-[#C9A84C] transition-all duration-200"
         aria-label="History"
       >
-        <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         {hasNew && (
@@ -99,7 +99,7 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-gray-900 rounded-xl border border-gray-700 shadow-2xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-black rounded-xl border border-[#C9A84C]/40 shadow-2xl z-50 overflow-hidden">
           <div className="p-3 border-b border-gray-800">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold text-white">History</h3>

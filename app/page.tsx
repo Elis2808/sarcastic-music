@@ -156,7 +156,7 @@ export default function Home() {
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-white transition-all duration-200"
+            className="p-2 rounded-lg bg-black border border-[#C9A84C]/40 hover:border-[#C9A84C] text-[#C9A84C] transition-all duration-200"
             aria-label="Open menu"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -171,7 +171,7 @@ export default function Home() {
 
           {/* Dropdown */}
           {menuOpen && (
-            <div className="absolute left-0 top-full mt-2 w-40 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden">
+            <div className="absolute left-0 top-full mt-2 w-40 bg-black border border-[#C9A84C]/40 rounded-xl shadow-2xl z-50 overflow-hidden">
               <div className="p-1">
                 {NAV_ITEMS.map(({ page, label }) => (
                   <button
@@ -186,8 +186,8 @@ export default function Home() {
                     }}
                     className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors ${
                       activePage === page
-                        ? "bg-[#C9A84C]/20 text-[#C9A84C]"
-                        : "text-white hover:bg-gray-800"
+                        ? "bg-[#C9A84C]/10 text-[#C9A84C] font-medium"
+                        : "text-gray-300 hover:text-[#C9A84C] hover:bg-[#C9A84C]/5"
                     }`}
                   >
                     {label}
@@ -223,8 +223,8 @@ export default function Home() {
             }}
             className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm outline-none transition-all duration-200 whitespace-nowrap ${
               activePage === page
-                ? "bg-black text-[#C9A84C] border border-[#C9A84C] shadow-[0_0_10px_rgba(201,168,76,0.3)]"
-                : "bg-gray-900 text-gray-400 border border-gray-700 hover:border-[#C9A84C]/50 hover:text-gray-200"
+                ? "bg-black text-[#C9A84C] border border-[#C9A84C] shadow-[0_0_12px_rgba(201,168,76,0.25)]"
+                : "bg-black text-gray-400 border border-[#C9A84C]/25 hover:border-[#C9A84C]/70 hover:text-[#C9A84C]"
             }`}
           >
             {label}
