@@ -230,62 +230,82 @@ function addApostrophes(word: string): string {
   return contractions[word.toLowerCase()] || word;
 }
 
+// Single-pass phoneme approximator — handles slang/foreign words not in CMU
+// Processes longest matches first so 'tch' beats 't', 'sh' beats 's', etc.
 function approximatePhones(word: string): string | null {
   if (!word || word.length < 1) return null;
-  const w = word.toLowerCase();
-  const phones: string[] = [];
+  const w = word.toLowerCase().replace(/[^a-z]/g, '');
+  if (!w) return null;
 
-  const rules: [RegExp, string][] = [
-    [/tch/g, 'CH'],
-    [/ck/g, 'K'],
-    [/ph/g, 'F'],
-    [/gh(?=[aeiou])/g, 'G'],
-    [/gh/g, ''],
-    [/qu/g, 'K W'],
-    [/x/g, 'K S'],
-    [/sh/g, 'SH'],
-    [/ch/g, 'CH'],
-    [/th/g, 'DH'],
-    [/ng/g, 'NG'],
-    [/oo/g, 'UW1'],
-    [/ee/g, 'IY1'],
-    [/ea/g, 'IY1'],
-    [/ai|ay/g, 'EY1'],
-    [/oa|ow/g, 'OW1'],
-    [/ou|ow/g, 'AW1'],
-    [/oi|oy/g, 'OY1'],
-    [/au|aw/g, 'AO1'],
-    [/ie/g, 'AY1'],
-    [/a(?=[^aeiou]e)/g, 'EY1'],
-    [/e(?=[^aeiou]e)/g, 'IY1'],
-    [/i(?=[^aeiou]e)/g, 'AY1'],
-    [/o(?=[^aeiou]e)/g, 'OW1'],
-    [/u(?=[^aeiou]e)/g, 'UW1'],
-    [/a/g, 'AH0'],
-    [/e/g, 'EH1'],
-    [/i/g, 'IH1'],
-    [/o/g, 'AO1'],
-    [/u/g, 'AH1'],
-    [/y(?=[aeiou])/g, 'Y'],
-    [/y/g, 'IY1'],
-    [/b/g, 'B'], [/c/g, 'K'], [/d/g, 'D'], [/f/g, 'F'],
-    [/g/g, 'G'], [/h/g, 'HH'], [/j/g, 'JH'], [/k/g, 'K'],
-    [/l/g, 'L'], [/m/g, 'M'], [/n/g, 'N'], [/p/g, 'P'],
-    [/r/g, 'R'], [/s/g, 'S'], [/t/g, 'T'], [/v/g, 'V'],
-    [/w/g, 'W'], [/z/g, 'Z'],
+  // Ordered rules: longest patterns first to avoid partial matches
+  const rules: [string, string][] = [
+    // Multi-char combos
+    ['tch',  'CH'],
+    ['ck',   'K'],
+    ['ph',   'F'],
+    ['qu',   'K W'],
+    ['sh',   'SH'],
+    ['ch',   'CH'],
+    ['th',   'DH'],
+    ['ng',   'NG'],
+    ['wr',   'R'],
+    ['kn',   'N'],
+    ['gn',   'N'],
+    ['wh',   'W'],
+    ['gh',   ''],
+    // Vowel digraphs
+    ['oo',   'UW1'],
+    ['ee',   'IY1'],
+    ['ea',   'IY1'],
+    ['ai',   'EY1'],
+    ['ay',   'EY1'],
+    ['oa',   'OW1'],
+    ['ou',   'AW1'],
+    ['ow',   'OW1'],
+    ['oi',   'OY1'],
+    ['oy',   'OY1'],
+    ['au',   'AO1'],
+    ['aw',   'AO1'],
+    ['ie',   'AY1'],
+    ['ue',   'UW1'],
+    // Single vowels (trailing e = long vowel handled below)
+    ['a',    'AH0'],
+    ['e',    'EH1'],
+    ['i',    'IH1'],
+    ['o',    'AO1'],
+    ['u',    'AH1'],
+    ['y',    'IY1'],
+    // Consonants
+    ['b',    'B'],
+    ['c',    'K'],
+    ['d',    'D'],
+    ['f',    'F'],
+    ['g',    'G'],
+    ['h',    'HH'],
+    ['j',    'JH'],
+    ['k',    'K'],
+    ['l',    'L'],
+    ['m',    'M'],
+    ['n',    'N'],
+    ['p',    'P'],
+    ['q',    'K'],
+    ['r',    'R'],
+    ['s',    'S'],
+    ['t',    'T'],
+    ['v',    'V'],
+    ['w',    'W'],
+    ['x',    'K S'],
+    ['z',    'Z'],
   ];
 
-  let processed = w;
-  const result: string[] = [];
+  const phones: string[] = [];
   let i = 0;
-  while (i < processed.length) {
+  while (i < w.length) {
     let matched = false;
-    for (const [pattern, phone] of rules) {
-      const singleChar = new RegExp(pattern.source.replace(/g$/, ''), '');
-      const m = processed.slice(i).match(new RegExp('^' + pattern.source.replace(/\/g$/, '')));
-      if (m) {
-        if (phone) result.push(phone);
-        i += m[0].length;
+    for (const [pat, phone] of rules) {
+      if (w.startsWith(pat, i)) {
+        if (phone) phones.push(...phone.split(' '));
+        i += pat.length;
         matched = true;
         break;
       }
@@ -293,38 +313,8 @@ function approximatePhones(word: string): string | null {
     if (!matched) i++;
   }
 
-  // Simple sequential pass
-  const simpleResult: string[] = [];
-  let s = w;
-  s = s.replace(/tch/g, ' CH ');
-  s = s.replace(/ck/g, ' K ');
-  s = s.replace(/ph/g, ' F ');
-  s = s.replace(/sh/g, ' SH ');
-  s = s.replace(/ch/g, ' CH ');
-  s = s.replace(/th/g, ' DH ');
-  s = s.replace(/ng/g, ' NG ');
-  s = s.replace(/oo/g, ' UW1 ');
-  s = s.replace(/ee|ea/g, ' IY1 ');
-  s = s.replace(/ai|ay/g, ' EY1 ');
-  s = s.replace(/au|aw/g, ' AO1 ');
-  s = s.replace(/oi|oy/g, ' OY1 ');
-  s = s.replace(/a/g, ' AH0 ');
-  s = s.replace(/e/g, ' EH1 ');
-  s = s.replace(/i/g, ' IH1 ');
-  s = s.replace(/o/g, ' AO1 ');
-  s = s.replace(/u/g, ' AH1 ');
-  s = s.replace(/y/g, ' IY1 ');
-  s = s.replace(/b/g, ' B '); s = s.replace(/c/g, ' K '); s = s.replace(/d/g, ' D ');
-  s = s.replace(/f/g, ' F '); s = s.replace(/g/g, ' G '); s = s.replace(/h/g, ' HH ');
-  s = s.replace(/j/g, ' JH '); s = s.replace(/k/g, ' K '); s = s.replace(/l/g, ' L ');
-  s = s.replace(/m/g, ' M '); s = s.replace(/n/g, ' N '); s = s.replace(/p/g, ' P ');
-  s = s.replace(/q/g, ' K '); s = s.replace(/r/g, ' R '); s = s.replace(/s/g, ' S ');
-  s = s.replace(/t/g, ' T '); s = s.replace(/v/g, ' V '); s = s.replace(/w/g, ' W ');
-  s = s.replace(/x/g, ' K S '); s = s.replace(/z/g, ' Z ');
-
-  const phones2 = s.trim().split(/\s+/).filter(Boolean);
-  if (phones2.length === 0) return null;
-  return phones2.join(' ');
+  if (phones.length === 0) return null;
+  return phones.join(' ');
 }
 
 export async function POST(req: Request) {
@@ -433,21 +423,15 @@ export async function POST(req: Request) {
 
   const inputPhoneArray = inputPhones.split(' ');
   const results: RhymeResult[] = [];
-
-  // Find rhymes by checking all words in the dictionary
   const processedWords = new Set<string>();
-  
+
+  // 1. Search CMU dictionary (standard English words with known pronunciations)
   for (const [candidateWord, candidatePhones] of Object.entries(dictionary)) {
-    // Clean up word: remove (2), (3) etc. suffixes
     const cleanWord = candidateWord.replace(/\(\d+\)$/, '');
     const normalizedWord = normalizeWord(cleanWord);
-    
-    // Skip if same as input, already processed (by normalized form), or contains filtered punctuation
     if (normalizedWord === input || processedWords.has(normalizedWord) || !filterWord(cleanWord)) continue;
-    
     const candidatePhoneArray = (candidatePhones as string).split(' ');
     const rhymeResult = calculateRhymeScore(inputPhoneArray, candidatePhoneArray, normalizedInput, cleanWord);
-    
     if (rhymeResult.score > 0) {
       results.push({
         word: cleanWord.charAt(0).toUpperCase() + cleanWord.slice(1),
@@ -456,6 +440,33 @@ export async function POST(req: Request) {
         category: rhymeResult.category
       });
       processedWords.add(normalizedWord);
+    }
+  }
+
+  // 2. Also search rap dictionary words using phonetic approximation
+  // Only include words with real definitions (not generic "Proper noun" placeholders)
+  // to keep the candidate set small (~5-10k words) and relevant
+  if (rapDictionary?.terms) {
+    for (const [candidateWord, definition] of Object.entries(rapDictionary.terms)) {
+      // Skip generic placeholder definitions — only real slang/defined words
+      if ((definition as string).startsWith('Proper noun, surname')) continue;
+      const cleanWord = candidateWord.toLowerCase().trim();
+      const normalizedWord = normalizeWord(cleanWord);
+      if (normalizedWord === input || processedWords.has(normalizedWord) || !filterWord(cleanWord)) continue;
+      if (dictionary[cleanWord]) continue; // already covered by CMU above
+      const approxPhones = approximatePhones(cleanWord);
+      if (!approxPhones) continue;
+      const candidatePhoneArray = approxPhones.split(' ');
+      const rhymeResult = calculateRhymeScore(inputPhoneArray, candidatePhoneArray, normalizedInput, cleanWord);
+      if (rhymeResult.score > 0) {
+        results.push({
+          word: cleanWord.charAt(0).toUpperCase() + cleanWord.slice(1),
+          score: rhymeResult.score,
+          rhymeType: rhymeResult.rhymeType,
+          category: rhymeResult.category
+        });
+        processedWords.add(normalizedWord);
+      }
     }
   }
 
