@@ -210,7 +210,8 @@ export default function Home() {
         <HistoryMenu onSelect={handleHistorySelect} />
       </div>
 
-      <nav className="flex flex-wrap justify-center gap-1.5 max-sm:gap-1 max-sm:px-2 mb-6">
+      {/* Desktop nav */}
+      <nav className="hidden sm:flex flex-wrap justify-center gap-1.5 mb-6">
         {NAV_ITEMS.map(({ page, label }) => (
           <button
             key={page}
@@ -222,7 +223,7 @@ export default function Home() {
               }
             }}
             style={{ borderColor: activePage === page ? "#C9A84C" : "rgba(201,168,76,0.45)" }}
-            className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm outline-none transition-all duration-200 whitespace-nowrap border-2 ${
+            className={`px-3 py-1.5 rounded-lg text-sm outline-none transition-all duration-200 whitespace-nowrap border-2 ${
               activePage === page
                 ? "bg-black text-[#C9A84C] shadow-[0_0_12px_rgba(201,168,76,0.25)]"
                 : "bg-black text-white hover:text-[#C9A84C]"
@@ -232,6 +233,51 @@ export default function Home() {
           </button>
         ))}
       </nav>
+
+      {/* Mobile nav — single scrollable row with slow auto-scroll */}
+      <div className="sm:hidden w-full mb-6 overflow-hidden">
+        <style>{`
+          @keyframes nav-scroll {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+          .nav-scroll-track {
+            display: flex;
+            gap: 6px;
+            width: max-content;
+            animation: nav-scroll 18s linear infinite;
+          }
+          .nav-scroll-track:hover,
+          .nav-scroll-track:active {
+            animation-play-state: paused;
+          }
+        `}</style>
+        <div
+          className="nav-scroll-track px-2"
+          onTouchStart={() => {}}
+        >
+          {[...NAV_ITEMS, ...NAV_ITEMS].map(({ page, label }, i) => (
+            <button
+              key={i}
+              onClick={() => {
+                if (page === "rhyme" && activePage === "rhyme") {
+                  window.location.reload();
+                } else {
+                  navigateTo(page);
+                }
+              }}
+              style={{ borderColor: activePage === page ? "#C9A84C" : "rgba(201,168,76,0.45)" }}
+              className={`px-3 py-1.5 rounded-lg text-xs outline-none whitespace-nowrap border-2 flex-shrink-0 ${
+                activePage === page
+                  ? "bg-black text-[#C9A84C] shadow-[0_0_12px_rgba(201,168,76,0.25)]"
+                  : "bg-black text-white"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {activePage === "rhyme"      && <RhymeFinder onLookupWord={openDictionary} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word} />}
       {activePage === "key"        && <KeyFinder 
