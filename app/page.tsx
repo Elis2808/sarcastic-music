@@ -140,10 +140,10 @@ export default function Home() {
   }
 
   const NAV_ITEMS: { page: Page; label: string }[] = [
-    { page: "youtube",    label: "Downloader" },
     { page: "rhyme",      label: "Rhyme Finder" },
     { page: "dictionary", label: "Dictionary" },
     { page: "voice",      label: "Song Splitter" },
+    { page: "youtube",    label: "Downloader" },
     { page: "key",        label: "Key Finder" },
     { page: "bpm",        label: "BPM Finder" },
     { page: "converter",  label: "File Converter" },

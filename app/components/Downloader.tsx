@@ -42,6 +42,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
   const [ytDownloading, setYtDownloading] = useState<"mp3" | "mp4" | null>(null);
   const [analyzing, setAnalyzing] = useState<"bpm" | "key" | "split" | null>(null);
   const [analysisResult, setAnalysisResult] = useState<{type: "bpm" | "key"; data: any} | null>(null);
+  const [rightsAccepted, setRightsAccepted] = useState(false);
 
   useEffect(() => {
     const id = "btn-sweep-style";
@@ -110,6 +111,16 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
 
   async function fetchInfo() {
     if (!ytUrl.trim()) return;
+    if (!rightsAccepted) {
+      showToast("Please confirm you own or have rights to this content.", "error");
+      return;
+    }
+    // Log acceptance — fire and forget
+    fetch("/api/log-acceptance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tool: "downloader" }),
+    }).catch(() => {});
     setYtLoading(true);
     setYtInfo(null);
     try {
@@ -330,11 +341,25 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
             placeholder={PLATFORMS.find(p => p.name === selectedPlatform)?.placeholder}
             className="w-full px-4 py-3 rounded-xl bg-black border border-gray-600 text-white outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
           />
+          {/* Rights confirmation checkbox */}
+          <label className="flex items-start gap-2.5 cursor-pointer max-w-xl w-full px-1">
+            <input
+              type="checkbox"
+              checked={rightsAccepted}
+              onChange={(e) => setRightsAccepted(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded accent-[#C9A84C] flex-shrink-0 cursor-pointer"
+            />
+            <span className="text-xs text-gray-400 leading-relaxed">
+              I confirm I own or have the legal right to download this content. I understand this tool is for personal use only. See our{" "}
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#C9A84C] hover:underline">Terms of Service</a>.
+            </span>
+          </label>
+
           <div className={`w-36 ${ytLoading ? "btn-sweep-wrapper" : "rounded-xl border border-[#C9A84C]"}`}>
             <button
               onClick={fetchInfo}
-              disabled={ytLoading || !ytUrl.trim()}
-              className="w-full px-6 py-2.5 rounded-[10px] bg-black text-white active:scale-95 disabled:cursor-not-allowed text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2"
+              disabled={ytLoading || !ytUrl.trim() || !rightsAccepted}
+              className="w-full px-6 py-2.5 rounded-[10px] bg-black text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2"
             >
               {ytLoading ? <span className="text-[#C9A84C]">Converting...</span> : "Convert"}
             </button>

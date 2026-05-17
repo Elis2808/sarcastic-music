@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { addHistoryItem } from "../lib/history";
 import { showToast } from "./Toast";
 
@@ -10,6 +10,19 @@ interface AudioMasterProps {
 }
 
 export default function AudioMaster({ initialUrl: _initialUrl, initialPlatform: _initialPlatform }: AudioMasterProps) {
+  useEffect(() => {
+    if (document.getElementById("audio-master-sweep-style")) return;
+    const style = document.createElement("style");
+    style.id = "audio-master-sweep-style";
+    style.textContent = `
+      @property --sweep-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+      @keyframes btn-sweep { to { --sweep-angle: 360deg; } }
+      .btn-sweep-wrapper { position: relative; border-radius: 0.75rem; padding: 3px; background: #111; will-change: transform; contain: layout style; }
+      .btn-sweep-wrapper::before { content: ''; position: absolute; inset: 0; border-radius: 0.75rem; padding: 3px; background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: btn-sweep 1.4s linear infinite; }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -129,17 +142,15 @@ export default function AudioMaster({ initialUrl: _initialUrl, initialPlatform: 
       {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
 
       {/* Master Button */}
-      <button
-        onClick={master}
-        disabled={processing}
-        className={`px-8 py-3 rounded-xl font-semibold text-sm transition-all ${
-          processing
-            ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-            : "bg-[#C9A84C] hover:bg-[#b8953d] text-black"
-        }`}
-      >
-        {processing ? "Mastering..." : "Master Audio"}
-      </button>
+      <div className={`w-36 ${processing ? "btn-sweep-wrapper" : "rounded-xl border border-[#C9A84C]"}`}>
+        <button
+          onClick={master}
+          disabled={processing}
+          className="w-full px-4 py-2.5 rounded-[10px] bg-black text-white text-sm font-medium disabled:cursor-not-allowed transition-all duration-200 outline-none"
+        >
+          {processing ? <span className="text-[#C9A84C]">Mastering...</span> : "Master Audio"}
+        </button>
+      </div>
 
       {/* Progress */}
       {processing && (
@@ -169,9 +180,13 @@ export default function AudioMaster({ initialUrl: _initialUrl, initialPlatform: 
             { label: "Compression", desc: "Dynamic range control" },
             { label: "Limiting", desc: "True peak limit at -1 dBTP" },
           ].map(item => (
-            <div key={item.label} className="bg-gray-900 rounded-xl p-3 text-center border border-gray-800">
+            <div
+              key={item.label}
+              style={{ borderColor: "rgba(201,168,76,0.45)" }}
+              className="bg-black rounded-xl p-3 text-center border-2"
+            >
               <p className="text-[#C9A84C] text-xs font-semibold mb-1">{item.label}</p>
-              <p className="text-gray-400 text-xs">{item.desc}</p>
+              <p className="text-white text-xs">{item.desc}</p>
             </div>
           ))}
         </div>
