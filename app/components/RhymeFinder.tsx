@@ -386,16 +386,22 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
                   </button>
                 ))}
               </div>
-              <div className="grid grid-cols-4 gap-x-6 gap-y-2 mb-4 text-xs text-gray-400 max-w-md mx-auto">
-                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#4ade80"}} /> Perfect</div>
-                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#60a5fa"}} /> Sounding</div>
-                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#f87171"}} /> Near</div>
-                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#facc15"}} /> Written</div>
-                <div className="flex items-center gap-1"><span className="w-2 h-2 bg-orange-400 rounded-full" /> Noun</div>
-                <div className="flex items-center gap-1"><span className="w-2 h-2 bg-cyan-400 rounded-full" /> Verb</div>
-                <div className="flex items-center gap-1"><span className="w-2 h-2 bg-pink-400 rounded-full" /> Adjective</div>
-                <div className="flex items-center gap-1"><span className="w-2 h-2 bg-lime-400 rounded-full" /> Slang</div>
-                <div className="flex items-center gap-1"><span className="w-2 h-2 bg-purple-400 rounded-full" /> Name</div>
+              <div className="mb-4 text-xs text-gray-400 space-y-2 max-w-md mx-auto">
+                <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-1">
+                  <span className="text-gray-600 mr-1">Border:</span>
+                  <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#4ade80"}} /> Perfect</div>
+                  <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#60a5fa"}} /> Sounding</div>
+                  <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#f87171"}} /> Near</div>
+                  <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#facc15"}} /> Written</div>
+                </div>
+                <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-1">
+                  <span className="text-gray-600 mr-1">Text:</span>
+                  <div className="flex items-center gap-1"><span className="w-2 h-2 bg-orange-400 rounded-full" /> Noun</div>
+                  <div className="flex items-center gap-1"><span className="w-2 h-2 bg-cyan-400 rounded-full" /> Verb</div>
+                  <div className="flex items-center gap-1"><span className="w-2 h-2 bg-pink-400 rounded-full" /> Adjective</div>
+                  <div className="flex items-center gap-1"><span className="w-2 h-2 bg-lime-400 rounded-full" /> Slang</div>
+                  <div className="flex items-center gap-1"><span className="w-2 h-2 bg-purple-400 rounded-full" /> Name</div>
+                </div>
               </div>
             </>
           )}
