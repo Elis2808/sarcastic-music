@@ -34,27 +34,28 @@ export default function DesktopNav({ items, activePage, onNavigate }: Props) {
               fontWeight: 500,
               letterSpacing: "-0.015em",
               WebkitFontSmoothing: "antialiased",
-              color: isActive ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
-              backgroundColor: isActive ? "rgba(201,168,76,0.13)" : "transparent",
-              transition: "color 160ms ease-out, background-color 160ms ease-out, opacity 160ms ease-out",
+              color: isActive ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
+              backgroundColor: "transparent",
+              border: isActive ? "1px solid rgba(201,168,76,0.6)" : "1px solid transparent",
+              transition: "color 160ms ease-out, border-color 160ms ease-out",
             }}
             onMouseEnter={e => {
               if (!isActive) {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.06)";
-                (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.75)";
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+                (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,1)";
               }
             }}
             onMouseLeave={e => {
               if (!isActive) {
                 (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.48)";
+                (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.85)";
               }
             }}
           >
             {icon && (
               <span style={{
                 display: "flex", alignItems: "center",
-                color: isActive ? "#C9A84C" : "rgba(255,255,255,0.40)",
+                color: isActive ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.75)",
                 transition: "color 160ms ease-out",
               }}>
                 {icon}
