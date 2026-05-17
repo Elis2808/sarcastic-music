@@ -319,13 +319,29 @@ export async function POST(request: NextRequest) {
   return Response.json({ jobId });
 }
 
-// GET /api/separate?id=<jobId> — poll status or proxy download
+// GET /api/separate?id=<jobId>&download=1 — poll status or proxy download
 export async function GET(request: NextRequest) {
   const jobId = request.nextUrl.searchParams.get("id");
   if (!jobId) return Response.json({ error: "Missing id" }, { status: 400 });
 
   const job = await readJob(jobId);
   if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
+
+  // Serve the local file binary when ?download=1
+  const isDownload = request.nextUrl.searchParams.get("download") === "1";
+  if (isDownload && job.stemUrl?.startsWith("file://")) {
+    const localPath = job.stemUrl.slice(7);
+    const audioBuffer = await readFile(localPath).catch(() => Buffer.alloc(0));
+    if (!audioBuffer.length) return Response.json({ error: "Result file missing" }, { status: 500 });
+    const safeFilename = (job.dlName || "download.mp3").replace(/[^\x00-\x7F]/g, "").replace(/[^a-zA-Z0-9._\-]/g, "_");
+    return new Response(new Uint8Array(audioBuffer), {
+      headers: {
+        "Content-Type": "audio/mpeg",
+        "Content-Disposition": `attachment; filename="${safeFilename}"`,
+        "Content-Length": String(audioBuffer.length),
+      },
+    });
+  }
 
   if (job.status === "done" && job.dlName) {
     // Delay deletion so frontend can poll more times without error (10 min for safety)
@@ -335,7 +351,7 @@ export async function GET(request: NextRequest) {
     }
     const safeFilename = job.dlName.replace(/[^\x00-\x7F]/g, "").replace(/[^a-zA-Z0-9._\-]/g, "_") || "download.mp3";
 
-    // Both stems ready
+    // Both stems ready (remote URLs)
     if (job.vocalsUrl && job.noVocalsUrl) {
       return Response.json({ 
         downloadUrl: job.noVocalsUrl, 
@@ -347,14 +363,10 @@ export async function GET(request: NextRequest) {
     // Both stems but need to mix instrumental on-demand
     if (job.vocalsUrl && !job.noVocalsUrl && (job.bassUrl || job.drumsUrl || job.guitarUrl || job.otherUrl || job.pianoUrl)) {
       try {
-        // Check if already mixed (stored in JOB_DIR for persistence)
         const mixedPath = join(JOB_DIR, `${jobId}-instrumental.mp3`);
         
-        // If not already mixed, do it now
         if (!existsSync(mixedPath)) {
           console.log(`[separate:${jobId}] Mixing instrumental on-demand...`);
-          
-          // Mix instrumental from individual stems
           const stemKeys = ["bass", "drums", "guitar", "other", "piano"] as const;
           const localPaths: string[] = [];
           const tmpFiles: string[] = [];
@@ -378,21 +390,14 @@ export async function GET(request: NextRequest) {
             "-c:a", "libmp3lame", "-b:a", "256k", mixedPath,
           ], { timeout: 120000 });
 
-          // Cleanup temp stem files
           for (const f of tmpFiles) unlink(f).catch(() => {});
-          
-          // Save to job so we don't remix on next poll
-          await writeJob(jobId, { 
-            ...job, 
-            noVocalsUrl: `file://${mixedPath}`,
-            createdAt: job.createdAt 
-          });
+          await writeJob(jobId, { ...job, stemUrl: `file://${mixedPath}`, createdAt: job.createdAt });
           console.log(`[separate:${jobId}] Instrumental mixed and saved`);
         }
 
-        // Return as JSON with both URLs (instrumental proxied, vocals remote)
+        // Always return JSON — client fetches file via ?download=1
         return Response.json({ 
-          downloadUrl: `file://${mixedPath}`,
+          downloadUrl: `/api/separate?id=${jobId}&download=1`,
           vocalsUrl: job.vocalsUrl,
           filename: safeFilename 
         });
@@ -402,24 +407,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Single stem (instrumental/no_vocals or vocals)
+    // Single stem
     if (job.stemUrl) {
       if (job.stemUrl.startsWith("file://")) {
-        // Locally mixed instrumental — must proxy since it's on disk
-        const localPath = job.stemUrl.slice(7);
-        const audioBuffer = await readFile(localPath).catch(() => Buffer.alloc(0));
-        // Don't delete immediately - let job persist for retries
-        if (!audioBuffer.length) return Response.json({ error: "Result file missing" }, { status: 500 });
-        return new Response(new Uint8Array(audioBuffer), {
-          headers: {
-            "Content-Type": "audio/mpeg",
-            "Content-Disposition": `attachment; filename="${safeFilename}"`,
-            "Content-Length": String(audioBuffer.length),
-          },
+        // Locally mixed — return JSON pointing to ?download=1 endpoint
+        return Response.json({ 
+          downloadUrl: `/api/separate?id=${jobId}&download=1`,
+          filename: safeFilename 
         });
       }
-
-      // Remote Replicate URL — redirect browser directly for instant download
+      // Remote Replicate URL
       return Response.json({ downloadUrl: job.stemUrl, filename: safeFilename });
     }
   }
