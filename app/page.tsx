@@ -11,6 +11,7 @@ import Dictionary from "./components/Dictionary";
 import AudioMaster from "./components/AudioMaster";
 import HistoryMenu from "./components/HistoryMenu";
 import MobileNav from "./components/MobileNav";
+import GlassCarousel from "./components/GlassCarousel";
 import { addHistoryItem, type HistoryItem } from "./lib/history";
 import ToastContainer from "./components/Toast";
 import { showToast } from "./components/Toast";
@@ -234,6 +235,9 @@ export default function Home() {
           </button>
         ))}
       </nav>
+
+      {/* Desktop liquid glass carousel */}
+      <GlassCarousel />
 
       {/* Mobile nav — auto-scrolling + swipeable */}
       <MobileNav
