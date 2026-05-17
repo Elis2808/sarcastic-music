@@ -313,7 +313,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
         value={word}
         onChange={(e) => setWord(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") search(word); }}
-        placeholder="word place thing"
+        placeholder="Type any word to find related rhymes"
         className="px-4 py-3 rounded-xl w-full max-w-xl bg-black border border-gray-600 text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C]"
       />
 
