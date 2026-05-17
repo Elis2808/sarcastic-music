@@ -50,7 +50,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
   const [lastClickedWord, setLastClickedWord] = useState(highlightWord || "");
   const [wordList, setWordList] = useState<string[]>([]);
   const [rhymeMap, setRhymeMap] = useState<Record<string, RhymeData>>({});
-  const [activeTab, setActiveTab] = useState<"top" | "all" | "perfect" | "sounding" | "near">("top");
+  const [activeTab, setActiveTab] = useState<"top" | "all" | "perfect" | "sounding" | "near" | "written">("top");
   const [isLoading, setIsLoading] = useState(false);
   const [rhymeMode, setRhymeMode] = useState<"basic" | "advanced">("basic");
   const [advancedFilter, setAdvancedFilter] = useState<"all" | "noun" | "verb" | "adjective" | "slang" | "name">("all");
@@ -86,6 +86,10 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
         .rhyme-pill-near {
           border: 2px solid #f87171;
           box-shadow: 0 0 8px rgba(248, 113, 113, 0.3);
+        }
+        .rhyme-pill-written {
+          border: 2px solid #facc15;
+          box-shadow: 0 0 8px rgba(250, 204, 21, 0.3);
         }
         .rhyme-pill-selected {
           border-color: #C9A84C !important;
@@ -226,6 +230,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
         case "perfect": results = data.categories.perfect.map(r => ({ word: r, category: "perfect" })); break;
         case "sounding":results = data.categories.sounding.map(r => ({ word: r, category: "sounding" })); break;
         case "near":    results = data.categories.near.map(r => ({ word: r, category: "near" })); break;
+        case "written": results = (data.categories.written || []).map(r => ({ word: r, category: "written" })); break;
         case "all":     results = data.allResults; break;
       }
       
@@ -340,7 +345,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
           </div>
 
           <div className="flex gap-2 mb-2 justify-center flex-wrap">
-            {(["top", "perfect", "sounding", "near", "all"] as const).map((tab) => (
+            {(["top", "perfect", "sounding", "near", "written", "all"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
