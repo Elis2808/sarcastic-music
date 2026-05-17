@@ -364,7 +364,7 @@ export default function KeyFinder({ initialUrl, initialPlatform, initialKey, ini
             <p className="text-gray-400 text-sm text-center px-4">
               {dragging ? "Drop It!" : "Drop Audio File or URL To Detect The Song Key"}
             </p>
-            <input ref={inputRef} type="file" accept="audio/*" className="hidden" onChange={onFileChange} />
+            <input ref={inputRef} type="file" accept="audio/*,.mp3,.wav,.aac,.m4a,.ogg,.flac,.aiff,.aif,.wma,.opus,.mp4" className="hidden" onChange={onFileChange} />
           </div>
         </UrlDropZone>
       )}

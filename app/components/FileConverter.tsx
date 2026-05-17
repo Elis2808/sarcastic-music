@@ -87,8 +87,8 @@ export default function FileConverter() {
         { id: "m4a-mp3", label: "M4A to MP3", accept: ".m4a" },
         { id: "flac-mp3", label: "FLAC to MP3", accept: ".flac" },
         { id: "ogg-mp3", label: "OGG to MP3", accept: ".ogg" },
-        { id: "any-mp3", label: "Any Audio to MP3", accept: "audio/*" },
-        { id: "compress-mp3", label: "Compress Audio", accept: "audio/*" },
+        { id: "any-mp3", label: "Any Audio to MP3", accept: "audio/*,.mp3,.wav,.aac,.m4a,.ogg,.flac,.aiff,.aif,.wma,.opus" },
+        { id: "compress-mp3", label: "Compress Audio", accept: "audio/*,.mp3,.wav,.aac,.m4a,.ogg,.flac,.aiff,.aif,.wma,.opus" },
         { id: "extract-audio", label: "Extract from Video", accept: "video/*" },
       ]
     },
@@ -517,7 +517,7 @@ export default function FileConverter() {
         <p className="text-gray-400 text-sm text-center px-4">
           {dragging ? "Drop Files Here!" : `Drop ${currentConversion.label.split(" → ")[0]} files or click to select`}
         </p>
-        <input ref={inputRef} type="file" accept={currentConversion.accept} multiple className="hidden" onChange={onFileChange} />
+        <input ref={inputRef} type="file" accept={currentConversion.accept.startsWith('audio/') ? `${currentConversion.accept},.mp3,.wav,.aac,.m4a,.ogg,.flac,.aiff,.aif,.wma,.opus,.mp4` : currentConversion.accept} multiple className="hidden" onChange={onFileChange} />
       </div>
 
       {/* Error */}

@@ -124,7 +124,7 @@ export default function AudioMaster({ initialUrl: _initialUrl, initialPlatform: 
           dragging ? "border-[#C9A84C] bg-black" : file ? "border-[#C9A84C] bg-black" : "border-[#C9A84C]/40 bg-black hover:border-[#C9A84C]"
         }`}
       >
-        <input ref={inputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileChange} />
+        <input ref={inputRef} type="file" accept="audio/*,.mp3,.wav,.aac,.m4a,.ogg,.flac,.aiff,.aif,.wma,.opus,.mp4" className="hidden" onChange={handleFileChange} />
         {file ? (
           <>
             <p className="text-sm text-[#C9A84C] font-medium truncate">{file.name}</p>
