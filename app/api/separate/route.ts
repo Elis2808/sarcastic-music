@@ -327,20 +327,47 @@ export async function GET(request: NextRequest) {
   const job = await readJob(jobId);
   if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
-  // Serve the local file binary when ?download=1
+  // Serve files when ?download=1 — handles both local files and remote proxying
   const isDownload = request.nextUrl.searchParams.get("download") === "1";
-  if (isDownload && job.stemUrl?.startsWith("file://")) {
-    const localPath = job.stemUrl.slice(7);
-    const audioBuffer = await readFile(localPath).catch(() => Buffer.alloc(0));
-    if (!audioBuffer.length) return Response.json({ error: "Result file missing" }, { status: 500 });
+  const stemParam = request.nextUrl.searchParams.get("stem"); // "vocals" | "instrumental"
+  if (isDownload) {
     const safeFilename = (job.dlName || "download.mp3").replace(/[^\x00-\x7F]/g, "").replace(/[^a-zA-Z0-9._\-]/g, "_");
-    return new Response(new Uint8Array(audioBuffer), {
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Content-Disposition": `attachment; filename="${safeFilename}"`,
-        "Content-Length": String(audioBuffer.length),
-      },
-    });
+
+    // Local file (mixed instrumental)
+    if (job.stemUrl?.startsWith("file://") && stemParam !== "vocals") {
+      const localPath = job.stemUrl.slice(7);
+      const audioBuffer = await readFile(localPath).catch(() => Buffer.alloc(0));
+      if (!audioBuffer.length) return Response.json({ error: "Result file missing" }, { status: 500 });
+      return new Response(new Uint8Array(audioBuffer), {
+        headers: {
+          "Content-Type": "audio/mpeg",
+          "Content-Disposition": `attachment; filename="${safeFilename}"`,
+          "Content-Length": String(audioBuffer.length),
+        },
+      });
+    }
+
+    // Proxy a remote Replicate URL so browser downloads instead of navigating
+    let remoteUrl: string | undefined;
+    if (stemParam === "vocals") {
+      remoteUrl = job.vocalsUrl;
+    } else {
+      remoteUrl = job.stemUrl && !job.stemUrl.startsWith("file://") ? job.stemUrl : job.noVocalsUrl || undefined;
+    }
+    if (remoteUrl) {
+      const upstream = await fetch(remoteUrl);
+      if (!upstream.ok) return Response.json({ error: "Failed to fetch audio" }, { status: 502 });
+      const dlFilename = stemParam === "vocals"
+        ? safeFilename.replace("_instrumental", "_vocals")
+        : safeFilename;
+      return new Response(upstream.body, {
+        headers: {
+          "Content-Type": "audio/mpeg",
+          "Content-Disposition": `attachment; filename="${dlFilename}"`,
+        },
+      });
+    }
+    return Response.json({ error: "File not ready" }, { status: 404 });
   }
 
   if (job.status === "done" && job.dlName) {
@@ -351,11 +378,11 @@ export async function GET(request: NextRequest) {
     }
     const safeFilename = job.dlName.replace(/[^\x00-\x7F]/g, "").replace(/[^a-zA-Z0-9._\-]/g, "_") || "download.mp3";
 
-    // Both stems ready (remote URLs)
+    // Both stems ready (remote URLs) — proxy both
     if (job.vocalsUrl && job.noVocalsUrl) {
       return Response.json({ 
-        downloadUrl: job.noVocalsUrl, 
-        vocalsUrl: job.vocalsUrl,
+        downloadUrl: `/api/separate?id=${jobId}&download=1&stem=instrumental`,
+        vocalsUrl: `/api/separate?id=${jobId}&download=1&stem=vocals`,
         filename: safeFilename 
       });
     }
@@ -398,7 +425,7 @@ export async function GET(request: NextRequest) {
         // Always return JSON — client fetches file via ?download=1
         return Response.json({ 
           downloadUrl: `/api/separate?id=${jobId}&download=1`,
-          vocalsUrl: job.vocalsUrl,
+          vocalsUrl: `/api/separate?id=${jobId}&download=1&stem=vocals`,
           filename: safeFilename 
         });
       } catch (err: any) {
@@ -416,8 +443,8 @@ export async function GET(request: NextRequest) {
           filename: safeFilename 
         });
       }
-      // Remote Replicate URL
-      return Response.json({ downloadUrl: job.stemUrl, filename: safeFilename });
+      // Remote Replicate URL — proxy it
+      return Response.json({ downloadUrl: `/api/separate?id=${jobId}&download=1&stem=instrumental`, filename: safeFilename });
     }
   }
 
