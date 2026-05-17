@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useState } from "react";
 
 type Page = string;
 
@@ -16,60 +16,67 @@ interface MobileNavProps {
 }
 
 export default function MobileNav({ items, activePage, onNavigate }: MobileNavProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number>(0);
-  const speedRef = useRef(0.4);
-  const isTouchingRef = useRef(false);
+  const trackRef = useRef<HTMLDivElement>(null);
   const touchStartXRef = useRef(0);
-  const scrollStartRef = useRef(0);
   const didDragRef = useRef(false);
-
-  const tick = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    if (!isTouchingRef.current) {
-      el.scrollLeft += speedRef.current;
-      // Seamless loop — track is doubled, so reset at halfway
-      if (el.scrollLeft >= el.scrollWidth / 2) {
-        el.scrollLeft = 0;
-      }
-    }
-    rafRef.current = requestAnimationFrame(tick);
-  }, []);
-
-  useEffect(() => {
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [tick]);
+  const [paused, setPaused] = useState(false);
+  // dragOffset shifts the track while user drags
+  const dragOffsetRef = useRef(0);
+  const animOffsetRef = useRef(0);
 
   function handleTouchStart(e: React.TouchEvent) {
-    isTouchingRef.current = true;
     didDragRef.current = false;
     touchStartXRef.current = e.touches[0].clientX;
-    scrollStartRef.current = scrollRef.current?.scrollLeft ?? 0;
+    setPaused(true);
+    // capture current anim translateX so drag starts from there
+    const el = trackRef.current;
+    if (el) {
+      const matrix = window.getComputedStyle(el).transform;
+      const match = matrix.match(/matrix.*\((.+)\)/);
+      if (match) {
+        const vals = match[1].split(", ");
+        animOffsetRef.current = parseFloat(vals[4]) || 0;
+      }
+      dragOffsetRef.current = animOffsetRef.current;
+      el.style.transform = `translateX(${dragOffsetRef.current}px)`;
+    }
   }
 
   function handleTouchMove(e: React.TouchEvent) {
-    const el = scrollRef.current;
-    if (!el) return;
-    const dx = touchStartXRef.current - e.touches[0].clientX;
+    const dx = e.touches[0].clientX - touchStartXRef.current;
     if (Math.abs(dx) > 5) didDragRef.current = true;
-    el.scrollLeft = scrollStartRef.current + dx;
-    if (el.scrollLeft >= el.scrollWidth / 2) el.scrollLeft = 0;
-    if (el.scrollLeft < 0) el.scrollLeft = el.scrollWidth / 2 - 1;
+    const el = trackRef.current;
+    if (!el) return;
+    dragOffsetRef.current = animOffsetRef.current + dx;
+    el.style.transform = `translateX(${dragOffsetRef.current}px)`;
   }
 
   function handleTouchEnd() {
-    isTouchingRef.current = false;
+    setPaused(false);
   }
 
+  // Calculate the width for animation — half the track (since list is doubled)
+  // We use a CSS variable set via inline style on the track
   return (
     <div className="sm:hidden w-full mb-6 overflow-hidden">
-      <style>{`.nav-no-scrollbar::-webkit-scrollbar{display:none}`}</style>
+      <style>{`
+        @keyframes mobile-nav-scroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .mobile-nav-track {
+          display: flex;
+          gap: 6px;
+          width: max-content;
+          animation: mobile-nav-scroll 20s linear infinite;
+        }
+        .mobile-nav-track.paused {
+          animation-play-state: paused;
+        }
+      `}</style>
       <div
-        ref={scrollRef}
-        className="nav-no-scrollbar flex gap-1.5 px-2"
-        style={{ overflowX: "scroll", scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+        ref={trackRef}
+        className={`mobile-nav-track px-2${paused ? " paused" : ""}`}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
