@@ -118,10 +118,13 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
     }
 
     function onMove(e: TouchEvent) {
-      e.preventDefault(); // stop page scrolling while swiping nav
       const x  = e.touches[0].clientX;
       const dx = x - dragStartX.current;
       const dy = e.touches[0].clientY - dragStartY.current;
+      // Only block page scroll when horizontal movement dominates
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 4) {
+        e.preventDefault();
+      }
       if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didDrag.current = true;
 
       const now = performance.now();
@@ -165,7 +168,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
       btnRefs.current.forEach(b => { if (b) b.style.transform = "scale(1)"; });
     }
 
-    el.addEventListener("touchstart", onStart, { passive: false });
+    el.addEventListener("touchstart", onStart, { passive: true });
     el.addEventListener("touchmove",  onMove,  { passive: false });
     el.addEventListener("touchend",   onEnd,   { passive: true });
 
