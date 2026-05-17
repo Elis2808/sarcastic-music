@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
         "equalizer=f=2500:width_type=o:width=2:g=2",                // presence / vocal clarity
         "equalizer=f=5000:width_type=o:width=2:g=1.5",              // definition & attack
         "equalizer=f=12000:width_type=o:width=2:g=2.5",             // air / openness
-        "acompressor=threshold=-24dB:ratio=6:attack=1:release=20:makeup=0:detection=peak:mode=downward:level_sc=1,bandreject=f=8000:width_type=o:width=3", // de-esser: compress + notch sibilance 6-10kHz
+        "acompressor=threshold=-24dB:ratio=6:attack=1:release=20:makeup=1:detection=peak:mode=downward,bandreject=f=8000:width_type=o:width=3", // de-esser: compress + notch sibilance 6-10kHz
         "acompressor=threshold=-20dB:ratio=2.5:attack=8:release=120:makeup=2", // gentle compression
         "dynaudnorm=p=0.95:m=100:s=12",                             // dynamic normalisation
         "loudnorm=I=-14:TP=-1:LRA=11",                              // LUFS target
