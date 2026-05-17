@@ -1,13 +1,13 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
 
 const PLACEHOLDER_CARDS = [
-  { id: 1, title: "Coming Soon", subtitle: "Drop 1", bg: "from-purple-900/60 to-black" },
-  { id: 2, title: "Coming Soon", subtitle: "Drop 2", bg: "from-blue-900/60 to-black" },
-  { id: 3, title: "Coming Soon", subtitle: "Drop 3", bg: "from-rose-900/60 to-black" },
-  { id: 4, title: "Coming Soon", subtitle: "Drop 4", bg: "from-emerald-900/60 to-black" },
-  { id: 5, title: "Coming Soon", subtitle: "Drop 5", bg: "from-amber-900/60 to-black" },
+  { id: 1, title: "Coming Soon", subtitle: "Drop 1" },
+  { id: 2, title: "Coming Soon", subtitle: "Drop 2" },
+  { id: 3, title: "Coming Soon", subtitle: "Drop 3" },
+  { id: 4, title: "Coming Soon", subtitle: "Drop 4" },
+  { id: 5, title: "Coming Soon", subtitle: "Drop 5" },
 ];
 
 export default function GlassCarousel() {
@@ -49,18 +49,18 @@ export default function GlassCarousel() {
         {PLACEHOLDER_CARDS.map((card) => (
           <div
             key={card.id}
-            className={`relative flex-shrink-0 w-52 h-72 rounded-2xl overflow-hidden bg-gradient-to-b ${card.bg}`}
+            className="relative flex-shrink-0 w-52 h-72 rounded-2xl overflow-hidden bg-black"
             style={{
               backdropFilter: "blur(16px) saturate(1.6)",
               WebkitBackdropFilter: "blur(16px) saturate(1.6)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.15) inset",
+              border: "1px solid rgba(201,168,76,0.35)",
+              boxShadow: "0 0 18px rgba(201,168,76,0.12), 0 8px 32px rgba(0,0,0,0.6)",
             }}
           >
             {/* Specular top highlight */}
             <div
               className="absolute inset-x-0 top-0 h-1/3 pointer-events-none"
-              style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 100%)" }}
+              style={{ background: "linear-gradient(180deg, rgba(201,168,76,0.08) 0%, transparent 100%)" }}
             />
             {/* Placeholder image area */}
             <div className="w-full h-40 bg-white/5 flex items-center justify-center">
