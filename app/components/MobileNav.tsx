@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useEffect, useCallback } from "react";
 
 type Page = string;
 
@@ -15,71 +15,77 @@ interface MobileNavProps {
   onNavigate: (page: Page) => void;
 }
 
+const SPEED = 0.5; // px per frame
+
 export default function MobileNav({ items, activePage, onNavigate }: MobileNavProps) {
   const trackRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>(0);
+  const posRef = useRef(0);          // current translateX (negative = scrolled right)
+  const halfWidthRef = useRef(0);    // half of track width (loop point)
   const touchStartXRef = useRef(0);
+  const touchStartPosRef = useRef(0);
+  const isTouchingRef = useRef(false);
   const didDragRef = useRef(false);
-  const [paused, setPaused] = useState(false);
-  // dragOffset shifts the track while user drags
-  const dragOffsetRef = useRef(0);
-  const animOffsetRef = useRef(0);
 
-  function handleTouchStart(e: React.TouchEvent) {
+  const applyTransform = useCallback(() => {
+    if (trackRef.current) {
+      trackRef.current.style.transform = `translateX(${posRef.current}px)`;
+    }
+  }, []);
+
+  const tick = useCallback(() => {
+    if (!isTouchingRef.current) {
+      posRef.current -= SPEED;
+      // Seamless loop: when we've scrolled half the track, jump back to 0
+      if (halfWidthRef.current > 0 && posRef.current <= -halfWidthRef.current) {
+        posRef.current += halfWidthRef.current;
+      }
+      applyTransform();
+    }
+    rafRef.current = requestAnimationFrame(tick);
+  }, [applyTransform]);
+
+  useEffect(() => {
+    // Measure half-width after mount
+    if (trackRef.current) {
+      halfWidthRef.current = trackRef.current.scrollWidth / 2;
+    }
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [tick]);
+
+  function onTouchStart(e: React.TouchEvent) {
+    isTouchingRef.current = true;
     didDragRef.current = false;
     touchStartXRef.current = e.touches[0].clientX;
-    setPaused(true);
-    // capture current anim translateX so drag starts from there
-    const el = trackRef.current;
-    if (el) {
-      const matrix = window.getComputedStyle(el).transform;
-      const match = matrix.match(/matrix.*\((.+)\)/);
-      if (match) {
-        const vals = match[1].split(", ");
-        animOffsetRef.current = parseFloat(vals[4]) || 0;
-      }
-      dragOffsetRef.current = animOffsetRef.current;
-      el.style.transform = `translateX(${dragOffsetRef.current}px)`;
-    }
+    touchStartPosRef.current = posRef.current;
   }
 
-  function handleTouchMove(e: React.TouchEvent) {
+  function onTouchMove(e: React.TouchEvent) {
     const dx = e.touches[0].clientX - touchStartXRef.current;
-    if (Math.abs(dx) > 5) didDragRef.current = true;
-    const el = trackRef.current;
-    if (!el) return;
-    dragOffsetRef.current = animOffsetRef.current + dx;
-    el.style.transform = `translateX(${dragOffsetRef.current}px)`;
+    if (Math.abs(dx) > 4) didDragRef.current = true;
+    posRef.current = touchStartPosRef.current + dx;
+    // Keep in bounds for loop
+    if (halfWidthRef.current > 0) {
+      if (posRef.current < -halfWidthRef.current) posRef.current += halfWidthRef.current;
+      if (posRef.current > 0) posRef.current -= halfWidthRef.current;
+    }
+    applyTransform();
   }
 
-  function handleTouchEnd() {
-    setPaused(false);
+  function onTouchEnd() {
+    isTouchingRef.current = false;
   }
 
-  // Calculate the width for animation — half the track (since list is doubled)
-  // We use a CSS variable set via inline style on the track
   return (
     <div className="sm:hidden w-full mb-6 overflow-hidden">
-      <style>{`
-        @keyframes mobile-nav-scroll {
-          0%   { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .mobile-nav-track {
-          display: flex;
-          gap: 6px;
-          width: max-content;
-          animation: mobile-nav-scroll 20s linear infinite;
-        }
-        .mobile-nav-track.paused {
-          animation-play-state: paused;
-        }
-      `}</style>
       <div
         ref={trackRef}
-        className={`mobile-nav-track px-2${paused ? " paused" : ""}`}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        className="flex gap-1.5 px-2 will-change-transform"
+        style={{ width: "max-content" }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
         {[...items, ...items].map(({ page, label }, i) => (
           <button

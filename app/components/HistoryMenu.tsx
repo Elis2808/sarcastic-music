@@ -117,7 +117,7 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
                 onClick={exportToTxt}
                 className="text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
               >
-                Export .txt
+                Export Text File
               </button>
             )}
           </div>
