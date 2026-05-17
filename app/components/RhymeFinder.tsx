@@ -350,7 +350,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
         <button
           onClick={() => search(word)}
           disabled={isLoading || !word.trim()}
-          className="w-full px-4 py-2.5 rounded-[10px] bg-black text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 outline-none" style={{color:'white'}}
+          className="w-full px-4 py-2.5 rounded-[10px] bg-black text-white text-sm font-medium disabled:cursor-not-allowed transition-all duration-200 outline-none"
         >
           {isLoading ? <span className="text-[#C9A84C]">Searching...</span> : "Search"}
         </button>

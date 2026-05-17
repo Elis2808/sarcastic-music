@@ -334,7 +334,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
             <button
               onClick={fetchInfo}
               disabled={ytLoading || !ytUrl.trim()}
-              className="w-full px-6 py-2.5 rounded-[10px] bg-black text-white active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2" style={{color:'white'}}
+              className="w-full px-6 py-2.5 rounded-[10px] bg-black text-white active:scale-95 disabled:cursor-not-allowed text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2"
             >
               {ytLoading ? <span className="text-[#C9A84C]">Converting...</span> : "Convert"}
             </button>
