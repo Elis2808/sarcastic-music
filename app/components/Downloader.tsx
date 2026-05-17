@@ -309,17 +309,16 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
           />
           {/* Rights confirmation checkbox */}
           <label className="flex items-start gap-2.5 cursor-pointer max-w-xl w-full px-1">
-            <div className="relative flex-shrink-0 mt-0.5">
+            <div className="relative flex-shrink-0 mt-0.5 w-4 h-4">
               <input
                 type="checkbox"
                 checked={rightsAccepted}
                 onChange={(e) => setRightsAccepted(e.target.checked)}
-                className="sr-only"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
               <div
-                onClick={() => setRightsAccepted(!rightsAccepted)}
                 style={{ borderColor: "#C9A84C", background: "black" }}
-                className="w-4 h-4 rounded-full border-2 cursor-pointer flex items-center justify-center transition-all duration-150"
+                className="w-4 h-4 rounded-full border-2 flex items-center justify-center pointer-events-none transition-all duration-150"
               >
                 {rightsAccepted && (
                   <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
