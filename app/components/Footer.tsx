@@ -12,7 +12,7 @@ export default function Footer() {
           <span className="text-gray-700">·</span>
           <Link href="/privacy" className="text-gray-500 hover:text-[#C9A84C] transition-colors">Privacy Policy</Link>
           <span className="text-gray-700">·</span>
-          <a href="mailto:legal@sarcasticmusic.com" className="text-gray-500 hover:text-[#C9A84C] transition-colors">DMCA / Legal</a>
+          <a href="mailto:sarcasticmusic2120@gmail.com?subject=Legal" className="text-gray-500 hover:text-[#C9A84C] transition-colors">DMCA / Legal</a>
         </div>
       </div>
     </footer>

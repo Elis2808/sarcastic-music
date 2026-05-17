@@ -64,7 +64,7 @@ export default function TermsPage() {
         <div>
           <h2 className="text-[#C9A84C] font-semibold text-base mb-2">7. DMCA & Copyright</h2>
           <p>We respect intellectual property rights. If you believe content accessed through our tools infringes your copyright, please contact us at:</p>
-          <p className="mt-2 text-[#C9A84C]">legal@sarcasticmusic.com</p>
+          <a href="mailto:sarcasticmusic2120@gmail.com?subject=Legal" className="mt-2 text-[#C9A84C] hover:underline block">sarcasticmusic2120@gmail.com</a>
         </div>
 
         <div>

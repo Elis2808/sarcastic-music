@@ -56,7 +56,7 @@ export default function PrivacyPage() {
         <div>
           <h2 className="text-[#C9A84C] font-semibold text-base mb-2">6. Your Rights</h2>
           <p>Since we do not collect personal data, there is typically nothing to delete or export. If you have concerns, contact us at:</p>
-          <p className="mt-2 text-[#C9A84C]">legal@sarcasticmusic.com</p>
+          <a href="mailto:sarcasticmusic2120@gmail.com?subject=Legal" className="mt-2 text-[#C9A84C] hover:underline block">sarcasticmusic2120@gmail.com</a>
         </div>
 
         <div>
