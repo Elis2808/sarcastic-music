@@ -318,7 +318,8 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
 
   return (
     <div className="flex flex-col items-center w-full pt-8 px-4 max-sm:pt-6 max-sm:px-3">
-      <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">Rhyme Finder</h1>
+      <h1 className="text-3xl max-sm:text-2xl font-bold mb-1">Rhyme Finder</h1>
+      <p className="text-gray-500 text-xs mb-4">Made by artists, with today&apos;s language.</p>
 
       <div className="flex items-center gap-3 mb-4">
         <button
@@ -345,7 +346,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
         placeholder="Type any word to find related rhymes"
         className="px-4 py-3 rounded-xl w-full max-w-xl bg-black border border-gray-600 text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C]"
       />
-      <div className={`mt-3 max-w-xl w-full ${isLoading ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+      <div className={`mt-3 max-w-xs w-full ${isLoading ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
         <button
           onClick={() => search(word)}
           disabled={isLoading || !word.trim()}
