@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { addHistoryItem } from "../lib/history";
-import AutoScrollPlatforms from "./AutoScrollPlatforms";
 import UrlDropZone from "./UrlDropZone";
 import { showToast } from "./Toast";
 
@@ -36,6 +35,7 @@ function formatDuration(seconds: string) {
 }
 
 export default function Downloader({ initialUrl, initialPlatform }: DownloaderProps) {
+  const platformScrollRef = useRef<HTMLDivElement>(null);
   const [selectedPlatform, setSelectedPlatform] = useState(initialPlatform || "YouTube");
   const [ytUrl, setYtUrl] = useState(initialUrl || "");
   const [ytInfo, setYtInfo] = useState<{ title: string; author: string; lengthSeconds: string; thumbnail: string } | null>(null);
@@ -281,11 +281,68 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
 
       {/* Platform selector */}
       <div className="w-full max-w-xl mb-4">
-        <AutoScrollPlatforms
-          platforms={PLATFORMS.map(p => ({ id: p.name, label: p.name }))}
-          selected={selectedPlatform}
-          onSelect={(id) => setSelectedPlatform(id)}
-        />
+        {/* Mobile: arrow buttons */}
+        <div
+          className="sm:hidden flex items-center gap-2"
+          style={{
+            backgroundColor: "rgba(20,20,24,0.48)",
+            backdropFilter: "blur(14px) saturate(160%)",
+            WebkitBackdropFilter: "blur(14px) saturate(160%)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 9999,
+            padding: "4px 6px",
+          }}
+        >
+          <button
+            onClick={() => {
+              const idx = PLATFORMS.findIndex(p => p.name === selectedPlatform);
+              const prev = PLATFORMS[(idx - 1 + PLATFORMS.length) % PLATFORMS.length];
+              setSelectedPlatform(prev.name);
+            }}
+            className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-white/60 hover:text-white transition-colors"
+          >‹</button>
+          <span className="flex-1 text-center text-xs font-medium text-white">{selectedPlatform}</span>
+          <button
+            onClick={() => {
+              const idx = PLATFORMS.findIndex(p => p.name === selectedPlatform);
+              const next = PLATFORMS[(idx + 1) % PLATFORMS.length];
+              setSelectedPlatform(next.name);
+            }}
+            className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-white/60 hover:text-white transition-colors"
+          >›</button>
+        </div>
+        {/* Desktop: scrollable strip */}
+        <div
+          ref={platformScrollRef}
+          className="hidden sm:flex gap-1 overflow-x-auto scrollbar-hide"
+          style={{
+            backgroundColor: "rgba(20,20,24,0.48)",
+            backdropFilter: "blur(14px) saturate(160%)",
+            WebkitBackdropFilter: "blur(14px) saturate(160%)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 9999,
+            padding: "4px 6px",
+          }}
+        >
+          {PLATFORMS.map((platform) => {
+            const isActive = selectedPlatform === platform.name;
+            return (
+              <button
+                key={platform.name}
+                onClick={() => setSelectedPlatform(platform.name)}
+                style={{
+                  color: isActive ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
+                  border: isActive ? "1px solid rgba(201,168,76,0.6)" : "1px solid transparent",
+                  backgroundColor: "transparent",
+                  transition: "color 160ms ease-out, border-color 160ms ease-out",
+                }}
+                className="px-4 py-1.5 rounded-full text-xs font-medium outline-none whitespace-nowrap flex-shrink-0"
+              >
+                {platform.name}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
 
