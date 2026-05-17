@@ -30,6 +30,7 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   
   // History restore state
+  const [restoreKey, setRestoreKey] = useState(0);
   const [restoreState, setRestoreState] = useState<{
     tool?: Page;
     word?: string;
@@ -121,6 +122,7 @@ export default function Home() {
     const page = toolMap[tool];
     if (!page) return;
     
+    setRestoreKey(k => k + 1);
     navigateTo(page, {
       word: item.data.word,
       url: item.data.url,
@@ -159,7 +161,14 @@ export default function Home() {
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="p-2 rounded-lg bg-black text-[#C9A84C] transition-all duration-200"
+            className="p-2 rounded-full text-[rgba(255,255,255,0.55)] hover:text-[rgba(255,240,205,0.96)] transition-colors duration-150"
+            style={{
+              backgroundColor: "rgba(20,20,24,0.48)",
+              backdropFilter: "blur(14px) saturate(160%)",
+              WebkitBackdropFilter: "blur(14px) saturate(160%)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.14)",
+            }}
             aria-label="Open menu"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -233,8 +242,8 @@ export default function Home() {
         }}
       />
 
-      {activePage === "rhyme"      && <RhymeFinder onLookupWord={openDictionary} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word} />}
-      {activePage === "key"        && <KeyFinder 
+      {activePage === "rhyme"      && <RhymeFinder key={restoreKey} onLookupWord={openDictionary} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word} />}
+      {activePage === "key"        && <KeyFinder key={restoreKey}
         initialUrl={restoreState.url} 
         initialPlatform={restoreState.platform}
         initialKey={restoreState.key}
@@ -243,16 +252,16 @@ export default function Home() {
         initialRelativeKey={restoreState.relativeKey}
         initialRelativeScale={restoreState.relativeScale}
       />}
-      {activePage === "bpm"        && <BpmFinder 
+      {activePage === "bpm"        && <BpmFinder key={restoreKey}
         initialUrl={restoreState.url} 
         initialPlatform={restoreState.platform}
         initialBpm={restoreState.bpm}
         initialTimeSignature={restoreState.timeSignature}
         initialBeatCount={restoreState.beatCount}
       />}
-      {activePage === "master"     && <AudioMaster initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
-      {activePage === "voice"      && <VoiceRemover initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
-      {activePage === "youtube"    && <Downloader initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
+      {activePage === "master"     && <AudioMaster key={restoreKey} initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
+      {activePage === "voice"      && <VoiceRemover key={restoreKey} initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
+      {activePage === "youtube"    && <Downloader key={restoreKey} initialUrl={restoreState.url} initialPlatform={restoreState.platform} />}
       {activePage === "converter"  && <FileConverter />}
       {activePage === "dictionary" && (
         <Dictionary

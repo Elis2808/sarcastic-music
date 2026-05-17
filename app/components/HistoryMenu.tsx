@@ -86,7 +86,15 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
       {/* Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl bg-black text-[#C9A84C] transition-all duration-200"
+        className="relative p-2 rounded-full transition-colors duration-150"
+        style={{
+          color: isOpen ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.55)",
+          backgroundColor: "rgba(20,20,24,0.48)",
+          backdropFilter: "blur(14px) saturate(160%)",
+          WebkitBackdropFilter: "blur(14px) saturate(160%)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.14)",
+        }}
         aria-label="History"
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
