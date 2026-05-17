@@ -197,13 +197,25 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
         {/* Gold sliding pill */}
         <div
           ref={pillRef}
-          className="absolute top-0 left-0 rounded-lg pointer-events-none"
+          className="absolute top-0 left-0 rounded-lg pointer-events-none overflow-hidden"
           style={{
-            background: "rgba(201,168,76,0.18)",
-            border: "2px solid #C9A84C",
-            boxShadow: "0 0 14px rgba(201,168,76,0.45)",
+            backdropFilter: "blur(12px) saturate(1.8)",
+            WebkitBackdropFilter: "blur(12px) saturate(1.8)",
+            background: "linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(201,168,76,0.12) 50%, rgba(255,255,255,0.06) 100%)",
+            border: "1px solid rgba(255,255,255,0.35)",
+            boxShadow: "0 4px 24px rgba(201,168,76,0.25), 0 1px 0 rgba(255,255,255,0.4) inset, 0 -1px 0 rgba(0,0,0,0.2) inset",
           }}
-        />
+        >
+          {/* Specular highlight streak */}
+          <div style={{
+            position: "absolute",
+            top: 0, left: 0, right: 0,
+            height: "45%",
+            background: "linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.0) 100%)",
+            borderRadius: "6px 6px 0 0",
+            pointerEvents: "none",
+          }} />
+        </div>
 
         {doubled.map(({ page, label }, i) => {
           const isFirst = i < items.length;

@@ -172,7 +172,7 @@ export default function Home() {
 
           {/* Dropdown */}
           {menuOpen && (
-            <div className="absolute left-0 top-full mt-2 w-40 bg-black border border-[#C9A84C]/40 rounded-xl shadow-2xl z-50 overflow-hidden">
+            <div className="absolute left-0 top-full mt-2 w-40 rounded-xl shadow-2xl z-50 overflow-hidden" style={{ backdropFilter: "blur(20px) saturate(1.8)", WebkitBackdropFilter: "blur(20px) saturate(1.8)", background: "linear-gradient(160deg, rgba(255,255,255,0.13) 0%, rgba(0,0,0,0.72) 60%, rgba(201,168,76,0.06) 100%)", border: "1px solid rgba(255,255,255,0.18)", boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.25) inset" }}>
               <div className="p-1">
                 {NAV_ITEMS.map(({ page, label }) => (
                   <button
