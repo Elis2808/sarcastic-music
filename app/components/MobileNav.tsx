@@ -124,10 +124,10 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
       const dx = x - dragStartX.current;
       const dy = e.touches[0].clientY - dragStartY.current;
       // Only block page scroll when horizontal movement dominates
-      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 4) {
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
         e.preventDefault();
+        didDrag.current = true;
       }
-      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didDrag.current = true;
 
       const now = performance.now();
       const dt  = now - lastT.current;

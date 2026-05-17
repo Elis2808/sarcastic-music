@@ -5,7 +5,6 @@ import { useState, useRef, useCallback, useEffect } from "react";
 export default function FileConverter() {
   const [activeCategory, setActiveCategory] = useState<"images" | "documents" | "audio" | "video">("images");
   const [activeConversion, setActiveConversion] = useState<string>("img-to-pdf");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
   const [converting, setConverting] = useState(false);
@@ -13,7 +12,6 @@ export default function FileConverter() {
   const [pdfPageRange, setPdfPageRange] = useState("");
   const [pdfTotalPages, setPdfTotalPages] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const id = "btn-sweep-style";
@@ -55,60 +53,54 @@ export default function FileConverter() {
   const CATEGORIES = {
     images: {
       label: "Images",
-      conversions: [
-        { id: "img-to-pdf", label: "Photos to PDF Album", accept: "image/*" },
-        { id: "pdf-to-img", label: "PDF to Photos", accept: ".pdf" },
-        { id: "jpg-png", label: "JPG to PNG (Transparent)", accept: ".jpg,.jpeg" },
-        { id: "png-jpg", label: "PNG to JPG (Smaller)", accept: ".png" },
-        { id: "webp-png", label: "WebP → PNG", accept: ".webp" },
-        { id: "webp-jpg", label: "WebP → JPG", accept: ".webp" },
-        { id: "png-webp", label: "PNG → WebP", accept: ".png" },
-        { id: "jpg-webp", label: "JPG → WebP", accept: ".jpg,.jpeg" },
-        { id: "gif-convert", label: "GIF to Video/Image", accept: ".gif" },
+      accept: "image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp,.tiff,.heic,.pdf",
+      outputs: [
+        { id: "img-to-pdf", label: "→ PDF" },
+        { id: "pdf-to-img", label: "→ PNG (from PDF)" },
+        { id: "jpg-png",    label: "→ PNG" },
+        { id: "png-jpg",    label: "→ JPG" },
+        { id: "png-webp",   label: "→ WebP" },
+        { id: "gif-convert",label: "→ MP4 (GIF)" },
       ]
     },
     documents: {
       label: "Documents",
-      conversions: [
-        { id: "doc-pdf", label: "Word to PDF", accept: ".doc,.docx" },
-        { id: "pdf-doc", label: "PDF to Word (Editable)", accept: ".pdf" },
-        { id: "txt-pdf", label: "Text File to PDF", accept: ".txt" },
-        { id: "md-pdf", label: "Markdown to PDF", accept: ".md" },
-        { id: "html-pdf", label: "HTML to PDF", accept: ".html,.htm" },
-        { id: "csv-xlsx", label: "CSV to Excel", accept: ".csv" },
-        { id: "xlsx-csv", label: "Excel to CSV", accept: ".xlsx,.xls" },
+      accept: ".pdf,.doc,.docx,.txt,.md,.html,.htm,.csv,.xlsx,.xls",
+      outputs: [
+        { id: "doc-pdf",  label: "→ PDF" },
+        { id: "pdf-doc",  label: "→ Word" },
+        { id: "txt-pdf",  label: "→ PDF (Text)" },
+        { id: "csv-xlsx", label: "→ Excel" },
+        { id: "xlsx-csv", label: "→ CSV" },
       ]
     },
     audio: {
       label: "Audio",
-      conversions: [
-        { id: "mp3-wav", label: "MP3 to WAV (Quality)", accept: ".mp3" },
-        { id: "wav-mp3", label: "WAV to MP3 (Smaller)", accept: ".wav" },
-        { id: "m4a-mp3", label: "M4A to MP3", accept: ".m4a" },
-        { id: "flac-mp3", label: "FLAC to MP3", accept: ".flac" },
-        { id: "ogg-mp3", label: "OGG to MP3", accept: ".ogg" },
-        { id: "any-mp3", label: "Any Audio to MP3", accept: "audio/*,.mp3,.wav,.aac,.m4a,.ogg,.flac,.aiff,.aif,.wma,.opus" },
-        { id: "compress-mp3", label: "Compress Audio", accept: "audio/*,.mp3,.wav,.aac,.m4a,.ogg,.flac,.aiff,.aif,.wma,.opus" },
-        { id: "extract-audio", label: "Extract from Video", accept: "video/*" },
+      accept: "audio/*,.mp3,.wav,.aac,.m4a,.ogg,.flac,.aiff,.aif,.wma,.opus",
+      outputs: [
+        { id: "any-mp3",      label: "→ MP3" },
+        { id: "mp3-wav",      label: "→ WAV" },
+        { id: "compress-mp3", label: "→ Compressed" },
+        { id: "extract-audio",label: "→ MP3 (from Video)" },
       ]
     },
     video: {
       label: "Video",
-      conversions: [
-        { id: "mp4-gif", label: "Video to GIF", accept: ".mp4,.mov,.avi" },
-        { id: "gif-mp4", label: "GIF to Video", accept: ".gif" },
-        { id: "mp4-mov", label: "MP4 to MOV", accept: ".mp4" },
-        { id: "mov-mp4", label: "MOV to MP4", accept: ".mov" },
-        { id: "avi-mp4", label: "AVI to MP4", accept: ".avi" },
-        { id: "wmv-mp4", label: "WMV to MP4", accept: ".wmv" },
-        { id: "video-mp3", label: "MP4 to MP3", accept: ".mp4,.mov,.avi,.wmv,.mkv,video/*" },
-        { id: "compress-video", label: "Compress Video", accept: "video/*" },
+      accept: "video/*,.mp4,.mov,.avi,.wmv,.mkv,.gif",
+      outputs: [
+        { id: "mov-mp4",       label: "→ MP4" },
+        { id: "mp4-mov",       label: "→ MOV" },
+        { id: "mp4-gif",       label: "→ GIF" },
+        { id: "video-mp3",     label: "→ MP3" },
+        { id: "compress-video",label: "→ Compressed" },
       ]
     },
   };
 
   const currentCategory = CATEGORIES[activeCategory];
-  const currentConversion = currentCategory.conversions.find(c => c.id === activeConversion) || currentCategory.conversions[0];
+  const currentOutput = currentCategory.outputs.find(o => o.id === activeConversion) || currentCategory.outputs[0];
+  // Build a currentConversion-compatible object for the rest of the code
+  const currentConversion = { id: currentOutput.id, label: currentOutput.label, accept: currentCategory.accept };
 
   const handleFile = useCallback(async (newFiles: FileList | null) => {
     if (!newFiles) return;
@@ -121,7 +113,7 @@ export default function FileConverter() {
       return extensions.some(ext => f.name.toLowerCase().endsWith(ext.replace(".", "")));
     });
     if (validFiles.length === 0) {
-      setError(`Please upload valid files for ${currentConversion.label}`);
+      setError(`Please upload a valid ${currentCategory.label.toLowerCase()} file`);
       return;
     }
     setFiles(prev => [...prev, ...validFiles]);
@@ -432,7 +424,7 @@ export default function FileConverter() {
   return (
     <div className="flex flex-col items-center w-full pt-8 px-4 select-none max-sm:pt-6 max-sm:px-3">
       <h1 className="text-3xl max-sm:text-2xl font-bold mb-1">File Converter</h1>
-      <p className="text-gray-500 text-xs mb-4">Convert any audio file to a different format.</p>
+      <p className="text-gray-500 text-xs mb-4">Drop any file and pick an output format.</p>
 
       {/* Main Category Tabs */}
       <div className="flex gap-2 mb-4 justify-center flex-wrap max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:justify-start max-sm:px-4 max-sm:pb-1 max-sm:scrollbar-none">
@@ -441,7 +433,7 @@ export default function FileConverter() {
             key={cat}
             onClick={() => {
               setActiveCategory(cat);
-              setActiveConversion(CATEGORIES[cat].conversions[0].id);
+              setActiveConversion(CATEGORIES[cat].outputs[0].id);
               setFiles([]);
               setError("");
             }}
@@ -456,47 +448,27 @@ export default function FileConverter() {
         ))}
       </div>
 
-      {/* Conversion Dropdown */}
-      <div className="relative mb-6 mx-auto" ref={dropdownRef}>
-        <button
-          onClick={() => setDropdownOpen(!dropdownOpen)}
-          className="w-64 max-sm:w-full max-sm:max-w-xs flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-black border border-[#C9A84C] text-[#C9A84C] hover:bg-gray-900 transition-all duration-200"
-        >
-          <span className="truncate text-center">{currentConversion.label}</span>
-          <svg 
-            className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
+      {/* Output Format Buttons */}
+      <div className="flex gap-2 mb-6 flex-wrap justify-center max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:justify-start max-sm:w-full max-sm:pb-1">
+        {currentCategory.outputs.map((out) => (
+          <button
+            key={out.id}
+            onClick={() => {
+              setActiveConversion(out.id);
+              setFiles([]);
+              setError("");
+              setPdfPageRange("");
+              setPdfTotalPages(null);
+            }}
+            className={`px-4 py-2 rounded-xl text-sm transition-all duration-200 outline-none flex-shrink-0 ${
+              activeConversion === out.id
+                ? "bg-black text-[#C9A84C] border border-[#C9A84C] shadow-[0_0_10px_rgba(201,168,76,0.4)]"
+                : "bg-gray-800 text-gray-300 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 border border-transparent"
+            }`}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        
-        {dropdownOpen && (
-          <div className="absolute top-full left-0 mt-2 w-64 bg-black border border-[#C9A84C] rounded-xl shadow-lg shadow-[#C9A84C]/20 z-50 max-h-64 overflow-y-auto">
-            {currentCategory.conversions.map((conv) => (
-              <button
-                key={conv.id}
-                onClick={() => {
-                  setActiveConversion(conv.id);
-                  setFiles([]);
-                  setError("");
-                  setPdfPageRange("");
-                  setPdfTotalPages(null);
-                  setDropdownOpen(false);
-                }}
-                className={`w-full px-4 py-3 text-left text-sm transition-all duration-200 border-b border-gray-800 last:border-b-0 ${
-                  activeConversion === conv.id
-                    ? "bg-[#C9A84C]/20 text-[#C9A84C]"
-                    : "text-gray-300 hover:bg-[#C9A84C]/10 hover:text-[#C9A84C]"
-                }`}
-              >
-                {conv.label}
-              </button>
-            ))}
-          </div>
-        )}
+            {out.label}
+          </button>
+        ))}
       </div>
 
       {/* Drop Zone */}
