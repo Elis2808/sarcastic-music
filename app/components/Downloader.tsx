@@ -198,7 +198,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
       if (!bpmRes.ok) throw new Error(data.error || "BPM detection failed");
       setAnalysisResult({ type: "bpm", data });
     } catch (e: any) {
-      // Error toast shown in analyzeBpm
+      showToast(e.message || "BPM detection failed", "error");
     } finally {
       setAnalyzing(null);
     }
@@ -223,7 +223,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
       if (!keyRes.ok) throw new Error(data.error || "Key detection failed");
       setAnalysisResult({ type: "key", data });
     } catch (e: any) {
-      // Error toast shown in analyzeKey
+      showToast(e.message || "Key detection failed", "error");
     } finally {
       setAnalyzing(null);
     }
@@ -262,11 +262,12 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
           a.href = pollData.downloadUrl;
           a.download = `${ytInfo?.title || "song"}_instrumental.mp3`;
           a.click();
+          showToast("Split complete! Downloading...", "success");
           break;
         }
       }
     } catch (e: any) {
-      // Error toast shown in splitSong
+      showToast(e.message || "Song splitting failed", "error");
     } finally {
       setAnalyzing(null);
     }
