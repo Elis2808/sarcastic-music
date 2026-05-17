@@ -10,6 +10,7 @@ import RhymeFinder from "./components/RhymeFinder";
 import Dictionary from "./components/Dictionary";
 import AudioMaster from "./components/AudioMaster";
 import HistoryMenu from "./components/HistoryMenu";
+import MobileNav from "./components/MobileNav";
 import { addHistoryItem, type HistoryItem } from "./lib/history";
 import ToastContainer from "./components/Toast";
 import { showToast } from "./components/Toast";
@@ -234,50 +235,15 @@ export default function Home() {
         ))}
       </nav>
 
-      {/* Mobile nav — single scrollable row with slow auto-scroll */}
-      <div className="sm:hidden w-full mb-6 overflow-hidden">
-        <style>{`
-          @keyframes nav-scroll {
-            0%   { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }
-          .nav-scroll-track {
-            display: flex;
-            gap: 6px;
-            width: max-content;
-            animation: nav-scroll 18s linear infinite;
-          }
-          .nav-scroll-track:hover,
-          .nav-scroll-track:active {
-            animation-play-state: paused;
-          }
-        `}</style>
-        <div
-          className="nav-scroll-track px-2"
-          onTouchStart={() => {}}
-        >
-          {[...NAV_ITEMS, ...NAV_ITEMS].map(({ page, label }, i) => (
-            <button
-              key={i}
-              onClick={() => {
-                if (page === "rhyme" && activePage === "rhyme") {
-                  window.location.reload();
-                } else {
-                  navigateTo(page);
-                }
-              }}
-              style={{ borderColor: activePage === page ? "#C9A84C" : "rgba(201,168,76,0.45)" }}
-              className={`px-3 py-1.5 rounded-lg text-xs outline-none whitespace-nowrap border-2 flex-shrink-0 ${
-                activePage === page
-                  ? "bg-black text-[#C9A84C] shadow-[0_0_12px_rgba(201,168,76,0.25)]"
-                  : "bg-black text-white"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Mobile nav — auto-scrolling + swipeable */}
+      <MobileNav
+        items={NAV_ITEMS}
+        activePage={activePage}
+        onNavigate={(page: string) => {
+          if (page === "rhyme" && activePage === "rhyme") window.location.reload();
+          else navigateTo(page as Page);
+        }}
+      />
 
       {activePage === "rhyme"      && <RhymeFinder onLookupWord={openDictionary} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word} />}
       {activePage === "key"        && <KeyFinder 
