@@ -44,32 +44,34 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "No file or URL provided" }, { status: 400 });
     }
 
-    // Mastering chain optimised for cars, speakers, iPhone & AirPods:
-    // 1. High-pass at 80 Hz — removes rumble, sub-bass mud, cleans up small speakers
-    // 2. Cut 150-200 Hz — removes boominess that masks clarity in car subs & earbuds
-    // 3. Cut 400 Hz — removes boxiness / honky mid-range
-    // 4. Boost 2.5 kHz — vocal presence, cuts through car noise & earbuds
-    // 5. Boost 5 kHz — definition, attack, snare snap
-    // 6. Boost 12 kHz — air & sparkle, makes AirPods/earbuds sound open
-    // 7. Gentle compression — tightens dynamics without pumping
-    // 8. Dynamic normalisation — consistent level
-    // 9. Loudnorm -14 LUFS — streaming standard
-    // 10. True peak limiter at -1 dBTP
+    // Professional mastering chain — stronger, wider, cleaner across all devices:
+    // 1. Noise gate       — kills background hiss/noise below -50dB
+    // 2. High-pass 60Hz   — remove sub rumble while keeping low-end body
+    // 3. EQ cleanup       — cut boomy 180Hz, cut boxy 350Hz
+    // 4. EQ presence      — boost 2kHz (vocals), 5kHz (attack/definition), 14kHz (air)
+    // 5. De-esser         — tame harsh 8kHz sibilance
+    // 6. Stereo widening  — extrapolate mid/side to widen the image
+    // 7. Compression      — strong ratio (4:1), high makeup gain (+6dB) for density & punch
+    // 8. Second-stage comp — catch transients, even out levels
+    // 9. Loudnorm -10 LUFS — louder than streaming standard, more impact
+    // 10. Hard limiter at -0.5dBTP — prevent clipping, maximum loudness
     await execFileAsync("ffmpeg", [
       "-y",
       "-i", inputPath,
       "-af", [
-        "highpass=f=80",                                             // remove rumble below 80 Hz
-        "equalizer=f=150:width_type=o:width=2:g=-2.5",              // cut boomy low-mids
-        "equalizer=f=400:width_type=o:width=2:g=-2",                // cut boxy mids
-        "equalizer=f=2500:width_type=o:width=2:g=2",                // presence / vocal clarity
-        "equalizer=f=5000:width_type=o:width=2:g=1.5",              // definition & attack
-        "equalizer=f=12000:width_type=o:width=2:g=2.5",             // air / openness
-        "acompressor=threshold=-24dB:ratio=6:attack=1:release=20:makeup=1:detection=peak:mode=downward,bandreject=f=8000:width_type=o:width=3", // de-esser: compress + notch sibilance 6-10kHz
-        "acompressor=threshold=-20dB:ratio=2.5:attack=8:release=120:makeup=2", // gentle compression
-        "dynaudnorm=p=0.95:m=100:s=12",                             // dynamic normalisation
-        "loudnorm=I=-14:TP=-1:LRA=11",                              // LUFS target
-        "alimiter=level_in=1:level_out=1:limit=0.891:attack=5:release=50", // true peak limit
+        "agate=threshold=0.003:ratio=10:attack=2:release=200",                        // noise gate
+        "highpass=f=60",                                                               // sub rumble removal
+        "equalizer=f=180:width_type=o:width=2:g=-3",                                  // cut boomy low-mids
+        "equalizer=f=350:width_type=o:width=2:g=-2.5",                                // cut boxy mids
+        "equalizer=f=2000:width_type=o:width=2:g=2.5",                                // vocal presence
+        "equalizer=f=5000:width_type=o:width=2:g=2",                                  // definition & attack
+        "equalizer=f=14000:width_type=o:width=2:g=3",                                 // air & sparkle
+        "acompressor=threshold=-24dB:ratio=6:attack=1:release=20:makeup=1:detection=peak:mode=downward,bandreject=f=8000:width_type=o:width=3", // de-esser
+        "extrastereo=m=2.0",                                                           // stereo widening
+        "acompressor=threshold=-16dB:ratio=4:attack=6:release=80:makeup=6",           // main compression (+6dB makeup)
+        "acompressor=threshold=-6dB:ratio=2:attack=1:release=30:makeup=1",            // peak catch / limiter stage
+        "loudnorm=I=-10:TP=-0.5:LRA=9",                                               // louder LUFS target
+        "alimiter=level_in=1:level_out=1:limit=0.944:attack=2:release=20",            // true peak limit -0.5dBTP
       ].join(","),
       "-c:a", "libmp3lame",
       "-b:a", "320k",

@@ -175,10 +175,10 @@ export default function AudioMaster({ initialUrl: _initialUrl, initialPlatform: 
       {!processing && (
         <div className="mt-8 w-full max-w-xl grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Clarity EQ", desc: "De-ess, cuts mud & boom, boosts presence & air" },
-            { label: "Loudness", desc: "-14 LUFS streaming standard" },
-            { label: "Compression", desc: "Tight dynamics, no pumping" },
-            { label: "Limiting", desc: "True peak limit at -1 dBTP" },
+            { label: "Noise Gate", desc: "Removes background hiss & noise" },
+            { label: "Stereo Width", desc: "Widens sound for speakers & headphones" },
+            { label: "Compression", desc: "Dense, punchy dynamics +6dB makeup" },
+            { label: "Loudness", desc: "-10 LUFS, hard limit at -0.5dBTP" },
           ].map(item => (
             <div
               key={item.label}
