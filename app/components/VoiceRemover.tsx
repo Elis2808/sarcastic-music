@@ -162,6 +162,15 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
           mask-composite: exclude;
           animation: btn-sweep 1.4s linear infinite;
         }
+        @keyframes progress-shimmer {
+          0%   { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+        .progress-fill {
+          background: linear-gradient(90deg, #C9A84C 0%, #e8c96a 40%, #C9A84C 60%, #b8943e 100%);
+          background-size: 200% 100%;
+          animation: progress-shimmer 2.2s ease-in-out infinite;
+        }
       `;
       document.head.appendChild(style);
     }
@@ -549,14 +558,17 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
               </div>
               <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all duration-300 bg-[#C9A84C]"
-                  style={{ width: `${
-                    bothPhase === "instrumental" || bothPhase === "vocals"
-                      ? stemProgress
-                      : bothPhase === "transit"
-                      ? 100
-                      : Math.round(demucsProgress)
-                  }%` }}
+                  className="h-full rounded-full progress-fill"
+                  style={{
+                    width: `${
+                      bothPhase === "instrumental" || bothPhase === "vocals"
+                        ? stemProgress
+                        : bothPhase === "transit"
+                        ? 100
+                        : Math.round(demucsProgress)
+                    }%`,
+                    transition: "width 1200ms cubic-bezier(0.4,0,0.2,1)",
+                  }}
                 />
               </div>
             </div>
