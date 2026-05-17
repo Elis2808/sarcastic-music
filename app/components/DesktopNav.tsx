@@ -8,38 +8,20 @@ interface Props {
   onNavigate: (page: string) => void;
 }
 
-const SPRING = { type: "spring" as const, stiffness: 340, damping: 30, mass: 0.8 };
+const SPRING = { type: "spring" as const, stiffness: 380, damping: 34, mass: 0.9 };
 
 export default function DesktopNav({ items, activePage, onNavigate }: Props) {
   return (
     <nav
-      className="hidden sm:flex relative items-center mb-6 rounded-full px-2 py-2"
+      className="hidden sm:flex items-center mb-6 rounded-full px-[10px]"
       style={{
-        /* ── Container: 5-layer liquid glass dock ── */
-        position: "relative",
-        height: 56,
-
-        /* Layer 1: base dark translucent */
-        backgroundColor: "rgba(18,18,20,0.55)",
-
-        /* Layer 2+3: glass overlay + subtle top reflection */
-        backgroundImage: [
-          "linear-gradient(to bottom, rgba(255,255,255,0.18), rgba(255,255,255,0.04))",
-        ].join(", "),
-
-        /* Layer 4: inner light edge */
-        border: "1px solid rgba(255,255,255,0.12)",
-
-        /* Layer 5: ambient shadow + top/bottom inset edge lights */
-        boxShadow: [
-          "0 8px 30px rgba(0,0,0,0.35)",
-          "inset 0 1px 0 rgba(255,255,255,0.18)",
-          "inset 0 -1px 0 rgba(255,255,255,0.05)",
-        ].join(", "),
-
-        /* Refraction blur */
-        backdropFilter: "blur(24px) saturate(180%)",
-        WebkitBackdropFilter: "blur(24px) saturate(180%)",
+        height: 58,
+        gap: 2,
+        backgroundColor: "rgba(20,20,24,0.50)",
+        backdropFilter: "blur(14px) saturate(160%)",
+        WebkitBackdropFilter: "blur(14px) saturate(160%)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "0 6px 18px rgba(0,0,0,0.18)",
       }}
     >
       {items.map(({ page, label }) => {
@@ -48,81 +30,68 @@ export default function DesktopNav({ items, activePage, onNavigate }: Props) {
           <button
             key={page}
             onClick={() => onNavigate(page)}
-            className="relative flex items-center justify-center px-5 h-full rounded-full outline-none whitespace-nowrap z-10"
+            className="relative flex items-center justify-center px-5 h-10 rounded-full outline-none whitespace-nowrap"
             style={{
               fontSize: 13,
               fontWeight: 500,
-              letterSpacing: "-0.01em",
-              color: isActive ? "rgba(255,215,140,0.95)" : "rgba(255,255,255,0.58)",
-              transition: "color 0.22s ease",
+              letterSpacing: "-0.015em",
+              color: isActive ? "rgba(255,235,190,0.95)" : "rgba(255,255,255,0.55)",
+              transition: "color 0.2s ease",
+              WebkitFontSmoothing: "antialiased",
             }}
           >
-            {/* ── Liquid Glass Bubble ── */}
+            {/* Liquid glass bubble — only transform/opacity animated */}
             {isActive && (
               <motion.span
-                layoutId="lg-bubble"
+                layoutId="liquid-tab"
                 transition={SPRING}
                 className="absolute inset-0 rounded-full pointer-events-none"
-                style={{ zIndex: 0 }}
+                style={{ zIndex: 0, willChange: "transform" }}
               >
-                {/* LAYER 1 — Base glass with refraction */}
+                {/* LAYER 1 — Main glass body */}
                 <span
                   className="absolute inset-0 rounded-full"
                   style={{
-                    background: "linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.10) 100%)",
-                    backdropFilter: "blur(18px) saturate(200%)",
-                    WebkitBackdropFilter: "blur(18px) saturate(200%)",
+                    background: "linear-gradient(to bottom, rgba(255,255,255,0.16), rgba(255,255,255,0.07))",
+                    backdropFilter: "blur(10px) saturate(170%)",
+                    WebkitBackdropFilter: "blur(10px) saturate(170%)",
                   }}
                 />
 
-                {/* LAYER 2 — Top curved specular highlight */}
+                {/* LAYER 2 — Top reflection */}
                 <span
-                  className="absolute rounded-full pointer-events-none"
+                  className="absolute pointer-events-none"
                   style={{
-                    top: 2,
-                    left: "10%",
-                    width: "80%",
-                    height: "40%",
-                    background: "linear-gradient(to bottom, rgba(255,255,255,0.65), rgba(255,255,255,0))",
-                    filter: "blur(1.5px)",
-                    opacity: 0.7,
+                    top: 1,
+                    left: "12%",
+                    width: "76%",
+                    height: "38%",
                     borderRadius: "50%",
+                    background: "linear-gradient(to bottom, rgba(255,255,255,0.28), rgba(255,255,255,0))",
+                    filter: "blur(3px)",
+                    opacity: 0.55,
                   }}
                 />
 
-                {/* LAYER 3 — Edge rim lighting + depth shadow */}
+                {/* LAYER 3 — Edge light */}
                 <span
                   className="absolute inset-0 rounded-full pointer-events-none"
                   style={{
-                    boxShadow: [
-                      "inset 0 1px 1px rgba(255,255,255,0.35)",
-                      "0 0 0 1px rgba(255,220,140,0.10)",
-                      "0 4px 12px rgba(0,0,0,0.18)",
-                    ].join(", "),
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10)",
                   }}
                 />
 
-                {/* LAYER 4 — Side edge glints */}
-                <span className="absolute pointer-events-none" style={{
-                  left: 1, top: "15%", width: 2, height: "55%", borderRadius: 9999,
-                  background: "linear-gradient(180deg, transparent, rgba(255,255,255,0.32), transparent)",
-                }} />
-                <span className="absolute pointer-events-none" style={{
-                  right: 1, top: "15%", width: 2, height: "55%", borderRadius: 9999,
-                  background: "linear-gradient(180deg, transparent, rgba(255,255,255,0.14), transparent)",
-                }} />
-
-                {/* LAYER 5 — Bottom caustic refraction tint */}
-                <span className="absolute pointer-events-none" style={{
-                  left: "18%", right: "18%", bottom: 2,
-                  height: "28%", borderRadius: "50%",
-                  background: "linear-gradient(0deg, rgba(255,220,140,0.10) 0%, transparent 100%)",
-                  filter: "blur(2px)",
-                }} />
+                {/* Internal luminance — subtle center brightness */}
+                <span
+                  className="absolute inset-0 rounded-full pointer-events-none"
+                  style={{
+                    background: "radial-gradient(circle at center, rgba(255,255,255,0.06), rgba(255,255,255,0) 70%)",
+                  }}
+                />
               </motion.span>
             )}
 
-            {/* Label above bubble */}
             <span className="relative" style={{ zIndex: 1 }}>{label}</span>
           </button>
         );
