@@ -329,7 +329,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
             placeholder={PLATFORMS.find(p => p.name === selectedPlatform)?.placeholder}
             className="w-full px-4 py-3 rounded-xl bg-black border border-gray-600 text-white outline-none focus:ring-2 focus:ring-[#C9A84C]"
           />
-          <div className={`w-36 ${ytLoading ? "btn-sweep-wrapper" : "rounded-xl p-[1px]"}`} style={ytLoading ? {} : {background: "linear-gradient(135deg, #8a6a1a, #C9A84C, #e8c96a, #C9A84C, #8a6a1a)"}}>
+          <div className={`w-36 ${ytLoading ? "btn-sweep-wrapper" : "rounded-xl border border-[#C9A84C]/40"}`}>
             <button
               onClick={fetchInfo}
               disabled={ytLoading || !ytUrl.trim()}

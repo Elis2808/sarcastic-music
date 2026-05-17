@@ -210,7 +210,7 @@ export default function Home() {
         <HistoryMenu onSelect={handleHistorySelect} />
       </div>
 
-      <nav className="flex flex-wrap justify-center gap-2 max-sm:gap-1.5 max-sm:px-2 mb-6">
+      <nav className="flex flex-wrap justify-center gap-1.5 max-sm:gap-1 max-sm:px-2 mb-6">
         {NAV_ITEMS.map(({ page, label }) => (
           <button
             key={page}
@@ -221,10 +221,10 @@ export default function Home() {
                 navigateTo(page);
               }
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm outline-none transition-colors whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm outline-none transition-all duration-200 whitespace-nowrap ${
               activePage === page
-                ? "bg-black text-white border border-[#C9A84C]"
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                ? "bg-black text-[#C9A84C] border border-[#C9A84C] shadow-[0_0_10px_rgba(201,168,76,0.3)]"
+                : "bg-gray-900 text-gray-400 border border-gray-700 hover:border-[#C9A84C]/50 hover:text-gray-200"
             }`}
           >
             {label}

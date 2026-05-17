@@ -346,7 +346,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
         placeholder="Type any word to find related rhymes"
         className="px-4 py-3 rounded-xl w-full max-w-xl bg-black border border-gray-600 text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C]"
       />
-      <div className={`mt-3 w-36 ${isLoading ? "btn-sweep-wrapper" : "rounded-xl p-[1px]"}`} style={isLoading ? {} : {background: "linear-gradient(135deg, #8a6a1a, #C9A84C, #e8c96a, #C9A84C, #8a6a1a)"}}>
+      <div className={`mt-3 w-36 ${isLoading ? "btn-sweep-wrapper" : "rounded-xl border border-[#C9A84C]/40"}`}>
         <button
           onClick={() => search(word)}
           disabled={isLoading || !word.trim()}
