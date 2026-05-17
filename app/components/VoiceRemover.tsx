@@ -29,6 +29,70 @@ const PLATFORMS = [
   { id: "twitch", label: "Twitch", placeholder: "Paste Twitch URL here" },
 ];
 
+function DownloadReadyCard({ instrumentalUrl, vocalsUrl, filename, onDismiss }: {
+  instrumentalUrl?: string;
+  vocalsUrl?: string;
+  filename?: string;
+  onDismiss: () => void;
+}) {
+  const [downloading, setDownloading] = useState<"instrumental" | "vocals" | null>(null);
+
+  const handleDownload = async (url: string, stem: "instrumental" | "vocals") => {
+    setDownloading(stem);
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const dlUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = dlUrl;
+      a.download = `${filename || "song"}_${stem}.mp3`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(dlUrl), 10000);
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  return (
+    <div className="mt-6 w-full max-w-xs rounded-xl border border-gray-800 bg-black px-5 py-4 flex flex-col items-center gap-3">
+      <p className="text-white text-sm font-semibold text-center">Download ready</p>
+      <p className="text-gray-500 text-xs text-center -mt-1">Tap if auto-download didn&apos;t start</p>
+      <div className="flex gap-3 w-full">
+        {instrumentalUrl && (
+          <div className={`flex-1 ${downloading === "instrumental" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-800"}`}>
+            <button
+              onClick={() => handleDownload(instrumentalUrl, "instrumental")}
+              disabled={downloading !== null}
+              className="w-full px-3 py-2 rounded-[10px] bg-black text-white text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {downloading === "instrumental" ? "Downloading..." : "Instrumental"}
+            </button>
+          </div>
+        )}
+        {vocalsUrl && (
+          <div className={`flex-1 ${downloading === "vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-800"}`}>
+            <button
+              onClick={() => handleDownload(vocalsUrl, "vocals")}
+              disabled={downloading !== null}
+              className="w-full px-3 py-2 rounded-[10px] bg-black text-white text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {downloading === "vocals" ? "Downloading..." : "Vocals"}
+            </button>
+          </div>
+        )}
+      </div>
+      <button
+        onClick={onDismiss}
+        className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+      >
+        Dismiss
+      </button>
+    </div>
+  );
+}
+
 export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemoverProps) {
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -515,42 +579,12 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
 
       {/* Download Ready - Manual fallback */}
       {pendingDownloads && (
-        <div className="mt-6 btn-sweep-wrapper w-full max-w-xs">
-          <div className="rounded-[10px] bg-black px-5 py-4 flex flex-col items-center gap-3">
-            <p className="text-white text-sm font-semibold text-center">Download ready</p>
-            <p className="text-gray-500 text-xs text-center -mt-1">Tap if auto-download didn&apos;t start</p>
-            <div className="flex gap-3 w-full">
-              {pendingDownloads.instrumentalUrl && (
-                <div className="btn-sweep-wrapper flex-1">
-                  <a
-                    href={pendingDownloads.instrumentalUrl}
-                    download={`${pendingDownloads.filename}_instrumental.mp3`}
-                    className="block w-full text-center px-3 py-2 rounded-[10px] bg-black text-white text-xs font-medium hover:bg-gray-900 transition-colors"
-                  >
-                    Instrumental
-                  </a>
-                </div>
-              )}
-              {pendingDownloads.vocalsUrl && (
-                <div className="btn-sweep-wrapper flex-1">
-                  <a
-                    href={pendingDownloads.vocalsUrl}
-                    download={`${pendingDownloads.filename}_vocals.mp3`}
-                    className="block w-full text-center px-3 py-2 rounded-[10px] bg-black text-white text-xs font-medium hover:bg-gray-900 transition-colors"
-                  >
-                    Vocals
-                  </a>
-                </div>
-              )}
-            </div>
-            <button
-              onClick={() => setPendingDownloads(null)}
-              className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
+        <DownloadReadyCard
+          instrumentalUrl={pendingDownloads.instrumentalUrl}
+          vocalsUrl={pendingDownloads.vocalsUrl}
+          filename={pendingDownloads.filename}
+          onDismiss={() => setPendingDownloads(null)}
+        />
       )}
     </div>
   );
