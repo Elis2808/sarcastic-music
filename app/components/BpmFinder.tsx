@@ -213,7 +213,8 @@ export default function BpmFinder({ initialUrl, initialPlatform, initialBpm, ini
 
   return (
     <div className="flex flex-col items-center w-full pt-8 px-4 max-sm:pt-6 max-sm:px-3 select-none">
-      <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">BPM Finder</h1>
+      <h1 className="text-3xl max-sm:text-2xl font-bold mb-1">BPM Finder</h1>
+      <p className="text-gray-500 text-xs mb-4">Instant BPM finder.</p>
 
       {/* Mode toggle */}
       {!result && !loading && (
@@ -325,10 +326,10 @@ export default function BpmFinder({ initialUrl, initialPlatform, initialBpm, ini
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
             onClick={() => inputRef.current?.click()}
-            className={`w-full max-sm:h-40 h-52 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors ${
+            className={`w-full max-sm:h-40 h-52 rounded-2xl border-2 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors ${
               dragging
                 ? "border-[#C9A84C] bg-[#C9A84C]/10"
-                : "border-gray-600 bg-gray-900 hover:border-[#C9A84C] hover:bg-black"
+                : "border-[#C9A84C]/40 bg-black hover:border-[#C9A84C]"
             }`}
           >
             <svg className={`w-10 h-10 transition-colors ${dragging ? "text-[#C9A84C]" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">

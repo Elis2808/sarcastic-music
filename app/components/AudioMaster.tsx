@@ -97,8 +97,8 @@ export default function AudioMaster({ initialUrl: _initialUrl, initialPlatform: 
   return (
     <div className="flex flex-col items-center bg-black text-white pt-8 pb-12 px-4 w-full min-h-screen">
       <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-white">Audio Master</h1>
-      <p className="text-gray-400 text-sm mb-8 text-center max-w-sm px-2">
-        Professional mastering — EQ, compression, loudness & limiting
+      <p className="text-gray-500 text-xs mb-4 text-center">
+        Professional mastering for optimizing sound on multiple devices.
       </p>
 
       {/* File Upload */}
@@ -107,8 +107,8 @@ export default function AudioMaster({ initialUrl: _initialUrl, initialPlatform: 
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className={`w-full max-w-md border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all mb-6 ${
-          dragging ? "border-[#C9A84C] bg-[#C9A84C]/5" : file ? "border-[#C9A84C]/50 bg-[#C9A84C]/5" : "border-gray-700 hover:border-gray-500"
+        className={`w-full max-w-md border-2 rounded-2xl p-8 text-center cursor-pointer transition-all mb-6 ${
+          dragging ? "border-[#C9A84C] bg-black" : file ? "border-[#C9A84C] bg-black" : "border-[#C9A84C]/40 bg-black hover:border-[#C9A84C]"
         }`}
       >
         <input ref={inputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileChange} />

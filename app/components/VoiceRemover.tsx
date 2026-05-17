@@ -345,9 +345,10 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
 
   return (
     <div className="flex flex-col items-center w-full pt-8 px-4 select-none max-sm:pt-6 max-sm:px-3">
-      <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">
+      <h1 className="text-3xl max-sm:text-2xl font-bold mb-1">
         {selectedPlatform ? `${PLATFORMS.find(p => p.id === selectedPlatform)?.label || ''} Song Splitter` : "Song Splitter"}
       </h1>
+      <p className="text-gray-500 text-xs mb-4">Split any song into a vocal file and instrumental file.</p>
 
       {/* Platform selector with scroll arrows */}
       <div className="flex items-center gap-2 mb-4 w-full max-w-xl">
@@ -436,12 +437,12 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
             onClick={() => !file && inputRef.current?.click()}
-            className={`w-full max-sm:h-40 h-52 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all duration-200 ${
+            className={`w-full max-sm:h-40 h-52 rounded-2xl border-2 flex flex-col items-center justify-center gap-3 transition-all duration-200 ${
               file
-                ? "border-[#C9A84C] bg-[#C9A84C]/5 cursor-default"
+                ? "border-[#C9A84C] bg-black cursor-default"
                 : dragging
                 ? "border-[#C9A84C] bg-[#C9A84C]/10 scale-[1.02] cursor-copy"
-                : "border-gray-600 bg-gray-900 hover:border-[#C9A84C] hover:bg-black cursor-pointer"
+                : "border-[#C9A84C]/40 bg-black hover:border-[#C9A84C] cursor-pointer"
             }`}
           >
             {file ? (

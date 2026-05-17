@@ -156,8 +156,7 @@ export default function Home() {
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            style={{ borderColor: "rgba(201,168,76,0.55)" }}
-            className="p-2 rounded-lg bg-black border-2 text-[#C9A84C] transition-all duration-200 hover:border-[#C9A84C]"
+            className="p-2 rounded-lg bg-black text-[#C9A84C] transition-all duration-200"
             aria-label="Open menu"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

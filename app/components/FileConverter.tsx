@@ -431,7 +431,8 @@ export default function FileConverter() {
 
   return (
     <div className="flex flex-col items-center w-full pt-8 px-4 select-none max-sm:pt-6 max-sm:px-3">
-      <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">File Converter</h1>
+      <h1 className="text-3xl max-sm:text-2xl font-bold mb-1">File Converter</h1>
+      <p className="text-gray-500 text-xs mb-4">Convert any audio file to a different format.</p>
 
       {/* Main Category Tabs */}
       <div className="flex gap-2 mb-4 justify-center flex-wrap max-sm:px-4">
@@ -504,10 +505,10 @@ export default function FileConverter() {
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         onClick={() => inputRef.current?.click()}
-        className={`w-full max-w-xl max-sm:h-32 h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 ${
+        className={`w-full max-w-xl max-sm:h-32 h-40 rounded-2xl border-2 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 ${
           dragging
             ? "border-[#C9A84C] bg-[#C9A84C]/10 scale-[1.02]"
-            : "border-gray-600 bg-gray-900 hover:border-[#C9A84C] hover:bg-black"
+            : "border-[#C9A84C]/40 bg-black hover:border-[#C9A84C]"
         }`}
       >
         <svg className={`w-8 h-8 transition-colors ${dragging ? "text-[#C9A84C]" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">

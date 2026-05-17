@@ -263,7 +263,8 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
 
   return (
     <div className="flex flex-col items-center w-full pt-8 px-4 max-sm:pt-6 max-sm:px-3">
-      <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">{selectedPlatform} Downloader</h1>
+      <h1 className="text-3xl max-sm:text-2xl font-bold mb-1">{selectedPlatform} Downloader</h1>
+      <p className="text-gray-500 text-xs mb-4">Convert any social media link to MP3 &amp; MP4.</p>
 
       {/* Platform selector with scroll arrows */}
       <div className="flex items-center gap-2 mb-4 w-full max-w-xl">

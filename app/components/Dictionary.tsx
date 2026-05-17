@@ -44,7 +44,8 @@ export default function Dictionary({ initialWord = "", onBack }: Props) {
 
   return (
     <div className="flex flex-col items-center w-full pt-8 px-4 pb-12 max-sm:pt-6 max-sm:px-3">
-      <h1 className="text-3xl max-sm:text-2xl font-bold mb-4">Dictionary</h1>
+      <h1 className="text-3xl max-sm:text-2xl font-bold mb-1">Dictionary</h1>
+      <p className="text-gray-500 text-xs mb-4">Search any word for its definition.</p>
 
       {onBack && (
         <div className="flex items-center gap-3 mb-6">
@@ -61,7 +62,7 @@ export default function Dictionary({ initialWord = "", onBack }: Props) {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") lookupWord(search); }}
-        placeholder="Search a word..."
+        placeholder="Search a word"
         className="px-4 py-3 rounded-xl w-full max-w-md bg-black border border-gray-600 text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C] mb-8"
       />
 
