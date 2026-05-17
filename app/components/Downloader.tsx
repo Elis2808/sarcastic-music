@@ -343,12 +343,25 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
           />
           {/* Rights confirmation checkbox */}
           <label className="flex items-start gap-2.5 cursor-pointer max-w-xl w-full px-1">
-            <input
-              type="checkbox"
-              checked={rightsAccepted}
-              onChange={(e) => setRightsAccepted(e.target.checked)}
-              className="mt-0.5 w-4 h-4 rounded accent-[#C9A84C] flex-shrink-0 cursor-pointer"
-            />
+            <div className="relative flex-shrink-0 mt-0.5">
+              <input
+                type="checkbox"
+                checked={rightsAccepted}
+                onChange={(e) => setRightsAccepted(e.target.checked)}
+                className="sr-only"
+              />
+              <div
+                onClick={() => setRightsAccepted(!rightsAccepted)}
+                style={{ borderColor: "#C9A84C", background: "black" }}
+                className="w-4 h-4 rounded border-2 cursor-pointer flex items-center justify-center transition-all duration-150"
+              >
+                {rightsAccepted && (
+                  <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+            </div>
             <span className="text-xs text-gray-400 leading-relaxed">
               I confirm I own or have the legal right to download this content. I understand this tool is for personal use only. See our{" "}
               <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#C9A84C] hover:underline">Terms of Service</a>.
