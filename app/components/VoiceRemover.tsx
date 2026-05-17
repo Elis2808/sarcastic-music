@@ -491,7 +491,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
 
           {/* Main buttons with Both in middle */}
           <div className="relative flex items-center gap-3 w-full">
-            {/* Transit shine overlay — sweeps across the whole row */}
+            {/* Transit shine overlay — sweeps left→right through the whole row */}
             {bothPhase === "transit" && <div className="btn-transit-shine rounded-xl" />}
 
             {/* Instrumental */}
@@ -503,7 +503,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
               <button
                 onClick={() => download("no_vocals")}
                 disabled={processing !== null}
-                className="w-full px-4 py-3 rounded-[10px] bg-black border border-[#C9A84C] hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 outline-none"
+                className="w-full px-4 py-3 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 outline-none"
               >
                 <svg className="w-4 h-4 text-[#C9A84C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
@@ -513,18 +513,18 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
             </div>
 
             {/* Both button */}
-            <div className="relative flex flex-col items-center">
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-[2px] bg-gradient-to-r from-gray-600 to-[#C9A84C]" />
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-[2px] bg-gradient-to-l from-gray-600 to-[#C9A84C]" />
-              <div className={bothPhase === "processing" ? "btn-sweep-sm" : ""}>
-                <button
-                  onClick={() => download("both")}
-                  disabled={processing !== null}
-                  className="px-3 py-2 rounded-[6px] bg-black border border-gray-500 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none whitespace-nowrap"
-                >
-                  Both
-                </button>
-              </div>
+            <div className={
+              bothPhase === "processing" || bothPhase === "transit"
+                ? "btn-sweep-wrapper"
+                : "rounded-xl p-[3px] bg-gray-700"
+            }>
+              <button
+                onClick={() => download("both")}
+                disabled={processing !== null}
+                className="px-3 py-2 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none whitespace-nowrap"
+              >
+                Both
+              </button>
             </div>
 
             {/* Vocals */}
@@ -536,7 +536,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
               <button
                 onClick={() => download("vocals")}
                 disabled={processing !== null}
-                className="w-full px-4 py-3 rounded-[10px] bg-black border border-gray-500 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 outline-none"
+                className="w-full px-4 py-3 rounded-[10px] bg-black hover:bg-gray-900 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 outline-none"
               >
                 <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
