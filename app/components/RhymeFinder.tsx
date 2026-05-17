@@ -164,10 +164,21 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
     }
   }, []);
 
-  // Update lastClickedWord when highlightWord prop changes
+  // Update lastClickedWord when highlightWord prop changes, then scroll to it
   useEffect(() => {
     if (highlightWord) {
       setLastClickedWord(highlightWord.toLowerCase());
+      // Wait for results to render, then scroll the highlighted pill into view
+      const scrollToHighlight = () => {
+        if (lastClickedRef.current) {
+          lastClickedRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      };
+      // Try immediately, then retry after render cycles
+      const t1 = setTimeout(scrollToHighlight, 100);
+      const t2 = setTimeout(scrollToHighlight, 400);
+      const t3 = setTimeout(scrollToHighlight, 900);
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
     }
   }, [highlightWord]);
 

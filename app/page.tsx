@@ -23,6 +23,7 @@ export default function Home() {
   const [activePage, setActivePage] = useState<Page>("rhyme");
   const [previousPage, setPreviousPage] = useState<Page | null>(null);
   const [dictWord, setDictWord] = useState("");
+  const [lastRhymeSearch, setLastRhymeSearch] = useState("");
   const [lastClickedRhymeWord, setLastClickedRhymeWord] = useState(() => {
     if (typeof sessionStorage !== "undefined") return sessionStorage.getItem("lastRhymeWord") || "";
     return "";
@@ -130,10 +131,11 @@ export default function Home() {
     });
   }
 
-  function openDictionary(word: string) {
+  function openDictionary(word: string, fromSearchWord?: string) {
     setDictWord(word);
     const lower = word.toLowerCase();
     setLastClickedRhymeWord(lower);
+    if (fromSearchWord) setLastRhymeSearch(fromSearchWord);
     if (typeof sessionStorage !== "undefined") sessionStorage.setItem("lastRhymeWord", lower);
     addHistoryItem({
       type: "dictionary_lookup",
@@ -242,7 +244,7 @@ export default function Home() {
         }}
       />
 
-      {activePage === "rhyme"      && <RhymeFinder key={restoreKey} onLookupWord={openDictionary} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word} />}
+      {activePage === "rhyme"      && <RhymeFinder key={restoreKey} onLookupWord={(word) => openDictionary(word, restoreState.word || lastRhymeSearch)} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word || lastRhymeSearch} />}
       {activePage === "key"        && <KeyFinder key={restoreKey}
         initialUrl={restoreState.url} 
         initialPlatform={restoreState.platform}
@@ -266,7 +268,12 @@ export default function Home() {
       {activePage === "dictionary" && (
         <Dictionary
           initialWord={dictWord}
-          onBack={previousPage === "rhyme" ? () => { setLastClickedRhymeWord(dictWord.toLowerCase()); navigateTo("rhyme"); } : undefined}
+          onBack={previousPage === "rhyme" ? () => {
+            setLastClickedRhymeWord(dictWord.toLowerCase());
+            setRestoreKey(k => k + 1);
+            setRestoreState(s => ({ ...s, word: lastRhymeSearch || s.word }));
+            navigateTo("rhyme");
+          } : undefined}
         />
       )}
       <ToastContainer />
