@@ -156,7 +156,7 @@ export default function Home() {
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="p-2 rounded-lg bg-black border border-[#C9A84C]/40 hover:border-[#C9A84C] text-[#C9A84C] transition-all duration-200"
+            className="p-2 rounded-lg bg-black border-2 border-[#C9A84C]/50 hover:border-[#C9A84C] text-[#C9A84C] transition-all duration-200"
             aria-label="Open menu"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -223,8 +223,8 @@ export default function Home() {
             }}
             className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm outline-none transition-all duration-200 whitespace-nowrap ${
               activePage === page
-                ? "bg-black text-[#C9A84C] border border-[#C9A84C] shadow-[0_0_12px_rgba(201,168,76,0.25)]"
-                : "bg-black text-gray-400 border border-[#C9A84C]/25 hover:border-[#C9A84C]/70 hover:text-[#C9A84C]"
+                ? "bg-black text-[#C9A84C] border-2 border-[#C9A84C] shadow-[0_0_12px_rgba(201,168,76,0.25)]"
+                : "bg-black text-white border-2 border-[#C9A84C]/40 hover:border-[#C9A84C]/80 hover:text-[#C9A84C]"
             }`}
           >
             {label}

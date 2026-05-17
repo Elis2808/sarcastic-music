@@ -86,7 +86,7 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
       {/* Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl bg-black border border-[#C9A84C]/40 hover:border-[#C9A84C] text-[#C9A84C] transition-all duration-200"
+        className="relative p-2 rounded-xl bg-black border-2 border-[#C9A84C]/50 hover:border-[#C9A84C] text-[#C9A84C] transition-all duration-200"
         aria-label="History"
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
