@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 type RhymeData = {
   results: { word: string; category: string }[];
   allResults: { word: string; category: string }[];
-  categories: { perfect: string[]; sounding: string[]; near: string[] };
+  categories: { perfect: string[]; sounding: string[]; near: string[]; written: string[] };
   totalFound: number;
 };
 
@@ -21,6 +21,7 @@ const CATEGORY_TEXT_CLASS: Record<string, string> = {
   perfect: "text-green-400",
   sounding: "text-blue-400",
   near: "text-red-400",
+  written: "text-yellow-400",
 };
 
 const ADVANCED_COLOR: Record<string, string> = {
@@ -248,8 +249,9 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
   }, [wordList, displayResultsMap]);
 
   function handleWordClick(w: string) {
-    setLastClickedWord(w.toLowerCase());
-    onLookupWord(w.toLowerCase());
+    const lower = w.toLowerCase();
+    setLastClickedWord(lower);
+    onLookupWord(lower);
   }
 
   function renderWordPill(r: { word: string; category: string }, i: number, small = false) {
@@ -358,6 +360,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
               <div className="flex items-center gap-1"><span className="w-2 h-2 bg-green-400 rounded-full" /> Perfect</div>
               <div className="flex items-center gap-1"><span className="w-2 h-2 bg-blue-400 rounded-full" /> Sounding</div>
               <div className="flex items-center gap-1"><span className="w-2 h-2 bg-red-400 rounded-full" /> Near</div>
+              <div className="flex items-center gap-1"><span className="w-2 h-2 bg-yellow-400 rounded-full" /> Written</div>
             </div>
           )}
 

@@ -11,7 +11,25 @@ export async function GET(request: Request) {
     return Response.json({ error: "No word provided" }, { status: 400 });
   }
 
-  // Try Dictionary API.dev first (real definitions)
+  // Try local rap dictionary FIRST for slang/rap terms
+  try {
+    const filePath = join(process.cwd(), "app", "data", "rap-dictionary.json");
+    const fileContents = await readFile(filePath, "utf8");
+    const rapDict = JSON.parse(fileContents);
+    if (rapDict.terms?.[word]) {
+      const def = rapDict.terms[word];
+      const isGeneric = def.includes("Proper noun, surname, place name");
+      if (!isGeneric) {
+        return Response.json({
+          word,
+          source: "local",
+          definitions: [{ partOfSpeech: "slang", definition: def }],
+        });
+      }
+    }
+  } catch {}
+
+  // Try Dictionary API.dev (real definitions)
   try {
     const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
     if (res.ok) {
@@ -86,24 +104,6 @@ export async function GET(request: Request) {
       }
     } catch {}
   }
-
-  // Final fallback: local dictionary (only return real definitions, skip generic placeholders)
-  try {
-    const filePath = join(process.cwd(), "app", "data", "rap-dictionary.json");
-    const fileContents = await readFile(filePath, "utf8");
-    const rapDict = JSON.parse(fileContents);
-    if (rapDict.terms?.[word]) {
-      const def = rapDict.terms[word];
-      const isGeneric = def.includes("Proper noun, surname, place name");
-      if (!isGeneric) {
-        return Response.json({
-          word,
-          source: "local",
-          definitions: [{ partOfSpeech: "definition", definition: def }],
-        });
-      }
-    }
-  } catch {}
 
   return Response.json({ error: "Word not found in any dictionary" }, { status: 404 });
 }

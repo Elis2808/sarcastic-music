@@ -20,7 +20,10 @@ export default function Home() {
   const [activePage, setActivePage] = useState<Page>("rhyme");
   const [previousPage, setPreviousPage] = useState<Page | null>(null);
   const [dictWord, setDictWord] = useState("");
-  const [lastClickedRhymeWord, setLastClickedRhymeWord] = useState("");
+  const [lastClickedRhymeWord, setLastClickedRhymeWord] = useState(() => {
+    if (typeof sessionStorage !== "undefined") return sessionStorage.getItem("lastRhymeWord") || "";
+    return "";
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   
   // History restore state
@@ -124,7 +127,9 @@ export default function Home() {
 
   function openDictionary(word: string) {
     setDictWord(word);
-    setLastClickedRhymeWord(word.toLowerCase());
+    const lower = word.toLowerCase();
+    setLastClickedRhymeWord(lower);
+    if (typeof sessionStorage !== "undefined") sessionStorage.setItem("lastRhymeWord", lower);
     addHistoryItem({
       type: "dictionary_lookup",
       title: word,
