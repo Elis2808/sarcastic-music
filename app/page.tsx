@@ -223,9 +223,6 @@ export default function Home() {
         }}
       />
 
-      {/* Desktop liquid glass carousel */}
-      <GlassCarousel />
-
       {/* Mobile nav — auto-scrolling + swipeable */}
       <MobileNav
         items={NAV_ITEMS}
