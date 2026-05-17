@@ -18,10 +18,11 @@ interface MobileNavProps {
 export default function MobileNav({ items, activePage, onNavigate }: MobileNavProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
-  const speedRef = useRef(0.4); // px per frame — slow but noticeable
+  const speedRef = useRef(0.4);
   const isTouchingRef = useRef(false);
   const touchStartXRef = useRef(0);
   const scrollStartRef = useRef(0);
+  const didDragRef = useRef(false);
 
   const tick = useCallback(() => {
     const el = scrollRef.current;
@@ -43,6 +44,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
 
   function handleTouchStart(e: React.TouchEvent) {
     isTouchingRef.current = true;
+    didDragRef.current = false;
     touchStartXRef.current = e.touches[0].clientX;
     scrollStartRef.current = scrollRef.current?.scrollLeft ?? 0;
   }
@@ -51,8 +53,8 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
     const el = scrollRef.current;
     if (!el) return;
     const dx = touchStartXRef.current - e.touches[0].clientX;
+    if (Math.abs(dx) > 5) didDragRef.current = true;
     el.scrollLeft = scrollStartRef.current + dx;
-    // Keep loop bounds
     if (el.scrollLeft >= el.scrollWidth / 2) el.scrollLeft = 0;
     if (el.scrollLeft < 0) el.scrollLeft = el.scrollWidth / 2 - 1;
   }
@@ -63,10 +65,11 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
 
   return (
     <div className="sm:hidden w-full mb-6 overflow-hidden">
+      <style>{`.nav-no-scrollbar::-webkit-scrollbar{display:none}`}</style>
       <div
         ref={scrollRef}
-        className="flex gap-1.5 overflow-x-hidden px-2 scrollbar-hide"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        className="nav-no-scrollbar flex gap-1.5 px-2"
+        style={{ overflowX: "scroll", scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -76,7 +79,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
             key={i}
             onTouchEnd={(e) => {
               e.stopPropagation();
-              onNavigate(page);
+              if (!didDragRef.current) onNavigate(page);
             }}
             style={{ borderColor: activePage === page ? "#C9A84C" : "rgba(201,168,76,0.45)" }}
             className={`px-3 py-1.5 rounded-lg text-xs outline-none whitespace-nowrap border-2 flex-shrink-0 ${
