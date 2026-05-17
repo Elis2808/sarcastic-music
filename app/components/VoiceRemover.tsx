@@ -2,10 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { addHistoryItem } from "../lib/history";
-import AutoScrollPlatforms from "./AutoScrollPlatforms";
 import { addRecentFile } from "../lib/recentFiles";
-import UrlDropZone from "./UrlDropZone";
-import { showToast } from "./Toast";
 
 type StemType = "no_vocals" | "vocals" | "both";
 
@@ -14,17 +11,7 @@ interface VoiceRemoverProps {
   initialPlatform?: string;
 }
 
-const PLATFORMS = [
-  { id: "youtube", label: "YouTube", placeholder: "Paste YouTube URL here" },
-  { id: "soundcloud", label: "SoundCloud", placeholder: "Paste SoundCloud URL here" },
-  { id: "tiktok", label: "TikTok", placeholder: "Paste TikTok URL here" },
-  { id: "instagram", label: "Instagram", placeholder: "Paste Instagram URL here" },
-  { id: "facebook", label: "Facebook", placeholder: "Paste Facebook URL here" },
-  { id: "twitter", label: "Twitter/X", placeholder: "Paste Twitter/X URL here" },
-  { id: "reddit", label: "Reddit", placeholder: "Paste Reddit URL here" },
-  { id: "bandcamp", label: "Bandcamp", placeholder: "Paste Bandcamp URL here" },
-  { id: "mixcloud", label: "Mixcloud", placeholder: "Paste Mixcloud URL here" },
-  { id: "dailymotion", label: "Dailymotion", placeholder: "Paste Dailymotion URL here" },
+const _UNUSED = [
   { id: "imgur", label: "Imgur", placeholder: "Paste Imgur URL here" },
   { id: "vimeo", label: "Vimeo", placeholder: "Paste Vimeo URL here" },
   { id: "twitch", label: "Twitch", placeholder: "Paste Twitch URL here" },
@@ -94,11 +81,9 @@ function DownloadReadyCard({ instrumentalUrl, vocalsUrl, filename, onDismiss }: 
   );
 }
 
-export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemoverProps) {
+export default function VoiceRemover(_props: VoiceRemoverProps) {
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [linkUrl, setLinkUrl] = useState(initialUrl || "");
-  const [selectedPlatform, setSelectedPlatform] = useState(initialPlatform || "");
   const [processing, setProcessing] = useState<StemType | null>(null);
   // bothPhase drives the sequential animation for "both" mode
   const [bothPhase, setBothPhase] = useState<"processing" | "instrumental" | "transit" | "vocals" | null>(null);
@@ -195,7 +180,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
   }, [handleFile]);
 
   const download = useCallback(async (stem: StemType) => {
-    if (!file && !linkUrl.trim()) return;
+    if (!file) return;
     setProcessing(stem);
     if (stem === "both") setBothPhase("processing");
     setElapsed(0);
@@ -205,66 +190,21 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
     timerRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
 
     try {
-      let jobId: string;
-      
-      if (linkUrl.trim()) {
-        // Process link through downloader first
-        const linkRes = await fetch("/api/youtube", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: linkUrl.trim(), format: "mp3" }),
-        });
-        if (!linkRes.ok) {
-          const err = await linkRes.json();
-          throw new Error(err.error || "Failed to fetch audio from link");
-        }
-        const audioBlob = await linkRes.blob();
-        const formData = new FormData();
-        formData.append("file", audioBlob, "audio.mp3");
-        formData.append("stem", stem);
-        
-        const startRes = await fetch("/api/separate", { method: "POST", body: formData });
-        const startData = await startRes.json();
-        if (!startRes.ok) throw new Error(startData.error || "Failed to start processing");
-        jobId = startData.jobId;
+      const formData = new FormData();
+      formData.append("file", file!);
+      formData.append("stem", stem);
 
-        // Add to history for link processing
-        const displayName = linkUrl.substring(0, 50) + (linkUrl.length > 50 ? '...' : '');
-        addHistoryItem({
-          type: "song_split",
-          title: displayName,
-          details: stem === "both" ? "Vocals + Instrumental" : stem === "vocals" ? "Vocals only" : "Instrumental only",
-          data: {
-            tool: "voice",
-            url: linkUrl,
-            platform: selectedPlatform || undefined,
-          },
-        });
-      } else {
-        // Process file upload
-        const formData = new FormData();
-        formData.append("file", file!);
-        formData.append("stem", stem);
-        
-        const startRes = await fetch("/api/separate", { method: "POST", body: formData });
-        const startData = await startRes.json();
-        if (!startRes.ok) throw new Error(startData.error || "Failed to start processing");
-        jobId = startData.jobId;
+      const startRes = await fetch("/api/separate", { method: "POST", body: formData });
+      const startData = await startRes.json();
+      if (!startRes.ok) throw new Error(startData.error || "Failed to start processing");
+      const jobId: string = startData.jobId;
 
-        // Add to history
-        const displayName = file?.name || linkUrl.substring(0, 50) + (linkUrl.length > 50 ? '...' : '');
-        addHistoryItem({
-          type: "song_split",
-          title: displayName,
-          details: stem === "both" ? "Vocals + Instrumental" : stem === "vocals" ? "Vocals only" : "Instrumental only",
-          data: {
-            tool: "voice",
-            url: linkUrl || undefined,
-            platform: selectedPlatform || undefined,
-            fileName: file?.name,
-          },
-        });
-      }
+      addHistoryItem({
+        type: "song_split",
+        title: file?.name || "audio",
+        details: stem === "both" ? "Vocals + Instrumental" : stem === "vocals" ? "Vocals only" : "Instrumental only",
+        data: { tool: "voice", fileName: file?.name },
+      });
 
       // Poll for job completion
       const pollJob = async (jid: string): Promise<{downloadUrl: string, vocalsUrl?: string}> => {
@@ -351,60 +291,14 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
       setElapsed(0);
       setDemucsProgress(0);
     }
-  }, [file, linkUrl]);
+  }, [file]);
 
   return (
     <div className="flex flex-col items-center w-full pt-8 px-4 select-none max-sm:pt-6 max-sm:px-3">
-      <h1 className="text-3xl max-sm:text-2xl font-bold mb-1">
-        {selectedPlatform ? `${PLATFORMS.find(p => p.id === selectedPlatform)?.label || ''} Song Splitter` : "Song Splitter"}
-      </h1>
+      <h1 className="text-3xl max-sm:text-2xl font-bold mb-1">Song Splitter</h1>
       <p className="text-gray-500 text-xs mb-4">Split any song into a vocal file and instrumental file.</p>
 
-      {/* Platform selector */}
       <div className="w-full max-w-xl">
-        <AutoScrollPlatforms
-          platforms={PLATFORMS}
-          selected={selectedPlatform}
-          onSelect={(id) => setSelectedPlatform(id)}
-        />
-      </div>
-
-      {/* Link input */}
-      <div className="w-full max-w-xl mb-4">
-        <div className="relative">
-          <input
-            value={linkUrl}
-            onChange={(e) => { setLinkUrl(e.target.value); setFile(null); }}
-            placeholder={selectedPlatform 
-              ? PLATFORMS.find(p => p.id === selectedPlatform)?.placeholder || "Paste link here"
-              : "Paste audio link here (YouTube, SoundCloud, TikTok, etc.)"}
-            className="w-full px-4 py-3 rounded-full bg-black text-white outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
-            style={{ border: "1px solid rgba(201,168,76,0.25)" }}
-          />
-          {linkUrl && (
-            <button
-              onClick={() => setLinkUrl("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-400"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Drop zone - only show when no link entered */}
-      {!linkUrl && (
-        <UrlDropZone
-          onUrlDrop={(url) => {
-            setLinkUrl(url);
-            const platform = PLATFORMS.find(p => url.toLowerCase().includes(p.id));
-            if (platform) setSelectedPlatform(platform.id);
-            showToast("URL dropped! Click Process to start separation.", "info");
-          }}
-          className="w-full max-w-xl"
-        >
           <div
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
@@ -441,14 +335,13 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
             )}
             <input ref={inputRef} type="file" accept="audio/*,.mp3,.wav,.aac,.m4a,.ogg,.flac,.aiff,.aif,.wma,.opus,.mp4" className="hidden" onChange={onFileChange} />
           </div>
-        </UrlDropZone>
-      )}
+      </div>
 
       {/* Error */}
       {error && <p className="mt-4 text-red-400 text-sm text-center max-w-md">{error}</p>}
 
       {/* Download buttons */}
-      {(file || linkUrl.trim()) && (
+      {file && (
         <div className="mt-8 flex flex-col items-center gap-4 w-full max-w-xs">
           <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Download as</p>
 

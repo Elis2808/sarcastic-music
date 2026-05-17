@@ -101,6 +101,40 @@ export default function AutoScrollPlatforms({ platforms, selected, onSelect }: P
       setTimeout(() => { touchActive.current = false; }, 0);
     }
 
+    // ── Mouse drag (desktop) ────────────────────────────────────────
+    function onMouseDown(e: MouseEvent) {
+      dragging.current = true;
+      didDrag.current = false;
+      dragStartX.current = e.clientX;
+      dragStartPos.current = autoPos.current;
+      lastX.current = e.clientX;
+      lastT.current = performance.now();
+      velocity.current = 0;
+      e.preventDefault();
+    }
+
+    function onMouseMove(e: MouseEvent) {
+      if (!dragging.current) return;
+      const dx = e.clientX - dragStartX.current;
+      if (Math.abs(dx) > 4) didDrag.current = true;
+      const now = performance.now();
+      const dt = now - lastT.current;
+      if (dt > 0) velocity.current = ((e.clientX - lastX.current) / dt) * 16;
+      lastX.current = e.clientX;
+      lastT.current = now;
+      autoPos.current = wrap(dragStartPos.current + dx);
+      if (el) el.style.transform = `translateX(${autoPos.current}px)`;
+    }
+
+    function onMouseUp() {
+      if (!dragging.current) return;
+      dragging.current = false;
+    }
+
+    el.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+
     el.addEventListener("touchstart", onStart, { passive: true });
     el.addEventListener("touchmove",  onMove,  { passive: false });
     el.addEventListener("touchend",   onEnd,   { passive: true });
@@ -108,6 +142,9 @@ export default function AutoScrollPlatforms({ platforms, selected, onSelect }: P
     return () => {
       cancelAnimationFrame(rafRef.current);
       clearTimeout(tid);
+      el.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
       el.removeEventListener("touchstart", onStart);
       el.removeEventListener("touchmove",  onMove);
       el.removeEventListener("touchend",   onEnd);
@@ -116,7 +153,7 @@ export default function AutoScrollPlatforms({ platforms, selected, onSelect }: P
 
   return (
     <div
-      className="w-full mb-3 overflow-hidden rounded-full"
+      className="w-full mb-3 overflow-hidden rounded-full select-none cursor-grab active:cursor-grabbing"
       style={{
         backgroundColor: "rgba(20,20,24,0.48)",
         backdropFilter: "blur(14px) saturate(160%)",
@@ -136,7 +173,7 @@ export default function AutoScrollPlatforms({ platforms, selected, onSelect }: P
           return (
             <button
               key={i}
-              onClick={() => onSelect(p.id === selected ? "" : p.id)}
+              onClick={(e) => { if (didDrag.current) { e.preventDefault(); return; } onSelect(p.id === selected ? "" : p.id); }}
               style={{
                 height: "100%",
                 color: isActive ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
