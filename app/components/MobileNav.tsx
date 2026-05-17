@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect } from "react";
 
 type Page = string;
 interface NavItem { page: Page; label: string; }
@@ -16,7 +16,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
   const trackRef = useRef<HTMLDivElement>(null);
   const pillRef  = useRef<HTMLDivElement>(null);
   const rafRef   = useRef<number>(0);
-  const btnRefs  = useRef<HTMLButtonElement[]>([]);   // first-set only (items.length)
+  const btnRefs  = useRef<HTMLButtonElement[]>([]);
 
   // auto-scroll state
   const autoPos  = useRef(0);
@@ -31,9 +31,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
   const dragStartPos = useRef(0);
   const lastX        = useRef(0);
   const lastT        = useRef(0);
-
-  // hovered item while dragging
-  const [hoveredIdx, setHoveredIdx] = useState<number>(-1);
+  const hoveredIdx   = useRef(-1); // DOM-driven, no React state
 
   const navigateFn   = useRef(onNavigate);
   navigateFn.current = onNavigate;
@@ -142,7 +140,12 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
       const nearest = nearestBtn(trackSpaceX);
       if (nearest) {
         movePillToBtn(nearest.btn, false);
-        setHoveredIdx(nearest.idx);
+        // scale buttons via DOM — zero React re-renders
+        btnRefs.current.forEach((b, i) => {
+          if (!b) return;
+          b.style.transform = i === nearest!.idx ? "scale(1.15)" : "scale(1)";
+        });
+        hoveredIdx.current = nearest.idx;
       }
     }
 
@@ -158,7 +161,8 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
           navigateFn.current(items[nearest.idx].page);
         }
       }
-      setHoveredIdx(-1);
+      hoveredIdx.current = -1;
+      btnRefs.current.forEach(b => { if (b) b.style.transform = "scale(1)"; });
     }
 
     el.addEventListener("touchstart", onStart, { passive: false });
@@ -197,8 +201,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
         {doubled.map(({ page, label }, i) => {
           const isFirst = i < items.length;
           const itemIdx = i % items.length;
-          const isActive  = activePage === page;
-          const isHovered = isFirst && hoveredIdx === itemIdx;
+          const isActive = activePage === page;
           return (
             <button
               key={i}
@@ -207,10 +210,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
                 e.stopPropagation();
                 if (!didDrag.current) navigateFn.current(page);
               }}
-              style={{
-                transform: isHovered ? "scale(1.15)" : "scale(1)",
-                transition: "transform 0.15s ease, color 0.2s",
-              }}
+              style={{ willChange: "transform" }}
               className={`relative z-10 px-3 py-1.5 rounded-lg text-xs outline-none whitespace-nowrap border-2 border-transparent flex-shrink-0 ${
                 isActive ? "text-[#C9A84C] font-semibold" : "text-gray-400"
               }`}
