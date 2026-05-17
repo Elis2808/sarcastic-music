@@ -175,9 +175,9 @@ export default function AudioMaster({ initialUrl: _initialUrl, initialPlatform: 
       {!processing && (
         <div className="mt-8 w-full max-w-xl grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
+            { label: "Clarity EQ", desc: "De-ess, cuts mud & boom, boosts presence & air" },
             { label: "Loudness", desc: "-14 LUFS streaming standard" },
-            { label: "EQ", desc: "Low end boost, mud cut, air" },
-            { label: "Compression", desc: "Dynamic range control" },
+            { label: "Compression", desc: "Tight dynamics, no pumping" },
             { label: "Limiting", desc: "True peak limit at -1 dBTP" },
           ].map(item => (
             <div
