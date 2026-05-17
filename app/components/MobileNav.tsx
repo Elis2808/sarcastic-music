@@ -138,17 +138,14 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
       autoPos.current = wrap(dragStartPos.current + dx);
       el!.style.transform = `translateX(${autoPos.current}px)`;
 
-      // move pill to nearest button while dragging
-      // touchX in track space = screenX - trackRect.left - autoPos
+      // highlight nearest button while dragging (scale only, pill stays on active tab)
       const trackRect = el!.getBoundingClientRect();
       const trackSpaceX = x - trackRect.left - autoPos.current;
       const nearest = nearestBtn(trackSpaceX);
-      if (nearest) {
-        movePillToBtn(nearest.btn, false);
-        // scale buttons via DOM — zero React re-renders
+      if (nearest && nearest.idx !== hoveredIdx.current) {
         btnRefs.current.forEach((b, i) => {
           if (!b) return;
-          b.style.transform = i === nearest!.idx ? "scale(1.15)" : "scale(1)";
+          b.style.transform = i === nearest!.idx ? "scale(1.1)" : "scale(1)";
         });
         hoveredIdx.current = nearest.idx;
       }
@@ -160,18 +157,10 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
       btnRefs.current.forEach(b => { if (b) b.style.transform = "scale(1)"; });
 
       if (didDrag.current) {
-        const trackRect = el!.getBoundingClientRect();
-        const x = e.changedTouches[0].clientX;
-        const trackSpaceX = x - trackRect.left - autoPos.current;
-        const nearest = nearestBtn(trackSpaceX);
-        if (nearest) {
-          navigateFn.current(items[nearest.idx].page);
-          movePillToBtn(nearest.btn, true);
-        } else {
-          movePillToPage(activeRef.current, true);
-        }
+        // swipe — just snap pill back to active page, no navigation
+        movePillToPage(activeRef.current, true);
       } else {
-        // pure tap — find which button was tapped by position
+        // pure tap — navigate to tapped button
         const trackRect = el!.getBoundingClientRect();
         const x = e.changedTouches[0].clientX;
         const trackSpaceX = x - trackRect.left - autoPos.current;
