@@ -10,52 +10,30 @@ interface Props {
   onSelect: (id: string) => void;
 }
 
-const BASE_SPEED = 0.5;
-
 export default function AutoScrollPlatforms({ platforms, selected, onSelect }: Props) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const rafRef   = useRef<number>(0);
-  const autoPos  = useRef(0);
-  const halfW    = useRef(0);
-  const velocity = useRef(0);
-  const dragging     = useRef(false);
-  const didDrag      = useRef(false);
-  const dragStartX   = useRef(0);
-  const dragStartPos = useRef(0);
-  const lastX        = useRef(0);
-  const lastT        = useRef(0);
-  const touchActive  = useRef(false);
-
-  const doubled = [...platforms, ...platforms];
+  const trackRef    = useRef<HTMLDivElement>(null);
+  const rafRef      = useRef<number>(0);
+  const autoPos     = useRef(0);
+  const dragging    = useRef(false);
+  const didDrag     = useRef(false);
+  const dragStartX  = useRef(0);
+  const dragStartPos= useRef(0);
+  const lastX       = useRef(0);
+  const lastT       = useRef(0);
+  const touchActive = useRef(false);
+  void rafRef; // unused after removing auto-scroll
 
   useEffect(() => {
     const el = trackRef.current;
     if (!el) return;
 
-    const tid = setTimeout(() => { halfW.current = el.scrollWidth / 2; }, 150);
-
     function wrap(p: number) {
-      if (halfW.current <= 0) return p;
-      while (p < -halfW.current) p += halfW.current;
-      while (p > 0) p -= halfW.current;
+      const half = el!.scrollWidth / 2;
+      if (half <= 0) return p;
+      while (p < -half) p += half;
+      while (p > 0) p -= half;
       return p;
     }
-
-    function loop() {
-      if (!dragging.current) {
-        if (Math.abs(velocity.current) > 0.05) {
-          autoPos.current += velocity.current;
-          velocity.current += (-BASE_SPEED - velocity.current) * 0.06;
-        } else {
-          velocity.current = 0;
-          autoPos.current -= BASE_SPEED;
-        }
-        autoPos.current = wrap(autoPos.current);
-        if (el) el.style.transform = `translateX(${autoPos.current}px)`;
-      }
-      rafRef.current = requestAnimationFrame(loop);
-    }
-    rafRef.current = requestAnimationFrame(loop);
 
     function onStart(e: TouchEvent) {
       touchActive.current = true;
@@ -65,18 +43,14 @@ export default function AutoScrollPlatforms({ platforms, selected, onSelect }: P
       dragStartPos.current = autoPos.current;
       lastX.current = e.touches[0].clientX;
       lastT.current = performance.now();
-      velocity.current = 0;
     }
 
     function onMove(e: TouchEvent) {
       const x = e.touches[0].clientX;
       const dx = x - dragStartX.current;
       if (Math.abs(dx) > 8) { e.preventDefault(); didDrag.current = true; }
-      const now = performance.now();
-      const dt = now - lastT.current;
-      if (dt > 0) velocity.current = ((x - lastX.current) / dt) * 16;
       lastX.current = x;
-      lastT.current = now;
+      lastT.current = performance.now();
       autoPos.current = wrap(dragStartPos.current + dx);
       if (el) el.style.transform = `translateX(${autoPos.current}px)`;
     }
@@ -109,7 +83,6 @@ export default function AutoScrollPlatforms({ platforms, selected, onSelect }: P
       dragStartPos.current = autoPos.current;
       lastX.current = e.clientX;
       lastT.current = performance.now();
-      velocity.current = 0;
       e.preventDefault();
     }
 
@@ -117,11 +90,8 @@ export default function AutoScrollPlatforms({ platforms, selected, onSelect }: P
       if (!dragging.current) return;
       const dx = e.clientX - dragStartX.current;
       if (Math.abs(dx) > 4) didDrag.current = true;
-      const now = performance.now();
-      const dt = now - lastT.current;
-      if (dt > 0) velocity.current = ((e.clientX - lastX.current) / dt) * 16;
       lastX.current = e.clientX;
-      lastT.current = now;
+      lastT.current = performance.now();
       autoPos.current = wrap(dragStartPos.current + dx);
       if (el) el.style.transform = `translateX(${autoPos.current}px)`;
     }
@@ -140,8 +110,6 @@ export default function AutoScrollPlatforms({ platforms, selected, onSelect }: P
     el.addEventListener("touchend",   onEnd,   { passive: true });
 
     return () => {
-      cancelAnimationFrame(rafRef.current);
-      clearTimeout(tid);
       el.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
@@ -168,7 +136,7 @@ export default function AutoScrollPlatforms({ platforms, selected, onSelect }: P
         className="relative flex gap-1"
         style={{ width: "max-content", willChange: "transform", height: "100%" }}
       >
-        {doubled.map((p, i) => {
+        {platforms.map((p: Platform, i: number) => {
           const isActive = selected === p.id;
           return (
             <button
