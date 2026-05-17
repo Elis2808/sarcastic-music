@@ -1,7 +1,5 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
-
 interface NavItem { page: string; label: string; icon?: React.ReactNode; }
 interface Props {
   items: NavItem[];
@@ -9,221 +7,55 @@ interface Props {
   onNavigate: (page: string) => void;
 }
 
-// lerp helper
-function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
-
 export default function DesktopNav({ items, activePage, onNavigate }: Props) {
-  const navRef      = useRef<HTMLElement>(null);
-  const btnRefs     = useRef<(HTMLButtonElement | null)[]>([]);
-  const activeRef   = useRef<HTMLSpanElement>(null);
-  const hoverRef    = useRef<HTMLSpanElement>(null);
-  const rafRef      = useRef<number>(0);
-
-  // RAF-driven state (no React re-renders in the loop)
-  const state = useRef({
-    // active indicator — snaps instantly on page change
-    aLeft: 0, aWidth: 0,
-    // hover indicator — lerps toward target
-    hLeft: 0, hWidth: 0, hOpacity: 0,
-    // lerp target
-    targetLeft: 0, targetWidth: 0, targetOpacity: 0,
-    // velocity tracking for opacity damping
-    prevLeft: 0, velocity: 0,
-    isHovering: false,
-  });
-
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-  const hoveredIdxRef = useRef<number | null>(null);
-  const activeIdxRef  = useRef(0);
-
-  // Update active indicator immediately on page change (no lerp)
-  useEffect(() => {
-    const idx = items.findIndex(i => i.page === activePage);
-    activeIdxRef.current = idx;
-    const btn = btnRefs.current[idx];
-    const nav = navRef.current;
-    if (!btn || !nav) return;
-    const br = btn.getBoundingClientRect();
-    const nr = nav.getBoundingClientRect();
-    const left = br.left - nr.left;
-    const width = br.width;
-    state.current.aLeft  = left;
-    state.current.aWidth = width;
-    if (activeRef.current) {
-      activeRef.current.style.left    = `${left}px`;
-      activeRef.current.style.width   = `${width}px`;
-      activeRef.current.style.opacity = "1";
-    }
-    // If not hovering, reset hover to active position so it starts from the right place
-    if (!state.current.isHovering) {
-      state.current.hLeft  = left;
-      state.current.hWidth = width;
-      state.current.targetLeft  = left;
-      state.current.targetWidth = width;
-    }
-  }, [activePage]);
-
-  // RAF loop — lerps hover indicator with inertia + velocity-based opacity
-  useEffect(() => {
-    const nav = navRef.current;
-    if (!nav) return;
-
-    function tick() {
-      const s = state.current;
-      const LERP   = 0.09;  // low = more inertia, heavier feel
-      const OLERPD = 0.06;  // opacity lerp down (slow ramp-in)
-      const OLERPU = 0.08;  // opacity lerp up (slightly faster fade-out)
-
-      // Position lerp
-      const prevLeft  = s.hLeft;
-      s.hLeft  = lerp(s.hLeft,  s.targetLeft,  LERP);
-      s.hWidth = lerp(s.hWidth, s.targetWidth, LERP);
-
-      // Velocity = how fast indicator is moving
-      s.velocity = Math.abs(s.hLeft - prevLeft);
-
-      // Reduce opacity during fast movement (velocity damping)
-      const velocityPenalty = Math.min(s.velocity * 0.18, 0.28);
-      const targetOp = s.isHovering
-        ? Math.max(0, s.targetOpacity - velocityPenalty)
-        : 0;
-
-      const oLerp = targetOp > s.hOpacity ? OLERPD : OLERPU;
-      s.hOpacity = lerp(s.hOpacity, targetOp, oLerp);
-
-      // Apply to DOM directly — no React state
-      const el = hoverRef.current;
-      if (el) {
-        el.style.left    = `${s.hLeft}px`;
-        el.style.width   = `${s.hWidth}px`;
-        el.style.opacity = `${s.hOpacity}`;
-      }
-
-      rafRef.current = requestAnimationFrame(tick);
-    }
-
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, []);
-
-  function handleMouseEnter(idx: number) {
-    const btn = btnRefs.current[idx];
-    const nav = navRef.current;
-    if (!btn || !nav) return;
-    const br = btn.getBoundingClientRect();
-    const nr = nav.getBoundingClientRect();
-    state.current.targetLeft    = br.left - nr.left;
-    state.current.targetWidth   = br.width;
-    state.current.targetOpacity = 0.72; // hover = 72% of active — anticipation not commitment
-    state.current.isHovering    = true;
-    hoveredIdxRef.current = idx;
-    setHoveredIdx(idx);
-  }
-
-  function handleMouseLeave() {
-    state.current.targetOpacity = 0;
-    state.current.isHovering    = false;
-    hoveredIdxRef.current = null;
-    setHoveredIdx(null);
-  }
-
   return (
     <nav
-      ref={navRef}
       className="hidden sm:flex items-center mb-6 rounded-full"
-      onMouseLeave={handleMouseLeave}
       style={{
-        position: "relative",
         height: 58,
         gap: 2,
         padding: "6px 8px",
         backgroundColor: "rgba(20,20,24,0.48)",
         backdropFilter: "blur(14px) saturate(160%)",
         WebkitBackdropFilter: "blur(14px) saturate(160%)",
-        border: "1px solid rgba(255,255,255,0.07)",
-        boxShadow: "0 6px 18px rgba(0,0,0,0.16)",
-        overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.06)",
+        boxShadow: "0 4px 14px rgba(0,0,0,0.14)",
       }}
     >
-
-      {/* ── Active indicator — snaps to active tab, no lerp ── */}
-      <span
-        ref={activeRef}
-        aria-hidden
-        className="absolute rounded-full pointer-events-none"
-        style={{
-          top: 6, height: "calc(100% - 12px)",
-          left: 0, width: 0, opacity: 0,
-          zIndex: 1,
-          transition: "left 0.28s cubic-bezier(0.4,0,0.2,1), width 0.28s cubic-bezier(0.4,0,0.2,1)",
-        }}
-      >
-        <span className="absolute inset-0 rounded-full" style={{
-          background: "linear-gradient(to bottom, rgba(255,255,255,0.11), rgba(255,255,255,0.05))",
-        }} />
-        <span className="absolute inset-0 rounded-full" style={{
-          background: "radial-gradient(circle at center, rgba(255,255,255,0.045), rgba(255,255,255,0) 72%)",
-        }} />
-        <span className="absolute pointer-events-none" style={{
-          top: 1, left: "14%", width: "72%", height: "34%",
-          borderRadius: "50%",
-          background: "linear-gradient(to bottom, rgba(255,255,255,0.12), rgba(255,255,255,0))",
-          filter: "blur(3px)", opacity: 0.22,
-        }} />
-        <span className="absolute inset-0 rounded-full" style={{
-          border: "1px solid rgba(255,255,255,0.08)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
-        }} />
-      </span>
-
-      {/* ── Hover indicator — RAF lerp with inertia ── */}
-      <span
-        ref={hoverRef}
-        aria-hidden
-        className="absolute rounded-full pointer-events-none"
-        style={{
-          top: 6, height: "calc(100% - 12px)",
-          left: 0, width: 0, opacity: 0,
-          zIndex: 2,
-        }}
-      >
-        <span className="absolute inset-0 rounded-full" style={{
-          background: "linear-gradient(to bottom, rgba(255,255,255,0.07), rgba(255,255,255,0.03))",
-        }} />
-        <span className="absolute inset-0 rounded-full" style={{
-          border: "1px solid rgba(255,255,255,0.05)",
-        }} />
-      </span>
-
-      {/* ── Tab buttons ── */}
-      {items.map(({ page, label, icon }, idx) => {
-        const isActive  = activePage === page;
-        const isHovered = hoveredIdx === idx;
+      {items.map(({ page, label, icon }) => {
+        const isActive = activePage === page;
         return (
           <button
             key={page}
-            ref={el => { btnRefs.current[idx] = el; }}
             onClick={() => onNavigate(page)}
-            onMouseEnter={() => handleMouseEnter(idx)}
             className="relative flex items-center justify-center gap-1.5 px-5 h-full rounded-full outline-none whitespace-nowrap"
             style={{
-              fontSize: 13, fontWeight: 500,
+              fontSize: 13,
+              fontWeight: 500,
               letterSpacing: "-0.015em",
               WebkitFontSmoothing: "antialiased",
-              zIndex: 3,
-              color: isActive
-                ? "rgba(255,240,205,0.96)"
-                : isHovered
-                  ? "rgba(255,255,255,0.72)"
-                  : "rgba(255,255,255,0.55)",
-              transition: "color 0.2s ease-out",
+              color: isActive ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
+              backgroundColor: isActive ? "rgba(201,168,76,0.06)" : "transparent",
+              transition: "color 160ms ease-out, background-color 160ms ease-out, opacity 160ms ease-out",
+            }}
+            onMouseEnter={e => {
+              if (!isActive) {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.045)";
+                (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.75)";
+              }
+            }}
+            onMouseLeave={e => {
+              if (!isActive) {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+                (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.48)";
+              }
             }}
           >
             {icon && (
               <span style={{
                 display: "flex", alignItems: "center",
-                color: isActive ? "#C9A84C" : "rgba(255,255,255,0.45)",
-                transition: "color 0.22s ease-out",
+                color: isActive ? "#C9A84C" : "rgba(255,255,255,0.40)",
+                transition: "color 160ms ease-out",
               }}>
                 {icon}
               </span>
@@ -232,7 +64,6 @@ export default function DesktopNav({ items, activePage, onNavigate }: Props) {
           </button>
         );
       })}
-
     </nav>
   );
 }
