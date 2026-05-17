@@ -417,19 +417,25 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
           </div>
 
           <div className="flex gap-2 mb-2 justify-center flex-wrap">
-            {(["top", "perfect", "sounding", "near", "written", "all"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(prev => prev === tab ? "top" : tab)}
-                className={`px-3 py-2 rounded-xl text-sm ${
-                  activeTab === tab
-                    ? "bg-black text-[#C9A84C] border border-[#C9A84C]"
-                    : "bg-gray-800 text-gray-300 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 border border-transparent"
-                } focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]/50`}
-              >
-                {tab === "top" ? "Top" : tab === "all" ? "All" : tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
+            {(["top", "perfect", "sounding", "near", "written", "all"] as const).map((tab) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    if (tab === "top") { setActiveTab("top"); return; }
+                    setActiveTab(isActive ? "top" : tab);
+                  }}
+                  className={`px-3 py-2 rounded-xl text-sm ${
+                    isActive
+                      ? "bg-black text-[#C9A84C] border border-[#C9A84C]"
+                      : "bg-gray-800 text-gray-300 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 border border-transparent"
+                  } focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]/50`}
+                >
+                  {tab === "top" ? "Top" : tab === "all" ? "All" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              );
+            })}
           </div>
 
           {rhymeMode === "basic" && (
