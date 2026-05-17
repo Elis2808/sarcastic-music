@@ -32,6 +32,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
   const lastX        = useRef(0);
   const lastT        = useRef(0);
   const hoveredIdx   = useRef(-1); // DOM-driven, no React state
+  const touchActive  = useRef(false); // true between touchstart and touchend
 
   const navigateFn   = useRef(onNavigate);
   navigateFn.current = onNavigate;
@@ -107,6 +108,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
     rafRef.current = requestAnimationFrame(loop);
 
     function onStart(e: TouchEvent) {
+      touchActive.current = true;
       dragging.current   = true;
       didDrag.current    = false;
       dragStartX.current = e.touches[0].clientX;
@@ -164,16 +166,21 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
         const nearest = nearestBtn(trackSpaceX);
         if (nearest) {
           navigateFn.current(items[nearest.idx].page);
-          // snap pill to landed position with animation
           movePillToBtn(nearest.btn, true);
         } else {
-          // fallback: snap back to current active page
           movePillToPage(activeRef.current, true);
         }
       } else {
-        // tap with no drag — restore pill to active page
+        // pure tap — find which button was tapped by position
+        const trackRect = el!.getBoundingClientRect();
+        const x = e.changedTouches[0].clientX;
+        const trackSpaceX = x - trackRect.left - autoPos.current;
+        const nearest = nearestBtn(trackSpaceX);
+        if (nearest) navigateFn.current(items[nearest.idx].page);
         movePillToPage(activeRef.current, true);
       }
+      // clear flag after a tick so React synthetic handlers see it
+      setTimeout(() => { touchActive.current = false; }, 0);
     }
 
     el.addEventListener("touchstart", onStart, { passive: true });
@@ -217,10 +224,6 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
             <button
               key={i}
               ref={el => { if (isFirst && el) btnRefs.current[itemIdx] = el; }}
-              onTouchEnd={(e) => {
-                e.stopPropagation();
-                if (!didDrag.current) navigateFn.current(page);
-              }}
               style={{ willChange: "transform" }}
               className={`relative z-10 px-3 py-1.5 rounded-lg text-xs outline-none whitespace-nowrap border-2 border-transparent flex-shrink-0 ${
                 isActive ? "text-[#C9A84C] font-semibold" : "text-gray-400"
