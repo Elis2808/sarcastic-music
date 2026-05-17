@@ -28,7 +28,7 @@ const ADVANCED_COLOR: Record<string, string> = {
   noun: "text-orange-400",
   verb: "text-cyan-400",
   adjective: "text-pink-400",
-  slang: "text-[#C9A84C]",
+  slang: "text-lime-400",
   name: "text-purple-400",
   all: "text-white",
 };
@@ -154,7 +154,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
     return {
       results: data.results || [],
       allResults: data.allResults || [],
-      categories: data.categories || { perfect: [], sounding: [], near: [] },
+      categories: data.categories || { perfect: [], sounding: [], near: [], written: [] },
       totalFound: data.totalFound || 0,
     };
   }, []);
@@ -272,7 +272,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
     // Advanced mode: text color = part-of-speech color
     const textColorClass = rhymeMode === "advanced" ? posColor : rhymeTextClass;
 
-    // Static border class based on rhyme quality
+    // Border always based on rhyme quality (even in advanced mode)
     const borderClass = `rhyme-pill rhyme-pill-${r.category} ${isSelected ? "rhyme-pill-selected" : ""}`;
 
     return (
@@ -387,13 +387,14 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
                 ))}
               </div>
               <div className="grid grid-cols-4 gap-x-6 gap-y-2 mb-4 text-xs text-gray-400 max-w-md mx-auto">
-                <div className="flex items-center gap-1"><span className="w-2 h-2 bg-green-400 rounded-full" /> Perfect</div>
-                <div className="flex items-center gap-1"><span className="w-2 h-2 bg-blue-400 rounded-full" /> Sounding</div>
-                <div className="flex items-center gap-1"><span className="w-2 h-2 bg-red-400 rounded-full" /> Near</div>
+                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#4ade80"}} /> Perfect</div>
+                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#60a5fa"}} /> Sounding</div>
+                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#f87171"}} /> Near</div>
+                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#facc15"}} /> Written</div>
                 <div className="flex items-center gap-1"><span className="w-2 h-2 bg-orange-400 rounded-full" /> Noun</div>
                 <div className="flex items-center gap-1"><span className="w-2 h-2 bg-cyan-400 rounded-full" /> Verb</div>
                 <div className="flex items-center gap-1"><span className="w-2 h-2 bg-pink-400 rounded-full" /> Adjective</div>
-                <div className="flex items-center gap-1"><span className="w-2 h-2 bg-[#C9A84C] rounded-full" /> Slang</div>
+                <div className="flex items-center gap-1"><span className="w-2 h-2 bg-lime-400 rounded-full" /> Slang</div>
                 <div className="flex items-center gap-1"><span className="w-2 h-2 bg-purple-400 rounded-full" /> Name</div>
               </div>
             </>
