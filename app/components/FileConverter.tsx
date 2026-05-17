@@ -435,7 +435,7 @@ export default function FileConverter() {
       <p className="text-gray-500 text-xs mb-4">Convert any audio file to a different format.</p>
 
       {/* Main Category Tabs */}
-      <div className="flex gap-2 mb-4 justify-center flex-wrap max-sm:px-4">
+      <div className="flex gap-2 mb-4 justify-center flex-wrap max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:justify-start max-sm:px-4 max-sm:pb-1 max-sm:scrollbar-none">
         {(Object.keys(CATEGORIES) as Array<keyof typeof CATEGORIES>).map((cat) => (
           <button
             key={cat}
@@ -445,7 +445,7 @@ export default function FileConverter() {
               setFiles([]);
               setError("");
             }}
-            className={`px-4 py-2 rounded-xl transition-all duration-200 text-sm outline-none ${
+            className={`px-4 py-2 rounded-xl transition-all duration-200 text-sm outline-none flex-shrink-0 ${
               activeCategory === cat
                 ? "bg-black text-[#C9A84C] border border-[#C9A84C] shadow-[0_0_10px_rgba(201,168,76,0.5)]"
                 : "bg-gray-800 text-gray-300 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 border border-transparent"
