@@ -35,9 +35,11 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
   const [linkUrl, setLinkUrl] = useState(initialUrl || "");
   const [selectedPlatform, setSelectedPlatform] = useState(initialPlatform || "");
   const [processing, setProcessing] = useState<StemType | null>(null);
-  const [downloadingStem, setDownloadingStem] = useState<"no_vocals" | "vocals" | null>(null);
+  // bothPhase drives the sequential animation for "both" mode
+  const [bothPhase, setBothPhase] = useState<"processing" | "instrumental" | "transit" | "vocals" | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [demucsProgress, setDemucsProgress] = useState(0);
+  const [stemProgress, setStemProgress] = useState(0); // per-stem fetch progress
   const [error, setError] = useState("");
   const [pendingDownloads, setPendingDownloads] = useState<{instrumentalUrl?: string, vocalsUrl?: string, filename?: string} | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +58,10 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
         }
         @keyframes btn-sweep {
           to { --sweep-angle: 360deg; }
+        }
+        @keyframes btn-shine {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(200%); }
         }
         .btn-sweep-wrapper {
           position: relative;
@@ -77,6 +83,18 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
           mask-composite: exclude;
           animation: btn-sweep 1.4s linear infinite;
           will-change: transform;
+        }
+        .btn-shine-wrapper {
+          position: relative;
+          border-radius: 0.5rem;
+          overflow: hidden;
+        }
+        .btn-shine-wrapper::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(105deg, transparent 30%, rgba(201,168,76,0.55) 50%, transparent 70%);
+          animation: btn-shine 0.9s ease-in-out forwards;
         }
       `;
       document.head.appendChild(style);
@@ -103,6 +121,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
   const download = useCallback(async (stem: StemType) => {
     if (!file && !linkUrl.trim()) return;
     setProcessing(stem);
+    if (stem === "both") setBothPhase("processing");
     setElapsed(0);
     setDemucsProgress(0);
     setError("");
@@ -188,53 +207,71 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
       };
 
       const result = await pollJob(jobId);
-      
+      const baseName = (file?.name || "song").replace(/\.[^.]+$/, "");
+
+      // Helper: fetch a URL and trigger download, tracking progress
+      const fetchAndDownload = async (url: string, filename: string, onProgress: (p: number) => void) => {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Download failed");
+        const total = Number(res.headers.get("content-length") || 0);
+        const reader = res.body!.getReader();
+        const chunks: ArrayBuffer[] = [];
+        let received = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value.buffer as ArrayBuffer);
+          received += value.length;
+          if (total > 0) onProgress(Math.round((received / total) * 100));
+        }
+        onProgress(100);
+        const blob = new Blob(chunks, { type: "audio/mpeg" });
+        const dlUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = dlUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(dlUrl), 10000);
+      };
+
       if (stem === "both" && result.vocalsUrl) {
-        // Store for manual download fallback (mobile Safari blocks auto-downloads)
-        const baseName = (file?.name || "song").replace(/\.[^.]+$/, "");
-        setPendingDownloads({
-          instrumentalUrl: result.downloadUrl,
-          vocalsUrl: result.vocalsUrl,
-          filename: baseName
-        });
-        
-        // Try auto-download (works on desktop, may fail on mobile Safari)
-        setDownloadingStem("no_vocals");
-        const a1 = document.createElement("a");
-        a1.href = result.downloadUrl;
-        a1.download = `${baseName}_instrumental.mp3`;
-        a1.click();
-        
-        await new Promise(r => setTimeout(r, 1500));
-        
-        setDownloadingStem("vocals");
-        const a2 = document.createElement("a");
-        a2.href = result.vocalsUrl;
-        a2.download = `${baseName}_vocals.mp3`;
-        a2.click();
-        
-        await new Promise(r => setTimeout(r, 500));
-        setDownloadingStem(null);
+        // Phase 1: instrumental
+        setBothPhase("instrumental");
+        setStemProgress(0);
+        await fetchAndDownload(result.downloadUrl, `${baseName}_instrumental.mp3`, p => setStemProgress(p));
+
+        // Phase 2: transit shine through Both button
+        setBothPhase("transit");
+        setStemProgress(0);
+        await new Promise(r => setTimeout(r, 900));
+
+        // Phase 3: vocals
+        setBothPhase("vocals");
+        setStemProgress(0);
+        await fetchAndDownload(result.vocalsUrl, `${baseName}_vocals.mp3`, p => setStemProgress(p));
+
+        // Store for manual fallback
+        setPendingDownloads({ instrumentalUrl: result.downloadUrl, vocalsUrl: result.vocalsUrl, filename: baseName });
+        setBothPhase(null);
       } else {
         // Single stem
-        const baseName = (file?.name || "song").replace(/\.[^.]+$/, "");
+        setStemProgress(0);
+        await fetchAndDownload(result.downloadUrl, `${baseName}_${stem === "vocals" ? "vocals" : "instrumental"}.mp3`, p => setStemProgress(p));
         setPendingDownloads({
           instrumentalUrl: stem === "no_vocals" ? result.downloadUrl : undefined,
           vocalsUrl: stem === "vocals" ? result.downloadUrl : undefined,
           filename: baseName
         });
-        
-        const a1 = document.createElement("a");
-        a1.href = result.downloadUrl;
-        a1.download = `${baseName}_${stem === "vocals" ? "vocals" : "instrumental"}.mp3`;
-        a1.click();
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Processing failed.");
     } finally {
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
       setProcessing(null);
-      setDownloadingStem(null);
+      setBothPhase(null);
+      setStemProgress(0);
       setElapsed(0);
       setDemucsProgress(0);
     }
@@ -378,7 +415,11 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
           {/* Main buttons with Both in middle */}
           <div className="flex items-center gap-3 w-full">
             {/* Instrumental */}
-            <div className={`flex-1 ${downloadingStem === "no_vocals" || processing === "no_vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+            <div className={`flex-1 ${
+              processing === "no_vocals" || bothPhase === "instrumental"
+                ? "btn-sweep-wrapper"
+                : "rounded-xl p-[3px] bg-gray-700"
+            }`}>
               <button
                 onClick={() => download("no_vocals")}
                 disabled={processing !== null}
@@ -391,25 +432,31 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
               </button>
             </div>
 
-            {/* Both button with connecting lines */}
+            {/* Both button */}
             <div className="relative flex flex-col items-center">
-              {/* Connecting lines */}
               <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-[2px] bg-gradient-to-r from-gray-600 to-[#C9A84C]" />
               <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-[2px] bg-gradient-to-l from-gray-600 to-[#C9A84C]" />
-              
-              <div className={`${processing === "both" && !downloadingStem ? "btn-sweep-wrapper" : processing === null ? "" : "rounded-lg p-[2px] bg-gray-600"}`}>
-                <button
-                  onClick={() => download("both")}
-                  disabled={processing !== null}
-                  className="px-3 py-2 rounded-[6px] bg-black border border-gray-500 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none whitespace-nowrap"
-                >
-                  Both
-                </button>
+              <div className={`${
+                bothPhase === "processing" ? "btn-sweep-wrapper" : ""
+              }`}>
+                <div className={bothPhase === "transit" ? "btn-shine-wrapper" : ""}>
+                  <button
+                    onClick={() => download("both")}
+                    disabled={processing !== null}
+                    className="px-3 py-2 rounded-[6px] bg-black border border-gray-500 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none whitespace-nowrap"
+                  >
+                    Both
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Vocals */}
-            <div className={`flex-1 ${downloadingStem === "vocals" || processing === "vocals" ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+            <div className={`flex-1 ${
+              processing === "vocals" || bothPhase === "vocals"
+                ? "btn-sweep-wrapper"
+                : "rounded-xl p-[3px] bg-gray-700"
+            }`}>
               <button
                 onClick={() => download("vocals")}
                 disabled={processing !== null}
@@ -423,17 +470,30 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
             </div>
           </div>
 
-          {/* Progress bar - shows when processing */}
+          {/* Progress bar */}
           {processing && (
             <div className="w-full">
               <div className="flex justify-between text-xs text-gray-500 mb-1">
-                <span>Processing</span>
-                <span>{Math.round(demucsProgress)}%</span>
+                {bothPhase === "instrumental" ? (
+                  <><span>Instrumental Progress</span><span>{stemProgress}%</span></>
+                ) : bothPhase === "vocals" ? (
+                  <><span>Vocal Progress</span><span>{stemProgress}%</span></>
+                ) : bothPhase === "transit" ? (
+                  <><span>Preparing vocals...</span><span></span></>
+                ) : (
+                  <><span>Processing</span><span>{Math.round(demucsProgress)}%</span></>
+                )}
               </div>
               <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-300 bg-[#C9A84C]"
-                  style={{ width: `${demucsProgress}%` }}
+                  style={{ width: `${
+                    bothPhase === "instrumental" || bothPhase === "vocals"
+                      ? stemProgress
+                      : bothPhase === "transit"
+                      ? 100
+                      : Math.round(demucsProgress)
+                  }%` }}
                 />
               </div>
             </div>
@@ -441,38 +501,43 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
         </div>
       )}
 
-      {/* Download Ready - Manual fallback for mobile Safari */}
+      {/* Download Ready - Manual fallback */}
       {pendingDownloads && (
-        <div className="mt-6 p-4 bg-[#C9A84C]/20 rounded-lg border border-[#C9A84C]">
-          <p className="text-[#C9A84C] font-semibold mb-3">Download Ready! (Tap buttons if auto-download didn&apos;t work)</p>
-          <div className="flex flex-wrap gap-3">
-            {pendingDownloads.instrumentalUrl && (
-              <a
-                href={pendingDownloads.instrumentalUrl}
-                download={`${pendingDownloads.filename}_instrumental.mp3`}
-                className="px-4 py-2 bg-[#C9A84C] text-[#151515] rounded-lg font-semibold hover:bg-[#C9A84C]/80 transition-colors"
-                onClick={() => {}}
-              >
-                Instrumental
-              </a>
-            )}
-            {pendingDownloads.vocalsUrl && (
-              <a
-                href={pendingDownloads.vocalsUrl}
-                download={`${pendingDownloads.filename}_vocals.mp3`}
-                className="px-4 py-2 bg-[#C9A84C] text-[#151515] rounded-lg font-semibold hover:bg-[#C9A84C]/80 transition-colors"
-                onClick={() => {}}
-              >
-                Vocals
-              </a>
-            )}
+        <div className="mt-6 btn-sweep-wrapper w-full max-w-xs">
+          <div className="rounded-[10px] bg-black px-5 py-4 flex flex-col items-center gap-3">
+            <p className="text-white text-sm font-semibold text-center">Download ready</p>
+            <p className="text-gray-500 text-xs text-center -mt-1">Tap if auto-download didn&apos;t start</p>
+            <div className="flex gap-3 w-full">
+              {pendingDownloads.instrumentalUrl && (
+                <div className="btn-sweep-wrapper flex-1">
+                  <a
+                    href={pendingDownloads.instrumentalUrl}
+                    download={`${pendingDownloads.filename}_instrumental.mp3`}
+                    className="block w-full text-center px-3 py-2 rounded-[10px] bg-black text-white text-xs font-medium hover:bg-gray-900 transition-colors"
+                  >
+                    Instrumental
+                  </a>
+                </div>
+              )}
+              {pendingDownloads.vocalsUrl && (
+                <div className="btn-sweep-wrapper flex-1">
+                  <a
+                    href={pendingDownloads.vocalsUrl}
+                    download={`${pendingDownloads.filename}_vocals.mp3`}
+                    className="block w-full text-center px-3 py-2 rounded-[10px] bg-black text-white text-xs font-medium hover:bg-gray-900 transition-colors"
+                  >
+                    Vocals
+                  </a>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setPendingDownloads(null)}
+              className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+            >
+              Dismiss
+            </button>
           </div>
-          <button
-            onClick={() => setPendingDownloads(null)}
-            className="mt-3 text-sm text-gray-400 hover:text-white underline"
-          >
-            Dismiss
-          </button>
         </div>
       )}
     </div>
