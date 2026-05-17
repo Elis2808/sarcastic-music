@@ -62,8 +62,11 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
   // so taps anywhere in the scrolling loop hit a valid ref
   function nearestBtn(trackX: number): { btn: HTMLButtonElement; idx: number } | null {
     const hw = halfW.current;
-    // Normalise into [0, halfW) so second-copy positions fold back onto first copy
-    let normalX = trackX % (hw || 1);
+    // trackX is relative to the translated track rect, so add autoPos to get
+    // position in the original (untranslated) track coordinate space,
+    // then wrap into [0, halfW) so second-copy buttons map to first-copy refs
+    const rawX = trackX - autoPos.current;
+    let normalX = rawX % (hw || 1);
     if (normalX < 0) normalX += hw;
     let best: { btn: HTMLButtonElement; idx: number } | null = null;
     let bestDist = Infinity;
@@ -167,9 +170,11 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
         movePillToPage(activeRef.current, true);
       } else {
         // pure tap — navigate to tapped button
+        // getBoundingClientRect already includes the CSS transform (autoPos),
+        // so just subtract trackRect.left to get position within the track
         const trackRect = el!.getBoundingClientRect();
         const x = e.changedTouches[0].clientX;
-        const trackSpaceX = x - trackRect.left - autoPos.current;
+        const trackSpaceX = x - trackRect.left;
         const nearest = nearestBtn(trackSpaceX);
         if (nearest) navigateFn.current(items[nearest.idx].page);
         movePillToPage(activeRef.current, true);
