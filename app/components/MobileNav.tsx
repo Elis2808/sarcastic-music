@@ -57,24 +57,24 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
     if (btn) movePillToBtn(btn, animated);
   }
 
-  // ── find nearest button to a raw track-space X ───────────────────
-  // The track is doubled, so wrap trackX into the first-copy range
-  // so taps anywhere in the scrolling loop hit a valid ref
-  function nearestBtn(trackX: number): { btn: HTMLButtonElement; idx: number } | null {
-    const hw = halfW.current;
-    // trackX is relative to the translated track rect, so add autoPos to get
-    // position in the original (untranslated) track coordinate space,
-    // then wrap into [0, halfW) so second-copy buttons map to first-copy refs
-    const rawX = trackX - autoPos.current;
-    let normalX = rawX % (hw || 1);
-    if (normalX < 0) normalX += hw;
-    let best: { btn: HTMLButtonElement; idx: number } | null = null;
+  // ── find which button the finger landed on by screen hit-test ──────
+  // Uses actual getBoundingClientRect on all rendered buttons (both copies)
+  // so it works regardless of autoPos/transform state
+  const allBtnRefs = useRef<{ el: HTMLButtonElement; idx: number }[]>([]);
+
+  function nearestByScreenX(screenX: number): number | null {
+    let best: number | null = null;
     let bestDist = Infinity;
-    btnRefs.current.forEach((btn, idx) => {
-      if (!btn) return;
-      const center = btn.offsetLeft + btn.offsetWidth / 2;
-      const dist = Math.abs(normalX - center);
-      if (dist < bestDist) { bestDist = dist; best = { btn, idx }; }
+    allBtnRefs.current.forEach(({ el, idx }) => {
+      const r = el.getBoundingClientRect();
+      if (screenX >= r.left && screenX <= r.right) {
+        // direct hit
+        best = idx;
+        bestDist = 0;
+      } else if (bestDist > 0) {
+        const dist = Math.min(Math.abs(screenX - r.left), Math.abs(screenX - r.right));
+        if (dist < bestDist) { bestDist = dist; best = idx; }
+      }
     });
     return best;
   }
@@ -147,16 +147,14 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
       autoPos.current = wrap(dragStartPos.current + dx);
       el!.style.transform = `translateX(${autoPos.current}px)`;
 
-      // highlight nearest button while dragging (scale only, pill stays on active tab)
-      const trackRect = el!.getBoundingClientRect();
-      const trackSpaceX = x - trackRect.left - autoPos.current;
-      const nearest = nearestBtn(trackSpaceX);
-      if (nearest && nearest.idx !== hoveredIdx.current) {
+      // highlight nearest button while dragging
+      const nearIdx = nearestByScreenX(x);
+      if (nearIdx !== null && nearIdx !== hoveredIdx.current) {
         btnRefs.current.forEach((b, i) => {
           if (!b) return;
-          b.style.transform = i === nearest!.idx ? "scale(1.1)" : "scale(1)";
+          b.style.transform = i === nearIdx ? "scale(1.1)" : "scale(1)";
         });
-        hoveredIdx.current = nearest.idx;
+        hoveredIdx.current = nearIdx;
       }
     }
 
@@ -169,14 +167,10 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
         // swipe — just snap pill back to active page, no navigation
         movePillToPage(activeRef.current, true);
       } else {
-        // pure tap — navigate to tapped button
-        // getBoundingClientRect already includes the CSS transform (autoPos),
-        // so just subtract trackRect.left to get position within the track
-        const trackRect = el!.getBoundingClientRect();
+        // pure tap — hit-test directly against screen rects of all buttons
         const x = e.changedTouches[0].clientX;
-        const trackSpaceX = x - trackRect.left;
-        const nearest = nearestBtn(trackSpaceX);
-        if (nearest) navigateFn.current(items[nearest.idx].page);
+        const idx = nearestByScreenX(x);
+        if (idx !== null) navigateFn.current(items[idx].page);
         movePillToPage(activeRef.current, true);
       }
       // clear flag after a tick so React synthetic handlers see it
@@ -223,7 +217,10 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
           return (
             <button
               key={i}
-              ref={el => { if (isFirst && el) btnRefs.current[itemIdx] = el; }}
+              ref={el => {
+                if (el) allBtnRefs.current[i] = { el, idx: itemIdx };
+                if (isFirst && el) btnRefs.current[itemIdx] = el;
+              }}
               style={{ willChange: "transform" }}
               className={`relative z-10 px-3 py-1.5 rounded-lg text-xs outline-none whitespace-nowrap border-2 border-transparent flex-shrink-0 ${
                 isActive ? "text-[#C9A84C] font-semibold" : "text-gray-400"
