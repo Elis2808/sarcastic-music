@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
   items: { page: string; label: string }[];
@@ -8,112 +8,114 @@ interface Props {
   onNavigate: (page: string) => void;
 }
 
+const SPRING = { type: "spring" as const, stiffness: 380, damping: 28, mass: 0.9 };
+
 export default function DesktopNav({ items, activePage, onNavigate }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pillRef = useRef<HTMLDivElement>(null);
-  const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const mounted = useRef(false);
-
-  function movePill(btn: HTMLButtonElement, animated: boolean) {
-    const pill = pillRef.current;
-    const container = containerRef.current;
-    if (!pill || !container) return;
-    const btnRect = btn.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    const left = btnRect.left - containerRect.left;
-    const width = btnRect.width;
-
-    if (!animated) {
-      pill.style.transition = "none";
-      pill.style.left = `${left}px`;
-      pill.style.width = `${width}px`;
-      pill.style.opacity = "1";
-      return;
-    }
-
-    // Water-bubble spring: squish sideways then settle
-    pill.style.transition = [
-      "left 0.42s cubic-bezier(0.22,1.6,0.36,1)",
-      "width 0.42s cubic-bezier(0.22,1.6,0.36,1)",
-      "opacity 0.18s ease",
-      "transform 0.42s cubic-bezier(0.22,1.6,0.36,1)",
-    ].join(", ");
-    pill.style.left = `${left}px`;
-    pill.style.width = `${width}px`;
-    pill.style.opacity = "1";
-    // Brief squish scale like a water bubble landing
-    pill.style.transform = "scaleY(0.82) scaleX(1.06)";
-    setTimeout(() => {
-      if (pillRef.current) pillRef.current.style.transform = "scaleY(1) scaleX(1)";
-    }, 80);
-  }
-
-  useEffect(() => {
-    const idx = items.findIndex(i => i.page === activePage);
-    const btn = btnRefs.current[idx];
-    if (btn) movePill(btn, mounted.current);
-    mounted.current = true;
-  }, [activePage]);
-
   return (
     <nav
-      ref={containerRef}
-      className="hidden sm:flex relative items-center mb-6 rounded-full px-1 py-1"
+      className="hidden sm:flex relative items-center mb-6 rounded-full px-1.5 py-1.5"
       style={{
-        backdropFilter: "blur(24px) saturate(1.6)",
-        WebkitBackdropFilter: "blur(24px) saturate(1.6)",
-        background: "linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(0,0,0,0.75) 100%)",
-        border: "1px solid rgba(255,255,255,0.09)",
-        boxShadow: "0 2px 20px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.08) inset",
+        backdropFilter: "blur(40px) saturate(1.8) brightness(0.9)",
+        WebkitBackdropFilter: "blur(40px) saturate(1.8) brightness(0.9)",
+        background: [
+          "linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)",
+        ].join(", "),
+        border: "1px solid rgba(255,255,255,0.12)",
+        boxShadow: [
+          "0 8px 32px rgba(0,0,0,0.55)",
+          "0 1px 0 rgba(255,255,255,0.12) inset",
+          "0 -1px 0 rgba(0,0,0,0.3) inset",
+        ].join(", "),
       }}
     >
-      {/* Water bubble pill */}
-      <div
-        ref={pillRef}
-        className="absolute top-1 h-[calc(100%-8px)] rounded-full pointer-events-none overflow-hidden"
-        style={{
-          opacity: 0,
-          backdropFilter: "blur(20px) saturate(2.5) brightness(1.2)",
-          WebkitBackdropFilter: "blur(20px) saturate(2.5) brightness(1.2)",
-          background: [
-            "radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.22) 0%, transparent 65%)",
-            "radial-gradient(ellipse at 50% 100%, rgba(160,210,255,0.12) 0%, transparent 60%)",
-            "linear-gradient(160deg, rgba(200,232,255,0.13) 0%, rgba(150,200,255,0.04) 50%, rgba(201,168,76,0.07) 100%)",
-          ].join(", "),
-          border: "1px solid rgba(210,235,255,0.3)",
-          boxShadow: [
-            "0 0 20px rgba(160,210,255,0.18)",
-            "0 0 6px rgba(201,168,76,0.12)",
-            "0 1.5px 0 rgba(255,255,255,0.5) inset",
-            "0 -1px 0 rgba(160,210,255,0.12) inset",
-          ].join(", "),
-        }}
-      >
-        {/* Top specular — bright curved highlight like a water bubble */}
-        <div className="absolute left-[15%] right-[15%] top-[2px] h-[38%] rounded-full pointer-events-none" style={{
-          background: "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.0) 100%)",
-          filter: "blur(1px)",
-        }} />
-        {/* Side edge glints */}
-        <div className="absolute left-0 top-[20%] w-[3px] h-[50%] rounded-full pointer-events-none" style={{
-          background: "linear-gradient(180deg, transparent, rgba(255,255,255,0.3), transparent)",
-        }} />
-        <div className="absolute right-0 top-[20%] w-[3px] h-[50%] rounded-full pointer-events-none" style={{
-          background: "linear-gradient(180deg, transparent, rgba(255,255,255,0.15), transparent)",
-        }} />
-      </div>
-
-      {items.map(({ page, label }, idx) => {
+      {items.map(({ page, label }) => {
         const isActive = activePage === page;
         return (
           <button
             key={page}
-            ref={el => { btnRefs.current[idx] = el; }}
             onClick={() => onNavigate(page)}
-            className="relative z-10 px-4 py-1.5 rounded-full text-xs font-medium outline-none whitespace-nowrap transition-colors duration-200"
-            style={{ color: isActive ? "#C9A84C" : "rgba(255,255,255,0.5)" }}
+            className="relative px-4 py-1.5 rounded-full text-xs font-medium outline-none whitespace-nowrap z-10"
+            style={{ color: isActive ? "#D4A843" : "rgba(255,255,255,0.42)" }}
           >
-            {label}
+            {/* Liquid glass bubble */}
+            <AnimatePresence>
+              {isActive && (
+                <motion.span
+                  layoutId="liquid-bubble"
+                  className="absolute inset-0 rounded-full pointer-events-none overflow-hidden"
+                  transition={SPRING}
+                  style={{
+                    backdropFilter: "blur(24px) saturate(3) brightness(1.35)",
+                    WebkitBackdropFilter: "blur(24px) saturate(3) brightness(1.35)",
+                    background: [
+                      "radial-gradient(ellipse at 50% -10%, rgba(255,255,255,0.28) 0%, transparent 60%)",
+                      "radial-gradient(ellipse at 30% 50%, rgba(200,228,255,0.10) 0%, transparent 55%)",
+                      "radial-gradient(ellipse at 70% 110%, rgba(160,210,255,0.08) 0%, transparent 50%)",
+                      "linear-gradient(170deg, rgba(210,235,255,0.12) 0%, rgba(180,215,255,0.04) 45%, rgba(201,168,76,0.06) 100%)",
+                    ].join(", "),
+                    border: "1px solid rgba(220,238,255,0.28)",
+                    boxShadow: [
+                      "0 0 0 0.5px rgba(255,255,255,0.18) inset",
+                      "0 1.5px 0 rgba(255,255,255,0.55) inset",
+                      "0 -0.5px 0 rgba(160,210,255,0.15) inset",
+                      "0 0 16px rgba(180,215,255,0.14)",
+                      "0 0 6px rgba(201,168,76,0.1)",
+                    ].join(", "),
+                  }}
+                >
+                  {/* Primary curved specular — the key to making it look like real glass */}
+                  <span
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: "12%", right: "12%", top: "1px",
+                      height: "42%",
+                      borderRadius: "50%",
+                      background: "linear-gradient(180deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.0) 100%)",
+                      filter: "blur(0.8px)",
+                    }}
+                  />
+                  {/* Secondary soft fill highlight */}
+                  <span
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: "25%", right: "25%", top: "3px",
+                      height: "28%",
+                      borderRadius: "50%",
+                      background: "rgba(255,255,255,0.18)",
+                      filter: "blur(2px)",
+                    }}
+                  />
+                  {/* Left edge glint */}
+                  <span className="absolute pointer-events-none" style={{
+                    left: "1px", top: "18%", width: "2px", height: "52%",
+                    borderRadius: "9999px",
+                    background: "linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)",
+                  }} />
+                  {/* Right edge glint */}
+                  <span className="absolute pointer-events-none" style={{
+                    right: "1px", top: "18%", width: "2px", height: "52%",
+                    borderRadius: "9999px",
+                    background: "linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%)",
+                  }} />
+                  {/* Bottom refraction caustic */}
+                  <span className="absolute pointer-events-none" style={{
+                    left: "20%", right: "20%", bottom: "1px",
+                    height: "30%",
+                    borderRadius: "50%",
+                    background: "linear-gradient(0deg, rgba(170,215,255,0.18) 0%, transparent 100%)",
+                    filter: "blur(1px)",
+                  }} />
+                </motion.span>
+              )}
+            </AnimatePresence>
+
+            {/* Label — sits above the bubble */}
+            <span className="relative z-10 transition-colors duration-200" style={{
+              color: isActive ? "#D4A843" : "rgba(255,255,255,0.42)",
+              textShadow: isActive ? "0 0 12px rgba(212,168,67,0.4)" : "none",
+            }}>
+              {label}
+            </span>
           </button>
         );
       })}
