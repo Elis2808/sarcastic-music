@@ -27,6 +27,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
   const dragging     = useRef(false);
   const didDrag      = useRef(false);
   const dragStartX   = useRef(0);
+  const dragStartY   = useRef(0);
   const dragStartPos = useRef(0);
   const lastX        = useRef(0);
   const lastT        = useRef(0);
@@ -111,6 +112,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
       dragging.current   = true;
       didDrag.current    = false;
       dragStartX.current = e.touches[0].clientX;
+      dragStartY.current = e.touches[0].clientY;
       dragStartPos.current = autoPos.current;
       lastX.current = e.touches[0].clientX;
       lastT.current = performance.now();
@@ -121,7 +123,8 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
       e.preventDefault(); // stop page scrolling while swiping nav
       const x  = e.touches[0].clientX;
       const dx = x - dragStartX.current;
-      if (Math.abs(dx) > 4) didDrag.current = true;
+      const dy = e.touches[0].clientY - dragStartY.current;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didDrag.current = true;
 
       const now = performance.now();
       const dt  = now - lastT.current;
