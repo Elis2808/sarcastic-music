@@ -321,7 +321,7 @@ export default function KeyFinder({ initialUrl, initialPlatform, initialKey, ini
               placeholder={selectedPlatform 
                 ? PLATFORMS.find(p => p.id === selectedPlatform)?.placeholder || "Paste link here"
                 : "Paste audio URL (YouTube, SoundCloud, etc.)"}
-              className="flex-1 px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-sm outline-none focus:ring-2 focus:ring-[#C9A84C]"
+              className="flex-1 px-4 py-3 rounded-full bg-black border border-[rgba(255,255,255,0.07)] text-white text-sm outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
             />
             <button
               onClick={processLink}

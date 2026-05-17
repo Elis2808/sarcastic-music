@@ -377,7 +377,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
         onChange={(e) => setWord(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") search(word); }}
         placeholder="Type any word to find related rhymes"
-        className="px-4 py-3 rounded-xl w-full max-w-xl bg-black border border-gray-600 text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
+        className="px-4 py-3 rounded-full w-full max-w-xl bg-black border border-[rgba(255,255,255,0.07)] text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
       />
       <div className={`mt-3 w-36 ${isLoading ? "btn-sweep-wrapper" : "rounded-xl border border-[#C9A84C]"}`}>
         <button
@@ -398,7 +398,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
                 value={rhymeFilter}
                 onChange={(e) => setRhymeFilter(e.target.value)}
                 placeholder="Filter rhymes..."
-                className="w-full px-3 py-2 pl-9 rounded-lg bg-gray-900 border border-gray-700 text-white text-sm outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
+                className="w-full px-3 py-2 pl-9 rounded-full bg-black border border-[rgba(255,255,255,0.07)] text-white text-sm outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
               />
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

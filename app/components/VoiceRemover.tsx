@@ -415,7 +415,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
             placeholder={selectedPlatform 
               ? PLATFORMS.find(p => p.id === selectedPlatform)?.placeholder || "Paste link here"
               : "Paste audio link here (YouTube, SoundCloud, TikTok, etc.)"}
-            className="w-full px-4 py-3 rounded-xl bg-black border border-gray-600 text-white outline-none focus:ring-2 focus:ring-[#C9A84C]"
+            className="w-full px-4 py-3 rounded-full bg-black border border-[rgba(255,255,255,0.07)] text-white outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
           />
           {linkUrl && (
             <button

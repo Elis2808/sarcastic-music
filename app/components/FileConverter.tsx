@@ -544,7 +544,7 @@ export default function FileConverter() {
                 value={pdfPageRange}
                 onChange={(e) => setPdfPageRange(e.target.value)}
                 placeholder={pdfTotalPages ? `e.g. 1-3, 5, 7 (blank = all ${pdfTotalPages})` : "e.g. 1-3, 5, 7 (blank = all)"}
-                className="w-full bg-black border border-gray-700 focus:border-[#C9A84C] rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors placeholder-gray-600"
+                className="w-full bg-black border border-[rgba(255,255,255,0.07)] focus:border-[#C9A84C] rounded-full px-4 py-2 text-white text-sm outline-none transition-colors placeholder-gray-600"
               />
               <p className="text-gray-600 text-xs">Ranges like <span className="text-gray-400">1-5</span>, individual pages like <span className="text-gray-400">2, 4, 7</span>, or combined</p>
             </div>

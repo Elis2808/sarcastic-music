@@ -63,7 +63,7 @@ export default function Dictionary({ initialWord = "", onBack }: Props) {
         onChange={(e) => setSearch(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") lookupWord(search); }}
         placeholder="Search a word"
-        className="px-4 py-3 rounded-xl w-full max-w-md bg-black border border-gray-600 text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C] mb-8"
+        className="px-4 py-3 rounded-full w-full max-w-md bg-black border border-[rgba(255,255,255,0.07)] text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C] mb-8"
       />
 
       {loading && <p className="text-gray-500 animate-pulse">Looking up...</p>}
