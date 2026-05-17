@@ -84,17 +84,30 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
           animation: btn-sweep 1.4s linear infinite;
           will-change: transform;
         }
-        .btn-shine-wrapper {
+        .btn-sweep-sm {
           position: relative;
-          border-radius: 0.5rem;
-          overflow: hidden;
+          border-radius: 8px;
+          padding: 3px;
+          background: #000;
+          will-change: transform;
         }
-        .btn-shine-wrapper::after {
+        .btn-sweep-sm::before {
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(105deg, transparent 30%, rgba(201,168,76,0.55) 50%, transparent 70%);
-          animation: btn-shine 0.9s ease-in-out forwards;
+          border-radius: 8px;
+          background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg);
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          animation: btn-sweep 1.4s linear infinite;
+        }
+        .btn-transit-shine {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background: linear-gradient(90deg, transparent 0%, rgba(201,168,76,0.0) 20%, rgba(201,168,76,0.7) 50%, rgba(201,168,76,0.0) 80%, transparent 100%);
+          animation: btn-shine 0.85s ease-in-out forwards;
         }
       `;
       document.head.appendChild(style);
@@ -413,7 +426,10 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
           <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Download as</p>
 
           {/* Main buttons with Both in middle */}
-          <div className="flex items-center gap-3 w-full">
+          <div className="relative flex items-center gap-3 w-full">
+            {/* Transit shine overlay — sweeps across the whole row */}
+            {bothPhase === "transit" && <div className="btn-transit-shine rounded-xl" />}
+
             {/* Instrumental */}
             <div className={`flex-1 ${
               processing === "no_vocals" || bothPhase === "instrumental"
@@ -436,18 +452,14 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
             <div className="relative flex flex-col items-center">
               <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-[2px] bg-gradient-to-r from-gray-600 to-[#C9A84C]" />
               <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-[2px] bg-gradient-to-l from-gray-600 to-[#C9A84C]" />
-              <div className={`${
-                bothPhase === "processing" ? "btn-sweep-wrapper" : ""
-              }`}>
-                <div className={bothPhase === "transit" ? "btn-shine-wrapper" : ""}>
-                  <button
-                    onClick={() => download("both")}
-                    disabled={processing !== null}
-                    className="px-3 py-2 rounded-[6px] bg-black border border-gray-500 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none whitespace-nowrap"
-                  >
-                    Both
-                  </button>
-                </div>
+              <div className={bothPhase === "processing" ? "btn-sweep-sm" : ""}>
+                <button
+                  onClick={() => download("both")}
+                  disabled={processing !== null}
+                  className="px-3 py-2 rounded-[6px] bg-black border border-gray-500 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none whitespace-nowrap"
+                >
+                  Both
+                </button>
               </div>
             </div>
 
