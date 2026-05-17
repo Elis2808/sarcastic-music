@@ -123,10 +123,6 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
         @keyframes btn-sweep {
           to { --sweep-angle: 360deg; }
         }
-        @keyframes btn-shine {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(200%); }
-        }
         .btn-sweep-wrapper {
           position: relative;
           border-radius: 0.75rem;
@@ -165,13 +161,6 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
           -webkit-mask-composite: xor;
           mask-composite: exclude;
           animation: btn-sweep 1.4s linear infinite;
-        }
-        .btn-transit-shine {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background: linear-gradient(90deg, transparent 0%, rgba(201,168,76,0.0) 20%, rgba(201,168,76,0.7) 50%, rgba(201,168,76,0.0) 80%, transparent 100%);
-          animation: btn-shine 0.85s ease-in-out forwards;
         }
       `;
       document.head.appendChild(style);
@@ -491,9 +480,6 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
 
           {/* Main buttons with Both in middle */}
           <div className="relative flex items-center gap-3 w-full">
-            {/* Transit shine overlay — sweeps left→right through the whole row */}
-            {bothPhase === "transit" && <div className="btn-transit-shine rounded-xl" />}
-
             {/* Instrumental */}
             <div className={`flex-1 ${
               processing === "no_vocals" || bothPhase === "instrumental"
@@ -514,7 +500,7 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
 
             {/* Both button */}
             <div className={
-              bothPhase === "processing" || bothPhase === "transit"
+              bothPhase === "processing"
                 ? "btn-sweep-wrapper"
                 : "rounded-xl p-[3px] bg-gray-700"
             }>
