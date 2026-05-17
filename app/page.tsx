@@ -12,6 +12,7 @@ import AudioMaster from "./components/AudioMaster";
 import HistoryMenu from "./components/HistoryMenu";
 import MobileNav from "./components/MobileNav";
 import GlassCarousel from "./components/GlassCarousel";
+import DesktopNav from "./components/DesktopNav";
 import { addHistoryItem, type HistoryItem } from "./lib/history";
 import ToastContainer from "./components/Toast";
 import { showToast } from "./components/Toast";
@@ -213,28 +214,14 @@ export default function Home() {
       </div>
 
       {/* Desktop nav */}
-      <nav className="hidden sm:flex flex-wrap justify-center gap-1.5 mb-6">
-        {NAV_ITEMS.map(({ page, label }) => (
-          <button
-            key={page}
-            onClick={() => {
-              if (page === "rhyme" && activePage === "rhyme") {
-                window.location.reload();
-              } else {
-                navigateTo(page);
-              }
-            }}
-            style={{ borderColor: activePage === page ? "#C9A84C" : "rgba(201,168,76,0.45)" }}
-            className={`px-3 py-1.5 rounded-lg text-sm outline-none transition-all duration-200 whitespace-nowrap border-2 ${
-              activePage === page
-                ? "bg-black text-[#C9A84C] shadow-[0_0_12px_rgba(201,168,76,0.25)]"
-                : "bg-black text-white hover:text-[#C9A84C]"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
+      <DesktopNav
+        items={NAV_ITEMS}
+        activePage={activePage}
+        onNavigate={(page) => {
+          if (page === "rhyme" && activePage === "rhyme") window.location.reload();
+          else navigateTo(page as Page);
+        }}
+      />
 
       {/* Desktop liquid glass carousel */}
       <GlassCarousel />
