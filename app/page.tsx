@@ -139,14 +139,14 @@ export default function Home() {
   }
 
   const NAV_ITEMS: { page: Page; label: string }[] = [
-    { page: "youtube",   label: "Downloader" },
-    { page: "rhyme",     label: "Rhyme Finder" },
-    { page: "master",    label: "Audio Master" },
-    { page: "voice",     label: "Song Splitter" },
-    { page: "key",       label: "Key Finder" },
-    { page: "bpm",       label: "BPM Finder" },
-    { page: "converter", label: "File Converter" },
-    { page: "dictionary",label: "Dictionary" },
+    { page: "youtube",    label: "Downloader" },
+    { page: "rhyme",      label: "Rhyme Finder" },
+    { page: "dictionary", label: "Dictionary" },
+    { page: "voice",      label: "Song Splitter" },
+    { page: "key",        label: "Key Finder" },
+    { page: "bpm",        label: "BPM Finder" },
+    { page: "converter",  label: "File Converter" },
+    { page: "master",     label: "Audio Master" },
   ];
 
   return (

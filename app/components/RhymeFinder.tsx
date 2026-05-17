@@ -346,11 +346,12 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
         placeholder="Type any word to find related rhymes"
         className="px-4 py-3 rounded-xl w-full max-w-xl bg-black border border-gray-600 text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C]"
       />
-      <div className={`mt-3 max-w-xs w-full ${isLoading ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+      <div className={`mt-3 max-w-xs w-full ${isLoading ? "btn-sweep-wrapper" : "rounded-xl p-[1px]"}`} style={isLoading ? {} : {background: "linear-gradient(135deg, #8a6a1a, #C9A84C, #e8c96a, #C9A84C, #8a6a1a)"}}>
         <button
           onClick={() => search(word)}
           disabled={isLoading || !word.trim()}
-          className="w-full px-4 py-2.5 rounded-[10px] bg-black text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 outline-none"
+          className="w-full px-4 py-2.5 rounded-[10px] bg-black text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 outline-none"
+          style={isLoading ? {} : {color: "#C9A84C"}}
         >
           {isLoading ? <span className="text-[#C9A84C]">Searching...</span> : "Search"}
         </button>
