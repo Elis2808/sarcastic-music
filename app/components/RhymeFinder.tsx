@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
 type RhymeData = {
   results: { word: string; category: string }[];
@@ -45,6 +45,41 @@ function getWordTypes(word: string, cache: Record<string, string[]>): string[] {
   return types;
 }
 
+interface PillListProps {
+  results: { word: string; category: string }[];
+  lastClicked: string;
+  onClickWord: (w: string) => void;
+  rhymeMode: "basic" | "advanced";
+  wordTypeCache: Record<string, string[]>;
+}
+
+const PillList = React.memo(function PillList({ results, lastClicked, onClickWord, rhymeMode, wordTypeCache }: PillListProps) {
+  return (
+    <div className="mt-2 w-full pb-8 max-h-[32rem] overflow-y-auto">
+      <div className="flex gap-2 flex-wrap justify-center">
+        {results.map((r, i) => {
+          const isSelected = lastClicked === r.word.toLowerCase();
+          const types = wordTypeCache[r.word.toLowerCase()] || getWordTypes(r.word, wordTypeCache);
+          const primaryType = types[0] || "noun";
+          const posColor = ADVANCED_COLOR[primaryType] || "text-white";
+          const rhymeTextClass = CATEGORY_TEXT_CLASS[r.category] || "text-white";
+          const textColorClass = rhymeMode === "advanced" ? posColor : rhymeTextClass;
+          const borderClass = `rhyme-pill rhyme-pill-${r.category}${isSelected ? " rhyme-pill-selected" : ""}`;
+          return (
+            <span
+              key={i}
+              onClick={() => onClickWord(r.word)}
+              className={`px-4 py-2 text-lg rounded-lg cursor-pointer bg-gray-900 ${borderClass} ${textColorClass}`}
+            >
+              {r.word}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
 export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }: Props) {
   const [word, setWord] = useState("");
   const [lastClickedWord, setLastClickedWord] = useState(highlightWord || "");
@@ -55,7 +90,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
   const [rhymeMode, setRhymeMode] = useState<"basic" | "advanced">("basic");
   const [advancedFilter, setAdvancedFilter] = useState<"all" | "noun" | "verb" | "adjective" | "slang" | "name">("all");
   const [isDraggingSlider, setIsDraggingSlider] = useState(false);
-  const [wordTypeCache, setWordTypeCache] = useState<Record<string, string[]>>({});
+  const wordTypeCache = useRef<Record<string, string[]>>({}).current;
   const [rhymeFilter, setRhymeFilter] = useState("");
   const sliderTrackRef = useRef<HTMLDivElement | null>(null);
   const lastClickedRef = useRef<HTMLSpanElement | null>(null);
@@ -235,15 +270,12 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
       });
     });
     return cache;
-  }, [rhymeMap, wordList, wordTypeCache]);
+  }, [rhymeMap, wordList]);
 
   function getCachedWordTypes(w: string): string[] {
     const lw = w.toLowerCase();
     if (memoizedWordTypes[lw]) return memoizedWordTypes[lw];
-    if (wordTypeCache[lw]) return wordTypeCache[lw];
-    const types = getWordTypes(w, wordTypeCache);
-    setWordTypeCache(prev => ({ ...prev, [lw]: types }));
-    return types;
+    return getWordTypes(w, wordTypeCache); // never setState during render
   }
 
   // Memoized display results to avoid recalculation on every render
@@ -272,7 +304,8 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
         results = results.filter(r => r.word.toLowerCase().includes(filter));
       }
       
-      map[w] = results;
+      // Cap to 200 for performance — "all" can have thousands of entries
+      map[w] = results.slice(0, 200);
     });
     return map;
   }, [rhymeMap, wordList, activeTab, rhymeMode, advancedFilter, rhymeFilter, memoizedWordTypes]);
@@ -459,11 +492,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
               <div className="text-green-400 text-sm">Searching...</div>
             </div>
           ) : wordList.length === 1 ? (
-            <div className="mt-2 w-full pb-8 max-h-96 overflow-y-auto">
-              <div className="flex gap-2 flex-wrap justify-center">
-                {displayResultsMap[wordList[0]]?.map((r, i) => renderWordPill(r, i, false))}
-              </div>
-            </div>
+            <PillList results={displayResultsMap[wordList[0]] || []} lastClicked={lastClickedWord} onClickWord={handleWordClick} rhymeMode={rhymeMode} wordTypeCache={wordTypeCache} />
           ) : (
             <div className="grid gap-4 w-full" style={{ gridTemplateColumns: `repeat(${Math.min(wordList.length, 3)}, minmax(280px, 1fr))` }}>
               {wordList.map((w) => {
