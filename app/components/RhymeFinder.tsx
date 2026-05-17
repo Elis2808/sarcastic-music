@@ -387,7 +387,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
             {(["top", "perfect", "sounding", "near", "written", "all"] as const).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => setActiveTab(prev => prev === tab ? "top" : tab)}
                 className={`px-3 py-2 rounded-xl text-sm ${
                   activeTab === tab
                     ? "bg-black text-[#C9A84C] border border-[#C9A84C]"
@@ -414,7 +414,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
                 {(["noun", "verb", "adjective", "slang", "name"] as const).map((filter) => (
                   <button
                     key={filter}
-                    onClick={() => setAdvancedFilter(filter)}
+                    onClick={() => setAdvancedFilter(prev => prev === filter ? "all" : filter)}
                     className={`px-2 py-1 rounded-lg text-xs ${
                       advancedFilter === filter
                         ? "bg-black text-[#C9A84C] border border-[#C9A84C]"
