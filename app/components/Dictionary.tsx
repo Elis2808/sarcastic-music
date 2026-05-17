@@ -51,7 +51,7 @@ export default function Dictionary({ initialWord = "", onBack }: Props) {
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={onBack}
-            className="text-[#C9A84C] text-sm border border-[#C9A84C] px-3 py-1 rounded-xl hover:bg-[#C9A84C]/10 transition-colors"
+            className="text-white text-sm border border-white/20 px-3 py-1 rounded-full hover:bg-white/5 transition-colors"
           >
             ← Back to Rhyme Finder
           </button>
@@ -63,7 +63,8 @@ export default function Dictionary({ initialWord = "", onBack }: Props) {
         onChange={(e) => setSearch(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") lookupWord(search); }}
         placeholder="Search a word"
-        className="px-4 py-3 rounded-full w-full max-w-md bg-black border border-[rgba(255,255,255,0.07)] text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C] mb-8"
+        className="px-4 py-3 rounded-full w-full max-w-md bg-black text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C] mb-8"
+        style={{ border: "1px solid rgba(201,168,76,0.25)" }}
       />
 
       {loading && <p className="text-gray-500 animate-pulse">Looking up...</p>}

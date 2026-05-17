@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { addHistoryItem } from "../lib/history";
+import AutoScrollPlatforms from "./AutoScrollPlatforms";
 import UrlDropZone from "./UrlDropZone";
 import { showToast } from "./Toast";
 
@@ -278,54 +279,15 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
       <h1 className="text-3xl max-sm:text-2xl font-bold mb-1">{selectedPlatform} Downloader</h1>
       <p className="text-gray-500 text-xs mb-4">Convert any social media link to MP3 &amp; MP4.</p>
 
-      {/* Platform selector with scroll arrows */}
-      <div className="flex items-center gap-2 mb-4 w-full max-w-xl">
-        <button
-          onClick={() => {
-            const container = document.getElementById('downloader-platform-scroll');
-            if (container) container.scrollBy({ left: -150, behavior: 'smooth' });
-          }}
-          className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-[#C9A84C] transition-all duration-200 flex-shrink-0"
-          aria-label="Scroll left"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-
-        <div id="downloader-platform-scroll" className="flex-1 overflow-x-auto scrollbar-hide">
-          <div className="flex gap-2 px-1">
-            {PLATFORMS.map((platform) => (
-              <button
-                key={platform.name}
-                onClick={() => setSelectedPlatform(platform.name)}
-                className="px-3 py-1.5 rounded-full text-xs outline-none whitespace-nowrap flex-shrink-0"
-                style={{
-                  backgroundColor: selectedPlatform === platform.name ? "rgba(201,168,76,0.13)" : "transparent",
-                  color: selectedPlatform === platform.name ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
-                  border: "1px solid " + (selectedPlatform === platform.name ? "rgba(201,168,76,0.25)" : "rgba(255,255,255,0.06)"),
-                  transition: "color 160ms ease-out, background-color 160ms ease-out, border-color 160ms ease-out",
-                }}
-              >
-                {platform.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <button
-          onClick={() => {
-            const container = document.getElementById('downloader-platform-scroll');
-            if (container) container.scrollBy({ left: 150, behavior: 'smooth' });
-          }}
-          className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-[#C9A84C] transition-all duration-200 flex-shrink-0"
-          aria-label="Scroll right"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+      {/* Platform selector */}
+      <div className="w-full max-w-xl mb-4">
+        <AutoScrollPlatforms
+          platforms={PLATFORMS.map(p => ({ id: p.name, label: p.name }))}
+          selected={selectedPlatform}
+          onSelect={(id) => setSelectedPlatform(id)}
+        />
       </div>
+
 
       <UrlDropZone
         onUrlDrop={(url) => {
@@ -342,7 +304,8 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
             onChange={(e) => setYtUrl(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") fetchInfo(); }}
             placeholder={PLATFORMS.find(p => p.name === selectedPlatform)?.placeholder}
-            className="w-full px-4 py-3 rounded-full bg-black border border-[rgba(255,255,255,0.07)] text-white outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
+            className="w-full px-4 py-3 rounded-full bg-black text-white outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
+            style={{ border: "1px solid rgba(201,168,76,0.25)" }}
           />
           {/* Rights confirmation checkbox */}
           <label className="flex items-start gap-2.5 cursor-pointer max-w-xl w-full px-1">
@@ -356,7 +319,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
               <div
                 onClick={() => setRightsAccepted(!rightsAccepted)}
                 style={{ borderColor: "#C9A84C", background: "black" }}
-                className="w-4 h-4 rounded border-2 cursor-pointer flex items-center justify-center transition-all duration-150"
+                className="w-4 h-4 rounded-full border-2 cursor-pointer flex items-center justify-center transition-all duration-150"
               >
                 {rightsAccepted && (
                   <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
@@ -371,11 +334,11 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
             </span>
           </label>
 
-          <div className={`w-36 ${ytLoading ? "btn-sweep-wrapper" : "rounded-xl border border-[#C9A84C]"}`}>
+          <div className={`w-36 ${ytLoading ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}`}>
             <button
               onClick={fetchInfo}
               disabled={ytLoading || !ytUrl.trim() || !rightsAccepted}
-              className="w-full px-6 py-2.5 rounded-[10px] bg-black text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2"
+              className="w-full px-6 py-2.5 rounded-full bg-black text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2"
             >
               {ytLoading ? <span className="text-[#C9A84C]">Converting...</span> : "Convert"}
             </button>

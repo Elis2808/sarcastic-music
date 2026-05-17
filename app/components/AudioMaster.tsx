@@ -142,11 +142,11 @@ export default function AudioMaster({ initialUrl: _initialUrl, initialPlatform: 
       {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
 
       {/* Master Button */}
-      <div className={`w-36 ${processing ? "btn-sweep-wrapper" : "rounded-xl border border-[#C9A84C]"}`}>
+      <div className={`w-36 ${processing ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}`}>
         <button
           onClick={master}
           disabled={processing}
-          className="w-full px-4 py-2.5 rounded-[10px] bg-black text-white text-sm font-medium disabled:cursor-not-allowed transition-all duration-200 outline-none"
+          className="w-full px-4 py-2.5 rounded-full bg-black text-white text-sm font-medium disabled:cursor-not-allowed transition-all duration-200 outline-none"
         >
           {processing ? <span className="text-[#C9A84C]">Mastering...</span> : "Master Audio"}
         </button>

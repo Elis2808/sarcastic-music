@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { addHistoryItem } from "../lib/history";
+import AutoScrollPlatforms from "./AutoScrollPlatforms";
 import { addRecentFile } from "../lib/recentFiles";
 import UrlDropZone from "./UrlDropZone";
 import { showToast } from "./Toast";
@@ -359,51 +360,13 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
       </h1>
       <p className="text-gray-500 text-xs mb-4">Split any song into a vocal file and instrumental file.</p>
 
-      {/* Platform selector with scroll arrows */}
-      <div className="flex items-center gap-2 mb-4 w-full max-w-xl">
-        <button
-          onClick={() => {
-            const container = document.getElementById('platform-scroll');
-            if (container) container.scrollBy({ left: -150, behavior: 'smooth' });
-          }}
-          className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-[#C9A84C] transition-all duration-200 flex-shrink-0"
-          aria-label="Scroll left"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-
-        <div id="platform-scroll" className="flex-1 overflow-x-auto scrollbar-hide">
-          <div className="flex gap-2 px-1">
-            {PLATFORMS.map((platform) => (
-              <button
-                key={platform.id}
-                onClick={() => setSelectedPlatform(platform.id === selectedPlatform ? "" : platform.id)}
-                className={`px-3 py-1.5 rounded-xl bg-black border text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                  selectedPlatform === platform.id
-                    ? "border-[#C9A84C] text-[#C9A84C]"
-                    : "border-gray-600 text-white hover:border-[#C9A84C] hover:text-[#C9A84C]"
-                }`}
-              >
-                {platform.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <button
-          onClick={() => {
-            const container = document.getElementById('platform-scroll');
-            if (container) container.scrollBy({ left: 150, behavior: 'smooth' });
-          }}
-          className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-[#C9A84C] transition-all duration-200 flex-shrink-0"
-          aria-label="Scroll right"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+      {/* Platform selector */}
+      <div className="w-full max-w-xl">
+        <AutoScrollPlatforms
+          platforms={PLATFORMS}
+          selected={selectedPlatform}
+          onSelect={(id) => setSelectedPlatform(id)}
+        />
       </div>
 
       {/* Link input */}
@@ -415,7 +378,8 @@ export default function VoiceRemover({ initialUrl, initialPlatform }: VoiceRemov
             placeholder={selectedPlatform 
               ? PLATFORMS.find(p => p.id === selectedPlatform)?.placeholder || "Paste link here"
               : "Paste audio link here (YouTube, SoundCloud, TikTok, etc.)"}
-            className="w-full px-4 py-3 rounded-full bg-black border border-[rgba(255,255,255,0.07)] text-white outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
+            className="w-full px-4 py-3 rounded-full bg-black text-white outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
+            style={{ border: "1px solid rgba(201,168,76,0.25)" }}
           />
           {linkUrl && (
             <button

@@ -388,13 +388,14 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
         onChange={(e) => setWord(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") search(word); }}
         placeholder="Type any word to find related rhymes"
-        className="px-4 py-3 rounded-full w-full max-w-xl bg-black border border-[rgba(255,255,255,0.07)] text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
+        className="px-4 py-3 rounded-full w-full max-w-xl bg-black text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
+        style={{ border: "1px solid rgba(201,168,76,0.25)" }}
       />
-      <div className={`mt-3 w-36 ${isLoading ? "btn-sweep-wrapper" : "rounded-xl border border-[#C9A84C]"}`}>
+      <div className={`mt-3 w-36 ${isLoading ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}`}>
         <button
           onClick={() => search(word)}
           disabled={isLoading || !word.trim()}
-          className="w-full px-4 py-2.5 rounded-[10px] bg-black text-white text-sm font-medium disabled:cursor-not-allowed transition-all duration-200 outline-none"
+          className="w-full px-4 py-2.5 rounded-full bg-black text-white text-sm font-medium disabled:cursor-not-allowed transition-all duration-200 outline-none"
         >
           {isLoading ? <span className="text-[#C9A84C]">Searching...</span> : "Search"}
         </button>
