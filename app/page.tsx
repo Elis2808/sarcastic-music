@@ -213,15 +213,63 @@ export default function Home() {
         <HistoryMenu onSelect={handleHistorySelect} />
       </div>
 
-      {/* Desktop nav */}
-      <DesktopNav
-        items={NAV_ITEMS}
-        activePage={activePage}
-        onNavigate={(page) => {
-          if (page === "rhyme" && activePage === "rhyme") window.location.reload();
-          else navigateTo(page as Page);
-        }}
-      />
+      {/* Desktop nav — environmental wrapper */}
+      <div className="hidden sm:block relative" style={{ marginBottom: 24 }}>
+        {/* Environmental luminance field — OUTSIDE the nav so backdrop-filter samples it */}
+        <div aria-hidden className="absolute pointer-events-none" style={{
+          inset: "-28px -56px",
+          zIndex: 0,
+        }}>
+          <div style={{
+            position:"absolute", width:"54%", height:"220%",
+            top:"-60%", left:"3%", borderRadius:"50%",
+            background:"radial-gradient(circle, rgba(201,168,76,0.030) 0%, transparent 68%)",
+            filter:"blur(24px)",
+            animation:"envB1 19s cubic-bezier(0.45,0.05,0.55,0.95) infinite",
+            animationDelay:"-7s", willChange:"transform,opacity",
+          }} />
+          <div style={{
+            position:"absolute", width:"42%", height:"190%",
+            top:"-50%", right:"5%", borderRadius:"50%",
+            background:"radial-gradient(circle, rgba(195,215,240,0.020) 0%, transparent 65%)",
+            filter:"blur(30px)",
+            animation:"envB2 24s cubic-bezier(0.4,0,0.6,1) infinite",
+            animationDelay:"-13s", willChange:"transform,opacity",
+          }} />
+          <div style={{
+            position:"absolute", width:"36%", height:"170%",
+            top:"-40%", left:"31%", borderRadius:"50%",
+            background:"radial-gradient(circle, rgba(255,255,255,0.022) 0%, transparent 62%)",
+            filter:"blur(20px)",
+            animation:"envB3 15s cubic-bezier(0.37,0,0.63,1) infinite",
+            animationDelay:"-3s", willChange:"transform,opacity",
+          }} />
+          <div style={{
+            position:"absolute", width:"28%", height:"150%",
+            top:"-30%", right:"16%", borderRadius:"50%",
+            background:"radial-gradient(circle, rgba(150,100,35,0.016) 0%, transparent 60%)",
+            filter:"blur(18px)",
+            animation:"envB4 29s cubic-bezier(0.5,0.1,0.5,0.9) infinite",
+            animationDelay:"-18s", willChange:"transform,opacity",
+          }} />
+        </div>
+        <style>{`
+          @keyframes envB1{0%{transform:scale(1);opacity:1}38%{transform:scale(1.08);opacity:.64}100%{transform:scale(.97);opacity:.9}}
+          @keyframes envB2{0%{transform:scale(1.03);opacity:.78}53%{transform:scale(.92);opacity:1}100%{transform:scale(1.01);opacity:.7}}
+          @keyframes envB3{0%{transform:scale(.97);opacity:.88}46%{transform:scale(1.10);opacity:.6}100%{transform:scale(1);opacity:1}}
+          @keyframes envB4{0%{transform:scale(1.02);opacity:.72}62%{transform:scale(.95);opacity:1}100%{transform:scale(1.04);opacity:.66}}
+        `}</style>
+        <div style={{ position:"relative", zIndex:1 }}>
+          <DesktopNav
+            items={NAV_ITEMS}
+            activePage={activePage}
+            onNavigate={(page) => {
+              if (page === "rhyme" && activePage === "rhyme") window.location.reload();
+              else navigateTo(page as Page);
+            }}
+          />
+        </div>
+      </div>
 
       {/* Mobile nav — auto-scrolling + swipeable */}
       <MobileNav

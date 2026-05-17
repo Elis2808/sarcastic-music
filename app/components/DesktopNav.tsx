@@ -145,26 +145,6 @@ export default function DesktopNav({ items, activePage, onNavigate }: Props) {
         overflow: "hidden",
       }}
     >
-      {/* ── Ambient breathing layer — subconscious luminance variation ── */}
-      <span aria-hidden className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
-        <span className="absolute rounded-full" style={{
-          width: "55%", height: "160%", top: "-30%", left: "8%",
-          background: "radial-gradient(circle, rgba(255,255,255,0.028) 0%, transparent 70%)",
-          animation: "navBreath1 13s ease-in-out infinite",
-        }} />
-        <span className="absolute rounded-full" style={{
-          width: "45%", height: "140%", top: "-20%", left: "42%",
-          background: "radial-gradient(circle, rgba(255,255,255,0.022) 0%, transparent 70%)",
-          animation: "navBreath2 17s ease-in-out infinite",
-          animationDelay: "-6s",
-        }} />
-        <span className="absolute rounded-full" style={{
-          width: "40%", height: "130%", top: "-15%", right: "5%",
-          background: "radial-gradient(circle, rgba(201,168,76,0.018) 0%, transparent 70%)",
-          animation: "navBreath3 11s ease-in-out infinite",
-          animationDelay: "-3s",
-        }} />
-      </span>
 
       {/* ── Active indicator — snaps to active tab, no lerp ── */}
       <span
@@ -187,8 +167,8 @@ export default function DesktopNav({ items, activePage, onNavigate }: Props) {
         <span className="absolute pointer-events-none" style={{
           top: 1, left: "14%", width: "72%", height: "34%",
           borderRadius: "50%",
-          background: "linear-gradient(to bottom, rgba(255,255,255,0.18), rgba(255,255,255,0))",
-          filter: "blur(3px)", opacity: 0.35,
+          background: "linear-gradient(to bottom, rgba(255,255,255,0.12), rgba(255,255,255,0))",
+          filter: "blur(3px)", opacity: 0.22,
         }} />
         <span className="absolute inset-0 rounded-full" style={{
           border: "1px solid rgba(255,255,255,0.08)",
@@ -253,21 +233,6 @@ export default function DesktopNav({ items, activePage, onNavigate }: Props) {
         );
       })}
 
-      {/* Keyframes injected once */}
-      <style>{`
-        @keyframes navBreath1 {
-          0%,100% { transform: scale(1);   opacity: 1; }
-          50%      { transform: scale(1.12); opacity: 0.6; }
-        }
-        @keyframes navBreath2 {
-          0%,100% { transform: scale(1.05); opacity: 0.7; }
-          50%      { transform: scale(0.92); opacity: 1; }
-        }
-        @keyframes navBreath3 {
-          0%,100% { transform: scale(0.95); opacity: 0.8; }
-          50%      { transform: scale(1.08); opacity: 0.55; }
-        }
-      `}</style>
     </nav>
   );
 }
