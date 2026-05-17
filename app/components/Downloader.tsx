@@ -329,12 +329,11 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
             placeholder={PLATFORMS.find(p => p.name === selectedPlatform)?.placeholder}
             className="w-full px-4 py-3 rounded-xl bg-black border border-gray-600 text-white outline-none focus:ring-2 focus:ring-[#C9A84C]"
           />
-          <div className={`max-w-xs w-full ${ytLoading ? "btn-sweep-wrapper" : "rounded-xl p-[1px]"}`} style={ytLoading ? {} : {background: "linear-gradient(135deg, #8a6a1a, #C9A84C, #e8c96a, #C9A84C, #8a6a1a)"}}>
+          <div className={`w-36 ${ytLoading ? "btn-sweep-wrapper" : "rounded-xl p-[1px]"}`} style={ytLoading ? {} : {background: "linear-gradient(135deg, #8a6a1a, #C9A84C, #e8c96a, #C9A84C, #8a6a1a)"}}>
             <button
               onClick={fetchInfo}
               disabled={ytLoading || !ytUrl.trim()}
-              className="w-full px-6 py-2.5 rounded-[10px] bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2"
-              style={ytLoading ? {} : {color: "#C9A84C"}}
+              className="w-full px-6 py-2.5 rounded-[10px] bg-black text-white active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2"
             >
               {ytLoading ? <span className="text-[#C9A84C]">Converting...</span> : "Convert"}
             </button>
