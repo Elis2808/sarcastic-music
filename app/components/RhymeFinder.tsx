@@ -95,6 +95,35 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
           border-color: #C9A84C !important;
           box-shadow: 0 0 12px rgba(201, 168, 76, 0.5) !important;
         }
+        @property --sweep-angle {
+          syntax: "<angle>";
+          initial-value: 0deg;
+          inherits: false;
+        }
+        @keyframes btn-sweep {
+          to { --sweep-angle: 360deg; }
+        }
+        .btn-sweep-wrapper {
+          position: relative;
+          border-radius: 0.75rem;
+          padding: 3px;
+          background: #111;
+          will-change: transform;
+          contain: layout style;
+        }
+        .btn-sweep-wrapper::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 0.75rem;
+          padding: 3px;
+          background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg);
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          animation: btn-sweep 1.4s linear infinite;
+          will-change: transform;
+        }
       `;
       document.head.appendChild(style);
     }
@@ -316,6 +345,15 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
         placeholder="Type any word to find related rhymes"
         className="px-4 py-3 rounded-xl w-full max-w-xl bg-black border border-gray-600 text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C]"
       />
+      <div className={`mt-3 max-w-xl w-full ${isLoading ? "btn-sweep-wrapper" : "rounded-xl p-[3px] bg-gray-700"}`}>
+        <button
+          onClick={() => search(word)}
+          disabled={isLoading || !word.trim()}
+          className="w-full px-4 py-2.5 rounded-[10px] bg-black text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 outline-none"
+        >
+          {isLoading ? <span className="text-[#C9A84C]">Searching...</span> : "Search"}
+        </button>
+      </div>
 
       {wordList.length > 0 && (
         <div className="w-full max-w-6xl mx-auto mt-2">
