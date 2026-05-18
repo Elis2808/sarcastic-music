@@ -107,7 +107,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
         }
         .btn-sweep-wrapper {
           position: relative;
-          border-radius: 0.75rem;
+          border-radius: 9999px;
           padding: 3px;
           background: #111;
           will-change: transform;
@@ -117,7 +117,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
           content: '';
           position: absolute;
           inset: 0;
-          border-radius: 0.75rem;
+          border-radius: 9999px;
           padding: 3px;
           background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg);
           -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);

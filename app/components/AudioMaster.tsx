@@ -17,8 +17,8 @@ export default function AudioMaster({ initialUrl: _initialUrl, initialPlatform: 
     style.textContent = `
       @property --sweep-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
       @keyframes btn-sweep { to { --sweep-angle: 360deg; } }
-      .btn-sweep-wrapper { position: relative; border-radius: 0.75rem; padding: 3px; background: #111; will-change: transform; contain: layout style; }
-      .btn-sweep-wrapper::before { content: ''; position: absolute; inset: 0; border-radius: 0.75rem; padding: 3px; background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: btn-sweep 1.4s linear infinite; }
+      .btn-sweep-wrapper { position: relative; border-radius: 9999px; padding: 3px; background: #111; will-change: transform; contain: layout style; }
+      .btn-sweep-wrapper::before { content: ''; position: absolute; inset: 0; border-radius: 9999px; padding: 3px; background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: btn-sweep 1.4s linear infinite; }
     `;
     document.head.appendChild(style);
   }, []);
@@ -132,6 +132,9 @@ export default function AudioMaster({ initialUrl: _initialUrl, initialPlatform: 
           </>
         ) : (
           <>
+            <svg className={`w-10 h-10 mx-auto mb-2 transition-colors ${dragging ? "text-[#C9A84C]" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
             <p className="text-sm text-gray-300 font-medium">Drop audio file here</p>
             <p className="text-xs text-gray-500 mt-1">or tap to browse</p>
           </>

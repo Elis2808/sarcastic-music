@@ -111,7 +111,7 @@ export default function VoiceRemover(_props: VoiceRemoverProps) {
         }
         .btn-sweep-wrapper {
           position: relative;
-          border-radius: 0.75rem;
+          border-radius: 9999px;
           padding: 3px;
           background: #111;
           will-change: transform;
@@ -121,7 +121,7 @@ export default function VoiceRemover(_props: VoiceRemoverProps) {
           content: '';
           position: absolute;
           inset: 0;
-          border-radius: 0.75rem;
+          border-radius: 9999px;
           padding: 3px;
           background: conic-gradient(from var(--sweep-angle), transparent 0deg, transparent 270deg, #C9A84C 310deg, #e8c96a 340deg, #C9A84C 360deg);
           -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -328,7 +328,7 @@ export default function VoiceRemover(_props: VoiceRemoverProps) {
             ) : (
               <>
                 <svg className={`w-10 h-10 transition-colors ${dragging ? "text-[#C9A84C]" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
                 <p className="text-gray-400 text-sm text-center px-4">{dragging ? "Drop It!" : "Drop audio file or URL here"}</p>
               </>
