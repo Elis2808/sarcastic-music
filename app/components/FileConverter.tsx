@@ -2,6 +2,12 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 
+function scrollToCenter(btn: HTMLButtonElement) {
+  const container = btn.parentElement;
+  if (!container) return;
+  container.scrollTo({ left: btn.offsetLeft - container.offsetWidth / 2 + btn.offsetWidth / 2, behavior: "smooth" });
+}
+
 export default function FileConverter() {
   const [activeCategory, setActiveCategory] = useState<"images" | "documents" | "audio" | "video">("images");
   const [activeConversion, setActiveConversion] = useState<string>("img-to-pdf");
@@ -441,11 +447,12 @@ export default function FileConverter() {
         {(Object.keys(CATEGORIES) as Array<keyof typeof CATEGORIES>).map((cat) => (
           <button
             key={cat}
-            onClick={() => {
+            onClick={(e) => {
               setActiveCategory(cat);
               setActiveConversion(CATEGORIES[cat].outputs[0].id);
               setFiles([]);
               setError("");
+              scrollToCenter(e.currentTarget);
             }}
             className="flex-1 px-4 py-1.5 rounded-full text-xs font-medium outline-none whitespace-nowrap"
             style={{
@@ -475,11 +482,12 @@ export default function FileConverter() {
         {currentCategory.outputs.map((out) => (
           <button
             key={out.id}
-            onClick={() => {
+            onClick={(e) => {
               setActiveConversion(out.id);
               setError("");
               setPdfPageRange("");
               setPdfTotalPages(null);
+              scrollToCenter(e.currentTarget);
             }}
             className="flex-1 px-4 py-1.5 rounded-full text-xs font-medium outline-none whitespace-nowrap"
             style={{

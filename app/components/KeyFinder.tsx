@@ -70,6 +70,12 @@ async function detectKey(file: File): Promise<KeyResult> {
   return res.json();
 }
 
+function scrollToCenter(btn: HTMLButtonElement) {
+  const container = btn.parentElement;
+  if (!container) return;
+  container.scrollTo({ left: btn.offsetLeft - container.offsetWidth / 2 + btn.offsetWidth / 2, behavior: "smooth" });
+}
+
 export default function KeyFinder({ initialUrl, initialPlatform, initialKey, initialScale, initialStrength, initialRelativeKey, initialRelativeScale }: KeyFinderProps) {
   const [dragging, setDragging] = useState(false);
   const [result, setResult] = useState<KeyResult | null>(
@@ -281,7 +287,7 @@ export default function KeyFinder({ initialUrl, initialPlatform, initialKey, ini
               return (
                 <button
                   key={p.id}
-                  onClick={() => setSelectedPlatform(p.id)}
+                  onClick={(e) => { setSelectedPlatform(p.id); scrollToCenter(e.currentTarget); }}
                   style={{
                     backgroundColor: "transparent",
                     color: isActive ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",

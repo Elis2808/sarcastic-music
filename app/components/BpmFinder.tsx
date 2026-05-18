@@ -46,6 +46,12 @@ function bpmCategory(bpm: number): { label: string; color: string } {
   return           { label: "Very Fast",  color: "#e74c3c" };
 }
 
+function scrollToCenter(btn: HTMLButtonElement) {
+  const container = btn.parentElement;
+  if (!container) return;
+  container.scrollTo({ left: btn.offsetLeft - container.offsetWidth / 2 + btn.offsetWidth / 2, behavior: "smooth" });
+}
+
 export default function BpmFinder({ initialUrl, initialPlatform, initialBpm, initialTimeSignature, initialBeatCount, shareableLink }: BpmFinderProps) {
   const [dragging, setDragging] = useState(false);
   const [result, setResult] = useState<BpmResult | null>(initialBpm ? { bpm: initialBpm, timeSignature: initialTimeSignature || '', beatCount: initialBeatCount || 0 } : null);
@@ -256,7 +262,7 @@ export default function BpmFinder({ initialUrl, initialPlatform, initialBpm, ini
               return (
                 <button
                   key={p.id}
-                  onClick={() => setSelectedPlatform(p.id)}
+                  onClick={(e) => { setSelectedPlatform(p.id); scrollToCenter(e.currentTarget); }}
                   style={{
                     backgroundColor: "transparent",
                     color: isActive ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",

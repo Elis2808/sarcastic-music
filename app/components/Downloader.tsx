@@ -26,6 +26,15 @@ const DOMAIN_MAP: Record<string, string> = {
   "twitch.tv": "Twitch",
 };
 
+function scrollToCenter(btn: HTMLButtonElement) {
+  const container = btn.parentElement;
+  if (!container) return;
+  const btnLeft = btn.offsetLeft;
+  const btnWidth = btn.offsetWidth;
+  const containerWidth = container.offsetWidth;
+  container.scrollTo({ left: btnLeft - containerWidth / 2 + btnWidth / 2, behavior: "smooth" });
+}
+
 function detectPlatform(url: string): string | null {
   try {
     const host = new URL(url).hostname.replace(/^www\./, "");
@@ -335,7 +344,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
             return (
               <button
                 key={platform.name}
-                onClick={() => setSelectedPlatform(platform.name)}
+                onClick={(e) => { setSelectedPlatform(platform.name); scrollToCenter(e.currentTarget); }}
                 style={{
                   color: isActive ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
                   border: isActive ? "1px solid rgba(201,168,76,0.6)" : "1px solid transparent",
