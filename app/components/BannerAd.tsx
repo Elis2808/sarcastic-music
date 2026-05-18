@@ -2,36 +2,34 @@
 
 import { useEffect, useRef } from "react";
 
-interface BannerAdProps {
+interface AdSlotProps {
   zoneId: string;
-  width: number;
-  height: number;
+  width: string | number;
+  height: string | number;
   className?: string;
 }
 
-export default function BannerAd({ zoneId, width, height, className = "" }: BannerAdProps) {
+export default function AdSlot({ zoneId, width, height, className = "" }: AdSlotProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const ran = useRef(false);
 
   useEffect(() => {
-    if (ran.current || !ref.current) return;
-    ran.current = true;
-    const inject = () => {
-      const s = document.createElement("script");
-      s.type = "text/javascript";
-      s.text = `aclib.runBanner({zoneId:'${zoneId}'});`;
-      ref.current!.appendChild(s);
-    };
-    if ((window as any).aclib) {
-      inject();
-    } else {
-      const t = setInterval(() => {
-        if ((window as any).aclib) { clearInterval(t); inject(); }
-      }, 100);
-    }
+    const interval = setInterval(() => {
+      if (typeof window === "undefined") return;
+      if ((window as any).aclib && ref.current) {
+        clearInterval(interval);
+        if (ref.current.dataset.loaded) return;
+        ref.current.dataset.loaded = "true";
+        (window as any).aclib.runBanner({ zoneId });
+      }
+    }, 200);
+    return () => clearInterval(interval);
   }, [zoneId]);
 
   return (
-    <div ref={ref} style={{ width, height, overflow: "hidden", flexShrink: 0 }} className={className} />
+    <div
+      ref={ref}
+      style={{ width, height, overflow: "hidden", flexShrink: 0 }}
+      className={className}
+    />
   );
 }

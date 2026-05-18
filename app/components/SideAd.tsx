@@ -9,31 +9,24 @@ interface SideAdProps {
 
 export default function SideAd({ side, zoneId = "11324470" }: SideAdProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const ran = useRef(false);
 
   useEffect(() => {
-    if (ran.current || !ref.current) return;
-    ran.current = true;
-    const run = () => {
-      try {
-        (window as any).aclib?.runBanner({ zoneId });
-      } catch {}
-    };
-    if ((window as any).aclib) {
-      run();
-    } else {
-      const interval = setInterval(() => {
-        if ((window as any).aclib) {
-          clearInterval(interval);
-          run();
-        }
-      }, 100);
-    }
+    const interval = setInterval(() => {
+      if (typeof window === "undefined") return;
+      if ((window as any).aclib && ref.current) {
+        clearInterval(interval);
+        if (ref.current.dataset.loaded) return;
+        ref.current.dataset.loaded = "true";
+        (window as any).aclib.runBanner({ zoneId });
+      }
+    }, 200);
+    return () => clearInterval(interval);
   }, [zoneId]);
 
   return (
     <div
       ref={ref}
+      className="hidden xl:block"
       style={{
         position: "fixed",
         top: "50%",
@@ -44,7 +37,6 @@ export default function SideAd({ side, zoneId = "11324470" }: SideAdProps) {
         zIndex: 10,
         overflow: "hidden",
       }}
-      className="hidden xl:block"
     />
   );
 }
