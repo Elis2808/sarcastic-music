@@ -81,6 +81,17 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
   const [rightsAccepted, setRightsAccepted] = useState(false);
 
   useEffect(() => {
+    const container = platformScrollRef.current;
+    if (!container) return;
+    const btn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.trim() === selectedPlatform
+    ) as HTMLButtonElement | undefined;
+    if (btn) {
+      container.scrollTo({ left: btn.offsetLeft - container.offsetWidth / 2 + btn.offsetWidth / 2, behavior: "smooth" });
+    }
+  }, [selectedPlatform]);
+
+  useEffect(() => {
     const id = "btn-sweep-style";
     if (!document.getElementById(id)) {
       const style = document.createElement("style");
