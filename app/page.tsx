@@ -185,8 +185,17 @@ export default function Home() {
 
           {/* Dropdown */}
           {menuOpen && (
-            <div className="absolute left-0 top-full mt-2 w-40 bg-black border border-[#C9A84C]/40 rounded-xl shadow-2xl z-50 overflow-hidden">
-              <div className="p-1">
+            <div
+              className="absolute left-0 top-full mt-2 w-44 rounded-2xl shadow-2xl z-50 overflow-hidden"
+              style={{
+                backgroundColor: "rgba(20,20,24,0.72)",
+                backdropFilter: "blur(18px) saturate(180%)",
+                WebkitBackdropFilter: "blur(18px) saturate(180%)",
+                border: "1px solid rgba(201,168,76,0.28)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(201,168,76,0.12)",
+              }}
+            >
+              <div className="p-1.5 flex flex-col gap-0.5">
                 {NAV_ITEMS.map(({ page, label }) => (
                   <button
                     key={page}
@@ -198,11 +207,16 @@ export default function Home() {
                         setMenuOpen(false);
                       }
                     }}
-                    className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors ${
-                      activePage === page
-                        ? "bg-[#C9A84C]/10 text-[#C9A84C] font-medium"
-                        : "text-gray-300 hover:text-[#C9A84C] hover:bg-[#C9A84C]/5"
-                    }`}
+                    className="w-full text-left px-3 py-1.5 rounded-full outline-none whitespace-nowrap transition-colors"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 500,
+                      letterSpacing: "-0.01em",
+                      color: activePage === page ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
+                      backgroundColor: "transparent",
+                      border: activePage === page ? "1px solid rgba(201,168,76,0.6)" : "1px solid transparent",
+                      transition: "color 160ms ease-out, border-color 160ms ease-out",
+                    }}
                   >
                     {label}
                   </button>
