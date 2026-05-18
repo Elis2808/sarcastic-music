@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import KeyFinder from "./components/KeyFinder";
 import BpmFinder from "./components/BpmFinder";
 import VoiceRemover from "./components/VoiceRemover";
@@ -30,12 +30,27 @@ export default function Home() {
   });
   const [menuOpen, setMenuOpen] = useState(false);
   const [hoveredMenuItem, setHoveredMenuItem] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = dropdownRef.current;
+    if (!el || !menuOpen) return;
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      const btn = target?.closest('[data-menu-page]') as HTMLElement | null;
+      setHoveredMenuItem(btn?.dataset.menuPage ?? null);
+    };
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", onTouchMove);
+  }, [menuOpen]);
 
   useEffect(() => {
     if (document.getElementById("glass-btn-style")) return;
     const s = document.createElement("style");
     s.id = "glass-btn-style";
-    s.textContent = `.glass-btn { transition: border-color 200ms ease, box-shadow 200ms ease, color 200ms ease; } .glass-btn:hover, .glass-btn:active { border-color: rgba(201,168,76,0.5) !important; box-shadow: 0 0 14px rgba(201,168,76,0.22), 0 4px 14px rgba(0,0,0,0.14) !important; color: rgba(255,240,205,0.96) !important; }`;
+    s.textContent = `.glass-btn { transition: border-color 200ms ease, box-shadow 200ms ease, color 200ms ease; } .glass-btn:hover, .glass-btn:active { border-color: rgba(201,168,76,0.5) !important; box-shadow: 0 0 14px rgba(201,168,76,0.22), 0 4px 14px rgba(0,0,0,0.14) !important; color: rgba(255,240,205,0.96) !important; } @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
     document.head.appendChild(s);
   }, []);
   
@@ -205,15 +220,13 @@ export default function Home() {
           {/* Dropdown */}
           {menuOpen && (
             <div
+              ref={dropdownRef}
               className="absolute left-0 top-full mt-2 rounded-3xl shadow-2xl z-50 overflow-hidden"
               onMouseLeave={() => setHoveredMenuItem(null)}
-              onTouchEnd={() => setHoveredMenuItem(null)}
               style={{
-                backgroundColor: "rgba(20,20,24,0.72)",
-                backdropFilter: "blur(18px) saturate(180%)",
-                WebkitBackdropFilter: "blur(18px) saturate(180%)",
+                backgroundColor: "rgb(10,10,12)",
                 border: "1px solid rgba(201,168,76,0.28)",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(201,168,76,0.12)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(201,168,76,0.12)",
               }}
             >
               <div className="p-1.5 flex flex-col gap-0.5">
@@ -232,12 +245,6 @@ export default function Home() {
                       }}
                       onMouseEnter={() => setHoveredMenuItem(page)}
                       onTouchStart={() => setHoveredMenuItem(page)}
-                      onTouchMove={(e) => {
-                        const touch = e.touches[0];
-                        const el = document.elementFromPoint(touch.clientX, touch.clientY);
-                        const btn = el?.closest('[data-menu-page]') as HTMLElement | null;
-                        if (btn) setHoveredMenuItem(btn.dataset.menuPage || null);
-                      }}
                       data-menu-page={page}
                       className="w-full text-left px-3 py-1.5 rounded-full outline-none whitespace-nowrap"
                       style={{

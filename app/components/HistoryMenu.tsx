@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { getHistory, clearHistory, deleteHistoryItem, formatTimestamp, type HistoryItem } from "../lib/history";
-import { showToast } from "./Toast";
 
 interface HistoryMenuProps {
   onSelect?: (item: HistoryItem) => void;
@@ -12,9 +11,25 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
   const [hasNew, setHasNew] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const historyListRef = useRef<HTMLDivElement>(null);
   const lastCountRef = useRef(0);
+
+  useEffect(() => {
+    const el = historyListRef.current;
+    if (!el || !isOpen) return;
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      const row = target?.closest('[data-history-id]') as HTMLElement | null;
+      setHoveredItem(row?.dataset.historyId ?? null);
+    };
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", onTouchMove);
+  }, [isOpen]);
 
   // Load history when menu opens
   useEffect(() => {
@@ -53,33 +68,17 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
   }, [isOpen]);
 
   function handleClear() {
-    clearHistory();
-    setHistory([]);
+    setClearing(true);
+    setTimeout(() => {
+      clearHistory();
+      setHistory([]);
+      setClearing(false);
+    }, 500);
   }
 
   function handleDelete(id: string) {
     deleteHistoryItem(id);
     setHistory(getHistory());
-  }
-
-  function exportToTxt() {
-    const data = getHistory();
-    const lines = data.map((item) => {
-      const date = new Date(item.timestamp).toLocaleString();
-      let line = `[${date}] ${item.title}`;
-      if (item.details) line += ` — ${item.details}`;
-      return line;
-    });
-    const text = lines.join("\n");
-    const blob = new Blob([text], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `sarcastic-music-history-${new Date().toISOString().split("T")[0]}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast("History exported", "success");
-    setIsOpen(false);
   }
 
   return (
@@ -113,44 +112,16 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
           onMouseLeave={() => setHoveredItem(null)}
           onTouchEnd={() => setHoveredItem(null)}
           style={{
-            backgroundColor: "rgba(20,20,24,0.72)",
-            backdropFilter: "blur(18px) saturate(180%)",
-            WebkitBackdropFilter: "blur(18px) saturate(180%)",
+            backgroundColor: "rgb(10,10,12)",
             border: "1px solid rgba(201,168,76,0.28)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(201,168,76,0.12)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(201,168,76,0.12)",
           }}
         >
-          <div className="px-3 pt-3 pb-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.85)", letterSpacing: "-0.01em" }}>History</h3>
-              {history.length > 0 && (
-                <button
-                  onClick={handleClear}
-                  className="text-xs transition-colors"
-                  style={{ color: "rgba(255,100,100,0.7)" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,100,100,1)")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,100,100,0.7)")}
-                >
-                  Clear all
-                </button>
-              )}
-            </div>
-            {history.length > 0 && (
-              <button
-                onClick={exportToTxt}
-                className="text-xs px-3 py-1 rounded-full transition-colors"
-                style={{
-                  backgroundColor: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: "rgba(255,255,255,0.7)",
-                }}
-              >
-                Export Text File
-              </button>
-            )}
+          <div className="px-3 pt-3 pb-2 text-center" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <h3 className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.85)", letterSpacing: "-0.01em" }}>History</h3>
           </div>
 
-          <div className="max-h-80 overflow-y-auto p-1.5 flex flex-col gap-0.5">
+          <div ref={historyListRef} className="max-h-80 overflow-y-auto p-1.5 flex flex-col gap-0.5">
             {history.length === 0 ? (
               <div className="p-6 text-center text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
                 <p>No history yet</p>
@@ -166,12 +137,6 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
                     onClick={() => { if (onSelect) { onSelect(item); setIsOpen(false); } }}
                     onMouseEnter={() => setHoveredItem(item.id)}
                     onTouchStart={() => setHoveredItem(item.id)}
-                    onTouchMove={(e) => {
-                      const touch = e.touches[0];
-                      const el = document.elementFromPoint(touch.clientX, touch.clientY);
-                      const row = el?.closest('[data-history-id]') as HTMLElement | null;
-                      if (row) setHoveredItem(row.dataset.historyId || null);
-                    }}
                     className="flex items-start gap-3 px-3 py-2 rounded-full group"
                     style={{
                       cursor: onSelect ? "pointer" : "default",
@@ -211,6 +176,31 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
               })
             )}
           </div>
+
+          {history.length > 0 && (
+            <div className="px-2 pb-2 pt-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+              <button
+                onClick={handleClear}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-full transition-all"
+                style={{
+                  color: "rgba(255,100,100,0.85)",
+                  border: "1px solid rgba(255,100,100,0.3)",
+                  backgroundColor: "rgba(255,100,100,0.08)",
+                  fontSize: 12,
+                  fontWeight: 500,
+                }}
+              >
+                <svg
+                  className="w-3.5 h-3.5"
+                  style={{ animation: clearing ? "spin 0.5s linear" : "none" }}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Clear all
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
