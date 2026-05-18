@@ -280,41 +280,21 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
       <p className="text-gray-500 text-xs mb-4">Convert any social media link to MP3 &amp; MP4.</p>
 
       {/* Platform selector */}
-      <div className="w-full max-w-xl mb-4">
-        {/* Mobile: arrow buttons */}
-        <div
-          className="sm:hidden flex items-center gap-2"
-          style={{
-            backgroundColor: "rgba(20,20,24,0.48)",
-            backdropFilter: "blur(14px) saturate(160%)",
-            WebkitBackdropFilter: "blur(14px) saturate(160%)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            borderRadius: 9999,
-            padding: "4px 6px",
+      <div className="w-full max-w-xl mb-4 flex items-center gap-2">
+        {/* Left arrow */}
+        <button
+          onClick={() => {
+            const el = platformScrollRef.current;
+            if (el) el.scrollBy({ left: -120, behavior: "smooth" });
           }}
-        >
-          <button
-            onClick={() => {
-              const idx = PLATFORMS.findIndex(p => p.name === selectedPlatform);
-              const prev = PLATFORMS[(idx - 1 + PLATFORMS.length) % PLATFORMS.length];
-              setSelectedPlatform(prev.name);
-            }}
-            className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-white/60 hover:text-white transition-colors"
-          >‹</button>
-          <span className="flex-1 text-center text-xs font-medium text-white">{selectedPlatform}</span>
-          <button
-            onClick={() => {
-              const idx = PLATFORMS.findIndex(p => p.name === selectedPlatform);
-              const next = PLATFORMS[(idx + 1) % PLATFORMS.length];
-              setSelectedPlatform(next.name);
-            }}
-            className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-white/60 hover:text-white transition-colors"
-          >›</button>
-        </div>
-        {/* Desktop: scrollable strip */}
+          style={{ border: "1px solid rgba(201,168,76,0.5)", background: "black" }}
+          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-white text-sm outline-none transition-colors hover:border-[#C9A84C]"
+        >‹</button>
+
+        {/* Scrollable pills */}
         <div
           ref={platformScrollRef}
-          className="hidden sm:flex gap-1 overflow-x-auto scrollbar-hide"
+          className="flex-1 flex gap-1.5 overflow-x-auto scrollbar-hide"
           style={{
             backgroundColor: "rgba(20,20,24,0.48)",
             backdropFilter: "blur(14px) saturate(160%)",
@@ -343,6 +323,16 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
             );
           })}
         </div>
+
+        {/* Right arrow */}
+        <button
+          onClick={() => {
+            const el = platformScrollRef.current;
+            if (el) el.scrollBy({ left: 120, behavior: "smooth" });
+          }}
+          style={{ border: "1px solid rgba(201,168,76,0.5)", background: "black" }}
+          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-white text-sm outline-none transition-colors hover:border-[#C9A84C]"
+        >›</button>
       </div>
 
 
@@ -405,29 +395,29 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
       {/* Analyze buttons - always show when URL entered */}
       {ytUrl.trim() && (
         <div className="mt-4 flex gap-2 flex-wrap justify-center w-full max-w-xl">
-          <div className={analyzing === "bpm" ? "btn-sweep-wrapper" : "rounded-xl p-[2px] bg-gray-700"}>
+          <div className={analyzing === "bpm" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]" }>
             <button
               onClick={analyzeBpm}
               disabled={analyzing !== null || ytDownloading !== null}
-              className="px-3 py-2 rounded-[10px] bg-black border border-gray-600 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
+              className="px-4 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
             >
               {analyzing === "bpm" ? <span className="text-[#C9A84C]">Finding BPM...</span> : "Find BPM"}
             </button>
           </div>
-          <div className={analyzing === "key" ? "btn-sweep-wrapper" : "rounded-xl p-[2px] bg-gray-700"}>
+          <div className={analyzing === "key" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}>
             <button
               onClick={analyzeKey}
               disabled={analyzing !== null || ytDownloading !== null}
-              className="px-3 py-2 rounded-[10px] bg-black border border-gray-600 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
+              className="px-4 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
             >
               {analyzing === "key" ? <span className="text-[#C9A84C]">Finding Key...</span> : "Find Key"}
             </button>
           </div>
-          <div className={analyzing === "split" ? "btn-sweep-wrapper" : "rounded-xl p-[2px] bg-gray-700"}>
+          <div className={analyzing === "split" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}>
             <button
               onClick={splitSong}
               disabled={analyzing !== null || ytDownloading !== null}
-              className="px-3 py-2 rounded-[10px] bg-black border border-gray-600 hover:border-[#C9A84C] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
+              className="px-4 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
             >
               {analyzing === "split" ? <span className="text-[#C9A84C]">Splitting...</span> : "Split Song"}
             </button>
