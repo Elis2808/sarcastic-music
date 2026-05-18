@@ -237,14 +237,16 @@ export default function Home() {
       </div>
 
       {/* Mobile nav — auto-scrolling + swipeable */}
-      <MobileNav
-        items={NAV_ITEMS}
-        activePage={activePage}
-        onNavigate={(page: string) => {
-          if (page === "rhyme" && activePage === "rhyme") window.location.reload();
-          else navigateTo(page as Page);
-        }}
-      />
+      <div className="w-full max-w-4xl px-4">
+        <MobileNav
+          items={NAV_ITEMS}
+          activePage={activePage}
+          onNavigate={(page: string) => {
+            if (page === "rhyme" && activePage === "rhyme") window.location.reload();
+            else navigateTo(page as Page);
+          }}
+        />
+      </div>
 
       {activePage === "rhyme"      && <RhymeFinder key={restoreKey} onLookupWord={(word) => openDictionary(word, restoreState.word || lastRhymeSearch)} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word || lastRhymeSearch} />}
       {activePage === "key"        && <KeyFinder key={restoreKey}

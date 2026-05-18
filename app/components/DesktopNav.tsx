@@ -27,11 +27,11 @@ export default function DesktopNav({ items, activePage, onNavigate }: Props) {
           <button
             key={page}
             onClick={() => onNavigate(page)}
-            className="relative flex items-center justify-center gap-1.5 px-5 h-full rounded-full outline-none whitespace-nowrap"
+            className="relative flex items-center justify-center gap-1 px-3 h-full rounded-full outline-none whitespace-nowrap"
             style={{
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: 500,
-              letterSpacing: "-0.015em",
+              letterSpacing: "-0.01em",
               WebkitFontSmoothing: "antialiased",
               color: isActive ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
               backgroundColor: "transparent",
