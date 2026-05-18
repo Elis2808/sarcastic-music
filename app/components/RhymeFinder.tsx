@@ -463,7 +463,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
           </div>
 
           {rhymeMode === "basic" && (
-            <div className="flex items-center gap-4 mb-4 text-xs text-gray-400 overflow-x-auto scrollbar-hide flex-nowrap px-1">
+            <div className="flex items-center gap-4 mb-4 text-xs text-gray-400 overflow-x-auto scrollbar-hide flex-nowrap px-1 justify-center">
               <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-green-400 rounded-full" /> Perfect</div>
               <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-blue-400 rounded-full" /> Sounding</div>
               <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-red-400 rounded-full" /> Near</div>
@@ -473,7 +473,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
 
           {rhymeMode === "advanced" && (
             <>
-              <div className="flex gap-2 mb-2 overflow-x-auto scrollbar-hide flex-nowrap px-1">
+              <div className="flex gap-2 mb-2 overflow-x-auto scrollbar-hide flex-nowrap px-1 justify-center">
                 {(["noun", "verb", "adjective", "slang", "name"] as const).map((filter) => (
                   <button
                     key={filter}
@@ -491,14 +491,14 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
                 ))}
               </div>
               <div className="mb-4 text-xs text-gray-400 overflow-x-auto scrollbar-hide">
-                <div className="flex items-center gap-4 flex-nowrap px-1 mb-1">
+                <div className="flex items-center gap-4 flex-nowrap px-1 mb-1 justify-center">
                   <span className="text-gray-600 flex-shrink-0">Border:</span>
                   <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 rounded-full" style={{background:"#4ade80"}} /> Perfect</div>
                   <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 rounded-full" style={{background:"#60a5fa"}} /> Sounding</div>
                   <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 rounded-full" style={{background:"#f87171"}} /> Near</div>
                   <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 rounded-full" style={{background:"#facc15"}} /> Written</div>
                 </div>
-                <div className="flex items-center gap-4 flex-nowrap px-1">
+                <div className="flex items-center gap-4 flex-nowrap px-1 justify-center">
                   <span className="text-gray-600 flex-shrink-0">Text:</span>
                   <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-orange-400 rounded-full" /> Noun</div>
                   <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-cyan-400 rounded-full" /> Verb</div>
