@@ -54,9 +54,11 @@ export default function RootLayout({
         <Script id="aclib" src="//acscdn.com/script/aclib.js" strategy="afterInteractive" />
         <Script id="adcash-video-slider" strategy="afterInteractive">{`
           (function(){
+            if(sessionStorage.getItem('vs_shown')) return;
             var t = setInterval(function(){
               if(window.aclib){
                 clearInterval(t);
+                sessionStorage.setItem('vs_shown','1');
                 aclib.runVideoSlider({ zoneId: '11324510' });
               }
             }, 200);
