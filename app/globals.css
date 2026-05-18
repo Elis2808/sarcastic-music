@@ -47,6 +47,21 @@ body {
   animation: fadeIn 0.3s ease-in-out;
 }
 
+/* Adcash video slider — constrain to bottom-right, small */
+div[id*="aclib-video"],
+div[class*="aclib-video"],
+div[class*="ac-video"],
+iframe[src*="acscdn"] {
+  max-width: 280px !important;
+  max-height: 180px !important;
+  bottom: 16px !important;
+  right: 16px !important;
+  top: auto !important;
+  left: auto !important;
+  position: fixed !important;
+  z-index: 999 !important;
+}
+
 /* Hide scrollbar utility */
 .scrollbar-hide {
   -ms-overflow-style: none;
