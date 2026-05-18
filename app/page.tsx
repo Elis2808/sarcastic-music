@@ -35,14 +35,45 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [glideHover, setGlideHover] = useState<string | null>(null);
 
   useEffect(() => {
     const el = dropdownRef.current;
     if (!el || !menuOpen) return;
-    const onTouchMove = (e: TouchEvent) => { e.preventDefault(); };
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    return () => el.removeEventListener("touchmove", onTouchMove);
-  }, [menuOpen]);
+
+    function getPageFromPoint(x: number, y: number): string | null {
+      const target = document.elementFromPoint(x, y);
+      const btn = target?.closest('[data-menu-page]') as HTMLElement | null;
+      return btn?.dataset.menuPage ?? null;
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      e.preventDefault();
+      const t = e.touches[0];
+      setGlideHover(getPageFromPoint(t.clientX, t.clientY));
+    }
+
+    function onTouchEnd(e: TouchEvent) {
+      const t = e.changedTouches[0];
+      const page = getPageFromPoint(t.clientX, t.clientY);
+      setGlideHover(null);
+      if (page) {
+        if (page === "rhyme" && activePage === "rhyme") window.location.reload();
+        else navigateTo(page as Page);
+      }
+    }
+
+    function onTouchStart() { setGlideHover(null); }
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove",  onTouchMove,  { passive: false });
+    el.addEventListener("touchend",   onTouchEnd,   { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove",  onTouchMove);
+      el.removeEventListener("touchend",   onTouchEnd);
+    };
+  }, [menuOpen, activePage]);
 
   useEffect(() => {
     if (document.getElementById("glass-btn-style")) return;
@@ -234,39 +265,25 @@ export default function Home() {
             >
               <div className="p-1.5 flex flex-col gap-0.5">
                 {NAV_ITEMS.map(({ page, label }) => {
-                  const isActive = activePage === page;
+                  const isActive  = activePage === page;
+                  const isGliding = glideHover === page;
                   return (
                     <button
                       key={page}
                       onClick={() => {
-                        if (page === "rhyme" && activePage === "rhyme") {
-                          window.location.reload();
-                        } else {
-                          navigateTo(page);
-                        }
-                      }}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
-                        if (page === "rhyme" && activePage === "rhyme") {
-                          window.location.reload();
-                        } else {
-                          navigateTo(page);
-                        }
+                        if (page === "rhyme" && activePage === "rhyme") window.location.reload();
+                        else navigateTo(page);
                       }}
                       data-menu-page={page}
-                      className="w-full text-left px-3 py-1.5 rounded-full outline-none whitespace-nowrap transition-colors"
-                      onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(201,168,76,0.12)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}
-                      onTouchStart={e => { if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(201,168,76,0.12)"; }}
+                      className="w-full text-left px-3 py-1.5 rounded-full outline-none whitespace-nowrap"
                       style={{
                         fontSize: 12,
                         fontWeight: 500,
                         letterSpacing: "-0.01em",
-                        color: isActive ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.85)",
-                        backgroundColor: "transparent",
+                        color: isActive ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.9)",
+                        backgroundColor: isGliding && !isActive ? "rgba(201,168,76,0.14)" : "transparent",
                         border: isActive ? "1px solid rgba(201,168,76,0.6)" : "1px solid transparent",
-                        transition: "background-color 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out",
+                        transition: "background-color 80ms ease-out",
                       }}
                     >
                       {label}
