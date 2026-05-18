@@ -287,28 +287,24 @@ export default function Home() {
         <HistoryMenu onSelect={handleHistorySelect} />
       </div>
 
-      {/* Nav row — matches logo row width exactly, spacers mirror hamburger+history buttons */}
-      <div className="flex items-center w-full max-w-4xl px-4 gap-3">
-        <div className="flex-shrink-0 w-9" />{/* spacer = hamburger button width */}
-        <div className="flex-1 min-w-0">
-          <DesktopNav
-            items={NAV_ITEMS}
-            activePage={activePage}
-            onNavigate={(page) => {
-              if (page === "rhyme" && activePage === "rhyme") window.location.reload();
-              else navigateTo(page as Page);
-            }}
-          />
-          <MobileNav
-            items={NAV_ITEMS}
-            activePage={activePage}
-            onNavigate={(page: string) => {
-              if (page === "rhyme" && activePage === "rhyme") window.location.reload();
-              else navigateTo(page as Page);
-            }}
-          />
-        </div>
-        <div className="flex-shrink-0 w-9" />{/* spacer = history button width */}
+      {/* Nav row — full width matching header row */}
+      <div className="w-full max-w-4xl px-4">
+        <DesktopNav
+          items={NAV_ITEMS}
+          activePage={activePage}
+          onNavigate={(page) => {
+            if (page === "rhyme" && activePage === "rhyme") window.location.reload();
+            else navigateTo(page as Page);
+          }}
+        />
+        <MobileNav
+          items={NAV_ITEMS}
+          activePage={activePage}
+          onNavigate={(page: string) => {
+            if (page === "rhyme" && activePage === "rhyme") window.location.reload();
+            else navigateTo(page as Page);
+          }}
+        />
       </div>
       </div>{/* end sticky header */}
 
