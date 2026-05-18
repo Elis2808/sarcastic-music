@@ -13,22 +13,21 @@ export default function AdSlot({ zoneId, width, height, className = "" }: AdSlot
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fire = () => {
+    const inject = () => {
       if (!ref.current) return;
       if (ref.current.dataset.loaded) return;
       ref.current.dataset.loaded = "true";
-      (window as any).aclib.runBanner({ zoneId });
+      const s = document.createElement("script");
+      s.type = "text/javascript";
+      s.text = `aclib.runBanner({ zoneId: '${zoneId}' });`;
+      ref.current.appendChild(s);
     };
     const interval = setInterval(() => {
       if ((window as any).aclib && ref.current) {
         clearInterval(interval);
-        fire();
+        inject();
       }
     }, 200);
-    // also try on window load in case aclib loads late
-    window.addEventListener("load", () => {
-      if ((window as any).aclib && ref.current && !ref.current.dataset.loaded) fire();
-    });
     return () => clearInterval(interval);
   }, [zoneId]);
 
