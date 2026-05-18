@@ -11,37 +11,29 @@ export async function GET(request: Request) {
     return Response.json({ error: "No word provided" }, { status: 400 });
   }
 
-  // Try custom dictionary FIRST (highest priority)
+  // Load custom definition to potentially append later
+  let customDef: string | null = null;
   try {
     const customPath = join(process.cwd(), "app", "data", "custom-dictionary.json");
     const customContents = await readFile(customPath, "utf8");
     const customDict = JSON.parse(customContents);
-    if (customDict.terms?.[word]) {
-      return Response.json({
-        word,
-        source: "local",
-        definitions: [{ partOfSpeech: "slang", definition: customDict.terms[word] }],
-      });
-    }
+    if (customDict.terms?.[word]) customDef = customDict.terms[word];
   } catch {}
 
-  // Try local rap dictionary for slang/rap terms
+  // Load rap dictionary slang def to potentially append later
+  let rapDef: string | null = null;
   try {
     const filePath = join(process.cwd(), "app", "data", "rap-dictionary.json");
     const fileContents = await readFile(filePath, "utf8");
     const rapDict = JSON.parse(fileContents);
     if (rapDict.terms?.[word]) {
       const def = rapDict.terms[word];
-      const isGeneric = def.includes("Proper noun, surname, place name");
-      if (!isGeneric) {
-        return Response.json({
-          word,
-          source: "local",
-          definitions: [{ partOfSpeech: "slang", definition: def }],
-        });
-      }
+      if (!def.includes("Proper noun, surname, place name")) rapDef = def;
     }
   } catch {}
+
+  // The slang context to append (custom takes priority over rap dictionary)
+  const slangContext = customDef ?? rapDef;
 
   // Try Dictionary API.dev (real definitions)
   try {
@@ -61,6 +53,11 @@ export async function GET(request: Request) {
         }
       }
 
+      // Append slang/name context if we have one
+      if (slangContext) {
+        definitions.push({ partOfSpeech: "slang context", definition: slangContext });
+      }
+
       return Response.json({
         word: entry.word,
         phonetic: entry.phonetic,
@@ -69,6 +66,15 @@ export async function GET(request: Request) {
       });
     }
   } catch {}
+
+  // If no real definition found but we have a custom/slang def, return that
+  if (slangContext) {
+    return Response.json({
+      word,
+      source: "local",
+      definitions: [{ partOfSpeech: "slang", definition: slangContext }],
+    });
+  }
 
   // Fallback to Datamuse API
   try {
@@ -94,14 +100,18 @@ export async function GET(request: Request) {
   } catch {}
 
   // Final fallback: check if it's a form of a base word
+  // Only accept if the returned word is clearly related (shares the same root as the query)
   const baseForms = [word.replace(/ing$/, ""), word.replace(/ed$/, ""), word.replace(/s$/, ""), word.replace(/es$/, "")];
   for (const base of baseForms) {
-    if (base === word) continue;
+    if (base === word || base.length < 3) continue;
     try {
       const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(base)}`);
       if (res.ok) {
         const data = await res.json();
         const entry = data[0];
+        const returned = entry.word.toLowerCase();
+        // Only use if the returned word starts with the base we tried
+        if (!returned.startsWith(base) && !base.startsWith(returned)) continue;
         return Response.json({
           word: entry.word,
           originalQuery: word,

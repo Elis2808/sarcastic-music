@@ -34,6 +34,14 @@ const ADVANCED_COLOR: Record<string, string> = {
   all: "text-white",
 };
 
+const ADVANCED_HEX: Record<string, string> = {
+  noun: "#fb923c",
+  verb: "#22d3ee",
+  adjective: "#f472b6",
+  slang: "#a3e635",
+  name: "#c084fc",
+};
+
 const SLANG_WORDS = new Set(["drip","flex","lowkey","highkey","slay","cap","bussin","fire","lit","vibe","goat","dope","sauce","plug","bag","bread","guap","racks","bands","clout","stan","slap","bop","hard","cold","icy","wave","deadass","bet","facts","fam","bruh","sis","bro","homie","crew","squad","og","sus","mid","woke","gas","hype","bars","rizz","based","cringe","spit","grind","hustle","trash","wack","corny","basic","extra","thirsty","simp","ghost","vibe","chill","fresh","clean","heat","tea","shade","beef","smoke","fade","finesse","tweakin","trippin","buggin","pressed","salty","tight","heated","turnt","hyped","hater","mad","brick","wildin","clap","murk","body","rip","ethered","bodied","ratio","cancel","sus","suss","fr","ngl","tbh","periodt","lowkey","highkey","deadass","bet","facts","drip","flex","slay","cap","bussin","fire","lit","dope","sauce","plug","bag","clout","stan","slap","bop","hard","cold","icy","wave","rizz","based","cringe","spit","bars","grind","hustle","hype","goat","woke","gas","simp","ghost","chill","fresh","clean","heat","tea","shade","beef","smoke","fade","finesse","pressed","salty","heated","turnt","hyped","hater","trash","wack","corny","basic","extra","thirsty"]);
 
 function getWordTypes(word: string, cache: Record<string, string[]>): string[] {
@@ -56,25 +64,66 @@ interface PillListProps {
   onClickWord: (w: string) => void;
   rhymeMode: "basic" | "advanced";
   wordTypeCache: Record<string, string[]>;
+  advancedFilters: Set<string>;
 }
 
-const PillList = React.memo(function PillList({ results, lastClicked, onClickWord, rhymeMode, wordTypeCache }: PillListProps) {
+const PillList = React.memo(function PillList({ results, lastClicked, onClickWord, rhymeMode, wordTypeCache, advancedFilters }: PillListProps) {
   return (
     <div className="mt-2 w-full pb-8 max-h-[32rem] overflow-y-auto">
       <div className="flex gap-2 flex-wrap justify-center">
         {results.map((r, i) => {
           const isSelected = lastClicked === r.word.toLowerCase();
           const types = wordTypeCache[r.word.toLowerCase()] || getWordTypes(r.word, wordTypeCache);
-          const primaryType = types[0] || "noun";
-          const posColor = ADVANCED_COLOR[primaryType] || "text-white";
-          const rhymeTextClass = CATEGORY_TEXT_CLASS[r.category] || "text-white";
-          const textColorClass = rhymeMode === "advanced" ? posColor : rhymeTextClass;
           const borderClass = `rhyme-pill rhyme-pill-${r.category}${isSelected ? " rhyme-pill-selected" : ""}`;
+
+          if (rhymeMode === "advanced") {
+            // Find which selected filters this word matches
+            const matchedFilters = advancedFilters.size > 0
+              ? types.filter(t => advancedFilters.has(t))
+              : types.slice(0, 1);
+            const hexColors = matchedFilters.map(t => ADVANCED_HEX[t]).filter(Boolean);
+
+            if (hexColors.length >= 2) {
+              // Gradient text for multi-type match
+              const gradientStyle = {
+                background: `linear-gradient(90deg, ${hexColors.join(", ")})`,
+                WebkitBackgroundClip: "text" as const,
+                WebkitTextFillColor: "transparent" as const,
+                backgroundClip: "text" as const,
+              };
+              return (
+                <span
+                  key={i}
+                  onClick={() => onClickWord(r.word)}
+                  className={`px-4 py-2 text-lg rounded-lg cursor-pointer bg-gray-900 ${borderClass}`}
+                  style={gradientStyle}
+                >
+                  {r.word}
+                </span>
+              );
+            }
+
+            // Single type — solid color
+            const primaryType = matchedFilters[0] || types[0] || "noun";
+            const posColor = ADVANCED_COLOR[primaryType] || "text-white";
+            return (
+              <span
+                key={i}
+                onClick={() => onClickWord(r.word)}
+                className={`px-4 py-2 text-lg rounded-lg cursor-pointer bg-gray-900 ${borderClass} ${posColor}`}
+              >
+                {r.word}
+              </span>
+            );
+          }
+
+          // Basic mode — rhyme quality color
+          const rhymeTextClass = CATEGORY_TEXT_CLASS[r.category] || "text-white";
           return (
             <span
               key={i}
               onClick={() => onClickWord(r.word)}
-              className={`px-4 py-2 text-lg rounded-lg cursor-pointer bg-gray-900 ${borderClass} ${textColorClass}`}
+              className={`px-4 py-2 text-lg rounded-lg cursor-pointer bg-gray-900 ${borderClass} ${rhymeTextClass}`}
             >
               {r.word}
             </span>
@@ -83,7 +132,7 @@ const PillList = React.memo(function PillList({ results, lastClicked, onClickWor
       </div>
     </div>
   );
-});
+})
 
 export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, onWordChange }: Props) {
   const [word, setWord] = useState("");
@@ -93,7 +142,15 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
   const [activeTab, setActiveTab] = useState<"top" | "all" | "perfect" | "sounding" | "near" | "written">("top");
   const [isLoading, setIsLoading] = useState(false);
   const [rhymeMode, setRhymeMode] = useState<"basic" | "advanced">("basic");
-  const [advancedFilter, setAdvancedFilter] = useState<"all" | "noun" | "verb" | "adjective" | "slang" | "name">("all");
+  
+  function toggleFilter(f: string) {
+    setAdvancedFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(f)) next.delete(f); else next.add(f);
+      return next;
+    });
+  }
+  const [advancedFilters, setAdvancedFilters] = useState<Set<string>>(new Set());
   const [isDraggingSlider, setIsDraggingSlider] = useState(false);
   const wordTypeCache = useRef<Record<string, string[]>>({}).current;
   const [rhymeFilter, setRhymeFilter] = useState("");
@@ -196,7 +253,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
   }, [initialWord]);
 
   useEffect(() => {
-    if (rhymeMode === "basic") setAdvancedFilter("all");
+    if (rhymeMode === "basic") setAdvancedFilters(new Set());
   }, [rhymeMode]);
 
   // Clear rhyme filter when word list changes
@@ -311,8 +368,8 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
         case "all":     results = data.allResults; break;
       }
       
-      if (rhymeMode === "advanced" && advancedFilter !== "all") {
-        results = results.filter(r => getCachedWordTypes(r.word).includes(advancedFilter));
+      if (rhymeMode === "advanced" && advancedFilters.size > 0) {
+        results = results.filter(r => getCachedWordTypes(r.word).some(t => advancedFilters.has(t)));
       }
       
       if (rhymeFilter.trim()) {
@@ -324,7 +381,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
       map[w] = results.slice(0, 200);
     });
     return map;
-  }, [rhymeMap, wordList, activeTab, rhymeMode, advancedFilter, rhymeFilter, memoizedWordTypes]);
+  }, [rhymeMap, wordList, activeTab, rhymeMode, advancedFilters, rhymeFilter, memoizedWordTypes]);
 
   // Memoized total results count
   const totalResultsCount = useMemo(() => {
@@ -477,12 +534,12 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
                 {(["noun", "verb", "adjective", "slang", "name"] as const).map((filter) => (
                   <button
                     key={filter}
-                    onClick={() => setAdvancedFilter(prev => prev === filter ? "all" : filter)}
+                    onClick={() => toggleFilter(filter)}
                     className="px-2 py-1 rounded-full text-xs outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]/50"
                     style={{
-                      backgroundColor: advancedFilter === filter ? "rgba(201,168,76,0.13)" : "transparent",
-                      color: advancedFilter === filter ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
-                      border: "1px solid " + (advancedFilter === filter ? "rgba(201,168,76,0.25)" : "rgba(255,255,255,0.06)"),
+                      backgroundColor: advancedFilters.has(filter) ? "rgba(201,168,76,0.13)" : "transparent",
+                      color: advancedFilters.has(filter) ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
+                      border: "1px solid " + (advancedFilters.has(filter) ? "rgba(201,168,76,0.25)" : "rgba(255,255,255,0.06)"),
                       transition: "color 160ms ease-out, background-color 160ms ease-out, border-color 160ms ease-out",
                     }}
                   >
@@ -524,7 +581,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
               <div className="text-green-400 text-sm">Searching...</div>
             </div>
           ) : wordList.length === 1 ? (
-            <PillList results={displayResultsMap[wordList[0]] || []} lastClicked={lastClickedWord} onClickWord={handleWordClick} rhymeMode={rhymeMode} wordTypeCache={wordTypeCache} />
+            <PillList results={displayResultsMap[wordList[0]] || []} lastClicked={lastClickedWord} onClickWord={handleWordClick} rhymeMode={rhymeMode} wordTypeCache={wordTypeCache} advancedFilters={advancedFilters} />
           ) : (
             <>
             <div className="flex flex-col gap-6 sm:hidden w-full">

@@ -104,7 +104,9 @@ export default function Dictionary({ initialWord = "", onBack, onWordChange }: P
           <div className="space-y-4 mt-4">
             {result.definitions.map((d, i) => (
               <div key={i}>
-                <span className="text-xs text-gray-500 italic">{d.partOfSpeech}</span>
+                <span className={`text-xs italic ${d.partOfSpeech === "slang context" ? "text-[#C9A84C] font-semibold not-italic" : "text-gray-500"}`}>
+                  {d.partOfSpeech === "slang context" ? "⚡ Slang / Street Context" : d.partOfSpeech}
+                </span>
                 <p className="text-white text-sm mt-1 leading-relaxed">{d.definition}</p>
                 {d.example && <p className="text-gray-500 text-xs mt-1 italic">&ldquo;{d.example}&rdquo;</p>}
               </div>
