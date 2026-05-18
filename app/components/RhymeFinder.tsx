@@ -516,7 +516,24 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
           ) : wordList.length === 1 ? (
             <PillList results={displayResultsMap[wordList[0]] || []} lastClicked={lastClickedWord} onClickWord={handleWordClick} rhymeMode={rhymeMode} wordTypeCache={wordTypeCache} />
           ) : (
-            <div className="grid gap-4 w-full" style={{ gridTemplateColumns: `repeat(${Math.min(wordList.length, 3)}, minmax(280px, 1fr))` }}>
+            <>
+            <div className="flex flex-col gap-6 sm:hidden w-full">
+              {wordList.map((w) => {
+                const results = displayResultsMap[w] || [];
+                return (
+                  <div key={w} className="flex flex-col min-w-0">
+                    <h2 className="text-center text-lg font-bold text-[#C9A84C] mb-3 capitalize border-b border-gray-700 pb-2">{w}</h2>
+                    <div className="flex flex-wrap gap-2 justify-center max-h-64 overflow-y-auto pb-2">
+                      {results.length === 0
+                        ? <span className="text-gray-500 text-sm">No results</span>
+                        : results.map((r, i) => renderWordPill(r, i, true))
+                      }
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="hidden sm:grid gap-4 w-full" style={{ gridTemplateColumns: `repeat(${Math.min(wordList.length, 3)}, minmax(280px, 1fr))` }}>
               {wordList.map((w) => {
                 const results = displayResultsMap[w] || [];
                 return (
@@ -532,6 +549,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
                 );
               })}
             </div>
+            </>
           )}
         </div>
       )}
