@@ -246,6 +246,16 @@ export default function Home() {
                     <button
                       key={page}
                       onClick={() => {
+                        setMenuOpen(false);
+                        if (page === "rhyme" && activePage === "rhyme") {
+                          window.location.reload();
+                        } else {
+                          navigateTo(page);
+                        }
+                      }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        setMenuOpen(false);
                         if (page === "rhyme" && activePage === "rhyme") {
                           window.location.reload();
                         } else {
@@ -287,8 +297,8 @@ export default function Home() {
         <HistoryMenu onSelect={handleHistorySelect} />
       </div>
 
-      {/* Nav row — full width matching header row */}
-      <div className="w-full max-w-4xl px-4">
+      {/* Nav row — compact pill width */}
+      <div className="w-full max-w-2xl px-4">
         <DesktopNav
           items={NAV_ITEMS}
           activePage={activePage}

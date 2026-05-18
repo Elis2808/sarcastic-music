@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 
 type Page = string;
 interface NavItem { page: Page; label: string; }
@@ -11,15 +11,16 @@ interface MobileNavProps {
 }
 
 const BASE_SPEED = 0.6;
-// Width reserved in the center for the locked active tab
-const LOCK_SLOT_W = 110;
 
 export default function MobileNav({ items, activePage, onNavigate }: MobileNavProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const trackRef     = useRef<HTMLDivElement>(null);
-  const rafRef       = useRef<number>(0);
-  const btnRefs      = useRef<HTMLButtonElement[]>([]);
-  const allBtnRefs   = useRef<{ el: HTMLButtonElement; idx: number }[]>([]);
+  const trackRef   = useRef<HTMLDivElement>(null);
+  const rafRef     = useRef<number>(0);
+  const btnRefs    = useRef<HTMLButtonElement[]>([]);
+  const allBtnRefs = useRef<{ el: HTMLButtonElement; idx: number }[]>([]);
+
+  // position of locked overlay (left offset from container)
+  const [lockLeft, setLockLeft] = useState<number | null>(null);
+  const [lockWidth, setLockWidth] = useState(80);
 
   const autoPos    = useRef(0);
   const halfW      = useRef(0);
@@ -33,26 +34,15 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
   const lastX        = useRef(0);
   const lastT        = useRef(0);
   const hoveredIdx   = useRef(-1);
-  const touchActive  = useRef(false);
 
-  const navigateFn   = useRef(onNavigate);
+  const navigateFn  = useRef(onNavigate);
   navigateFn.current = onNavigate;
-  const activeRef    = useRef(activePage);
-  activeRef.current  = activePage;
+  const activeRef   = useRef(activePage);
+  activeRef.current = activePage;
 
-  // non-active items for the scrolling track (doubled for infinite loop)
-  const scrollItems = items.filter(it => it.page !== activePage);
-  const doubled     = [...scrollItems, ...scrollItems];
+  const doubled = [...items, ...items];
 
   function nearestByScreenX(screenX: number): number | null {
-    // Check the locked active tab first
-    if (containerRef.current) {
-      const lockEl = containerRef.current.querySelector<HTMLElement>("[data-locked]");
-      if (lockEl) {
-        const r = lockEl.getBoundingClientRect();
-        if (screenX >= r.left && screenX <= r.right) return null; // tapped the active tab
-      }
-    }
     let best: number | null = null;
     let bestDist = Infinity;
     allBtnRefs.current.forEach(({ el, idx }) => {
@@ -67,6 +57,23 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
     return best;
   }
 
+  // Measure where the active tab's first copy sits in the container coords
+  // Called after mount and after activePage changes
+  function measureLock() {
+    const track = trackRef.current;
+    if (!track) return;
+    const container = track.parentElement;
+    if (!container) return;
+    const containerRect = container.getBoundingClientRect();
+    // find first copy of active button
+    const activeIdx = items.findIndex(it => it.page === activePage);
+    const btn = btnRefs.current[activeIdx];
+    if (!btn) return;
+    const btnRect = btn.getBoundingClientRect();
+    setLockLeft(btnRect.left - containerRect.left);
+    setLockWidth(btnRect.width);
+  }
+
   useEffect(() => {
     const el = trackRef.current;
     if (!el) return;
@@ -74,10 +81,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
     autoPos.current  = 0;
     velocity.current = 0;
 
-    const measure = () => {
-      const sw = el.scrollWidth;
-      halfW.current = sw > 0 ? sw / 2 : 0;
-    };
+    const measure = () => { halfW.current = el.scrollWidth > 0 ? el.scrollWidth / 2 : 0; };
     measure();
 
     function wrap(p: number) {
@@ -102,10 +106,13 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
       rafRef.current = requestAnimationFrame(loop);
     }
 
-    const tid = setTimeout(() => { measure(); rafRef.current = requestAnimationFrame(loop); }, 60);
+    const tid = setTimeout(() => {
+      measure();
+      measureLock();
+      rafRef.current = requestAnimationFrame(loop);
+    }, 60);
 
     function onStart(e: TouchEvent) {
-      touchActive.current  = true;
       dragging.current     = true;
       didDrag.current      = false;
       dragStartX.current   = e.touches[0].clientX;
@@ -143,13 +150,11 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
       dragging.current   = false;
       hoveredIdx.current = -1;
       btnRefs.current.forEach(b => { if (b) b.style.transform = "scale(1)"; });
-
       if (!didDrag.current) {
         const x   = e.changedTouches[0].clientX;
         const idx = nearestByScreenX(x);
-        if (idx !== null) navigateFn.current(scrollItems[idx]?.page ?? items[idx]?.page);
+        if (idx !== null) navigateFn.current(items[idx].page);
       }
-      setTimeout(() => { touchActive.current = false; }, 0);
     }
 
     el.addEventListener("touchstart", onStart, { passive: true });
@@ -163,7 +168,6 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
       el.removeEventListener("touchmove",  onMove);
       el.removeEventListener("touchend",   onEnd);
     };
-  // re-run when active page changes so scrollItems/doubled update
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePage]);
 
@@ -171,7 +175,6 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
 
   return (
     <div
-      ref={containerRef}
       className="sm:hidden w-full mb-6 rounded-full overflow-hidden relative"
       style={{
         backgroundColor: "rgba(20,20,24,0.48)",
@@ -182,16 +185,17 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
         height: 46,
       }}
     >
-      {/* Scrolling track — other tabs flow past */}
-      <div className="absolute inset-0 flex items-center overflow-hidden" style={{ padding: "4px 6px" }}>
+      {/* Scrolling track — all tabs including active scroll, active styled differently */}
+      <div className="absolute inset-0 overflow-hidden" style={{ padding: "4px 6px" }}>
         <div
           ref={trackRef}
-          className="flex gap-1"
-          style={{ width: "max-content", willChange: "transform", height: "100%" }}
+          className="flex gap-1 h-full"
+          style={{ width: "max-content", willChange: "transform" }}
         >
           {doubled.map(({ page, label }, i) => {
-            const isFirst = i < scrollItems.length;
-            const itemIdx = i % scrollItems.length;
+            const isFirst  = i < items.length;
+            const itemIdx  = i % items.length;
+            const isActive = page === activePage;
             return (
               <button
                 key={i}
@@ -202,9 +206,9 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
                 style={{
                   willChange: "transform",
                   height: "100%",
-                  color: "rgba(255,255,255,0.75)",
-                  border: "1px solid transparent",
-                  backgroundColor: "transparent",
+                  color: isActive ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.75)",
+                  border: isActive ? "1px solid rgba(201,168,76,0.6)" : "1px solid transparent",
+                  backgroundColor: isActive ? "rgb(0,0,0)" : "transparent",
                 }}
                 className="px-4 rounded-full text-xs font-medium outline-none whitespace-nowrap flex-shrink-0 flex items-center"
               >
@@ -215,33 +219,22 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
         </div>
       </div>
 
-      {/* Locked active tab — always centered, stationary */}
-      {activeItem && (
-        <div
-          className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          style={{ padding: "4px 6px" }}
-        >
-          <button
-            data-locked="true"
-            onClick={() => navigateFn.current(activeItem.page)}
-            className="pointer-events-auto flex items-center justify-center rounded-full text-xs font-semibold whitespace-nowrap outline-none active:scale-95 transition-transform"
-            style={{
-              height: "calc(100% - 0px)",
-              minWidth: LOCK_SLOT_W,
-              paddingLeft: 16,
-              paddingRight: 16,
-              color: "rgba(255,255,255,0.45)",
-              border: "1px solid rgba(201,168,76,0.65)",
-              backgroundColor: "rgba(0,0,0,0.72)",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
-              boxShadow: "0 0 12px rgba(201,168,76,0.15)",
-              zIndex: 10,
-            }}
-          >
-            {activeItem.label}
-          </button>
-        </div>
+      {/* Invisible overlay on the active tab's position to intercept taps and keep it "locked" looking */}
+      {activeItem && lockLeft !== null && (
+        <button
+          onClick={() => navigateFn.current(activeItem.page)}
+          className="absolute top-0 bottom-0 rounded-full outline-none"
+          style={{
+            left: lockLeft,
+            width: lockWidth,
+            zIndex: 20,
+            backgroundColor: "transparent",
+            border: "none",
+            cursor: "default",
+          }}
+          aria-hidden="true"
+          tabIndex={-1}
+        />
       )}
     </div>
   );

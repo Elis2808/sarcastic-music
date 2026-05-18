@@ -272,7 +272,7 @@ export default function KeyFinder({ initialUrl, initialPlatform, initialKey, ini
 
       {/* Platform selector - only in link mode */}
       {!result && !loading && linkMode && (
-        <div className="w-full max-w-xl">
+        <div className="w-full max-w-xl mb-3">
           <div
             className="flex gap-1.5 overflow-x-auto scrollbar-hide"
             style={{
