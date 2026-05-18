@@ -339,6 +339,14 @@ export async function POST(req: Request) {
     console.log('Rap dictionary not found, using only CMU dictionary');
   }
 
+  // Load custom dictionary
+  let customDictionary: any = null;
+  try {
+    const customPath = join(process.cwd(), 'app', 'data', 'custom-dictionary.json');
+    const customContents = await readFile(customPath, 'utf8');
+    customDictionary = JSON.parse(customContents);
+  } catch {}
+
   // Check rap dictionary first for slang and rap terms
   if (rapDictionary) {
     const slangRhymes = rapDictionary.slang?.[normalizedInput.toLowerCase()];
@@ -454,6 +462,29 @@ export async function POST(req: Request) {
       const normalizedWord = normalizeWord(cleanWord);
       if (normalizedWord === input || processedWords.has(normalizedWord) || !filterWord(cleanWord)) continue;
       if (dictionary[cleanWord]) continue; // already covered by CMU above
+      const approxPhones = approximatePhones(cleanWord);
+      if (!approxPhones) continue;
+      const candidatePhoneArray = approxPhones.split(' ');
+      const rhymeResult = calculateRhymeScore(inputPhoneArray, candidatePhoneArray, normalizedInput, cleanWord);
+      if (rhymeResult.score > 0) {
+        results.push({
+          word: cleanWord.charAt(0).toUpperCase() + cleanWord.slice(1),
+          score: rhymeResult.score,
+          rhymeType: rhymeResult.rhymeType,
+          category: rhymeResult.category
+        });
+        processedWords.add(normalizedWord);
+      }
+    }
+  }
+
+  // 3. Search custom dictionary words as phonetic candidates
+  if (customDictionary?.terms) {
+    for (const candidateWord of Object.keys(customDictionary.terms)) {
+      const cleanWord = candidateWord.toLowerCase().trim();
+      const normalizedWord = normalizeWord(cleanWord);
+      if (normalizedWord === input || processedWords.has(normalizedWord) || !filterWord(cleanWord)) continue;
+      if (dictionary[cleanWord]) continue;
       const approxPhones = approximatePhones(cleanWord);
       if (!approxPhones) continue;
       const candidatePhoneArray = approxPhones.split(' ');

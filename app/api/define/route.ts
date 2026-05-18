@@ -11,7 +11,21 @@ export async function GET(request: Request) {
     return Response.json({ error: "No word provided" }, { status: 400 });
   }
 
-  // Try local rap dictionary FIRST for slang/rap terms
+  // Try custom dictionary FIRST (highest priority)
+  try {
+    const customPath = join(process.cwd(), "app", "data", "custom-dictionary.json");
+    const customContents = await readFile(customPath, "utf8");
+    const customDict = JSON.parse(customContents);
+    if (customDict.terms?.[word]) {
+      return Response.json({
+        word,
+        source: "local",
+        definitions: [{ partOfSpeech: "slang", definition: customDict.terms[word] }],
+      });
+    }
+  } catch {}
+
+  // Try local rap dictionary for slang/rap terms
   try {
     const filePath = join(process.cwd(), "app", "data", "rap-dictionary.json");
     const fileContents = await readFile(filePath, "utf8");

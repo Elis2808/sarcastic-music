@@ -34,6 +34,8 @@ const ADVANCED_COLOR: Record<string, string> = {
   all: "text-white",
 };
 
+const SLANG_WORDS = new Set(["drip","flex","lowkey","highkey","slay","cap","bussin","fire","lit","vibe","goat","dope","sauce","plug","bag","bread","guap","racks","bands","clout","stan","slap","bop","hard","cold","icy","wave","deadass","bet","facts","fam","bruh","sis","bro","homie","crew","squad","og","sus","mid","woke","gas","hype","bars","rizz","based","cringe","spit","grind","hustle","trash","wack","corny","basic","extra","thirsty","simp","ghost","vibe","chill","fresh","clean","heat","tea","shade","beef","smoke","fade","finesse","tweakin","trippin","buggin","pressed","salty","tight","heated","turnt","hyped","hater","mad","brick","wildin","clap","murk","body","rip","ethered","bodied","ratio","cancel","sus","suss","fr","ngl","tbh","periodt","lowkey","highkey","deadass","bet","facts","drip","flex","slay","cap","bussin","fire","lit","dope","sauce","plug","bag","clout","stan","slap","bop","hard","cold","icy","wave","rizz","based","cringe","spit","bars","grind","hustle","hype","goat","woke","gas","simp","ghost","chill","fresh","clean","heat","tea","shade","beef","smoke","fade","finesse","pressed","salty","heated","turnt","hyped","hater","trash","wack","corny","basic","extra","thirsty"]);
+
 function getWordTypes(word: string, cache: Record<string, string[]>): string[] {
   if (!word) return ["noun"];
   const w = word.toLowerCase().trim();
@@ -42,6 +44,8 @@ function getWordTypes(word: string, cache: Record<string, string[]>): string[] {
   if (/\w+(ing|ed|ize|ise|ify)$/.test(w)) types.push("verb");
   if (/\w+(tion|sion|ment|ness|ity|dom|ship)$/.test(w)) types.push("noun");
   if (/\w+(ful|ous|ive|less|able|ible|ic|al)$/.test(w)) types.push("adjective");
+  if (SLANG_WORDS.has(w)) types.push("slang");
+  if (/^[A-Z][a-z]+$/.test(word.trim()) || /\w+(son|ton|man|ley|ster|ito|isha|ion|ell)$/.test(w)) types.push("name");
   if (types.length === 0) types.push("noun");
   return types;
 }
