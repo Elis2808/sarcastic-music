@@ -427,7 +427,17 @@ export default function FileConverter() {
       <p className="text-gray-500 text-xs mb-4">Drop any file and pick an output format.</p>
 
       {/* Main Category Tabs */}
-      <div className="flex gap-2 mb-4 justify-center flex-wrap max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:justify-start max-sm:px-4 max-sm:pb-1 max-sm:scrollbar-none">
+      <div
+        className="flex gap-1.5 mb-3 overflow-x-auto scrollbar-hide w-full max-w-xl"
+        style={{
+          backgroundColor: "rgba(20,20,24,0.48)",
+          backdropFilter: "blur(14px) saturate(160%)",
+          WebkitBackdropFilter: "blur(14px) saturate(160%)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: 9999,
+          padding: "4px 6px",
+        }}
+      >
         {(Object.keys(CATEGORIES) as Array<keyof typeof CATEGORIES>).map((cat) => (
           <button
             key={cat}
@@ -437,12 +447,12 @@ export default function FileConverter() {
               setFiles([]);
               setError("");
             }}
-            className="px-4 py-2 rounded-full text-sm outline-none flex-shrink-0"
+            className="flex-1 px-4 py-1.5 rounded-full text-xs font-medium outline-none whitespace-nowrap"
             style={{
-              backgroundColor: activeCategory === cat ? "rgba(201,168,76,0.13)" : "transparent",
-              color: activeCategory === cat ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
-              border: "1px solid " + (activeCategory === cat ? "rgba(201,168,76,0.25)" : "rgba(255,255,255,0.06)"),
-              transition: "color 160ms ease-out, background-color 160ms ease-out, border-color 160ms ease-out",
+              backgroundColor: "transparent",
+              color: activeCategory === cat ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
+              border: "1px solid " + (activeCategory === cat ? "rgba(201,168,76,0.6)" : "transparent"),
+              transition: "color 160ms ease-out, border-color 160ms ease-out",
             }}
           >
             {CATEGORIES[cat].label}
@@ -451,23 +461,32 @@ export default function FileConverter() {
       </div>
 
       {/* Output Format Buttons */}
-      <div className="flex gap-2 mb-6 flex-wrap justify-center max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:justify-start max-sm:w-full max-sm:pb-1">
+      <div
+        className="flex gap-1.5 mb-6 overflow-x-auto scrollbar-hide w-full max-w-xl"
+        style={{
+          backgroundColor: "rgba(20,20,24,0.48)",
+          backdropFilter: "blur(14px) saturate(160%)",
+          WebkitBackdropFilter: "blur(14px) saturate(160%)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: 9999,
+          padding: "4px 6px",
+        }}
+      >
         {currentCategory.outputs.map((out) => (
           <button
             key={out.id}
             onClick={() => {
               setActiveConversion(out.id);
-              setFiles([]);
               setError("");
               setPdfPageRange("");
               setPdfTotalPages(null);
             }}
-            className="px-4 py-2 rounded-full text-sm outline-none flex-shrink-0"
+            className="flex-1 px-4 py-1.5 rounded-full text-xs font-medium outline-none whitespace-nowrap"
             style={{
-              backgroundColor: activeConversion === out.id ? "rgba(201,168,76,0.13)" : "transparent",
-              color: activeConversion === out.id ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
-              border: "1px solid " + (activeConversion === out.id ? "rgba(201,168,76,0.25)" : "rgba(255,255,255,0.06)"),
-              transition: "color 160ms ease-out, background-color 160ms ease-out, border-color 160ms ease-out",
+              backgroundColor: "transparent",
+              color: activeConversion === out.id ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
+              border: "1px solid " + (activeConversion === out.id ? "rgba(201,168,76,0.6)" : "transparent"),
+              transition: "color 160ms ease-out, border-color 160ms ease-out",
             }}
           >
             {out.label}
