@@ -193,7 +193,7 @@ export default function Home() {
     <main className="relative flex min-h-screen flex-col items-center bg-black text-white">
       {/* Sticky header */}
       <div
-        className="sticky top-0 z-40 w-full flex flex-col items-center pt-6 pb-3"
+        className="sticky top-0 z-40 w-full flex flex-col items-center pt-6 pb-4"
         style={{
           backgroundColor: "rgba(0,0,0,0.92)",
           backdropFilter: "blur(16px) saturate(160%)",
@@ -201,7 +201,7 @@ export default function Home() {
           borderBottom: "1px solid rgba(255,255,255,0.05)",
         }}
       >
-      <div className="flex items-center justify-between w-full max-w-4xl px-4 mb-4">
+      <div className="flex items-center justify-between w-full max-w-4xl px-4">
         {/* Hamburger Menu Button + Dropdown */}
         <div className="relative">
           <button
@@ -296,29 +296,31 @@ export default function Home() {
         {/* History Menu */}
         <HistoryMenu onSelect={handleHistorySelect} />
       </div>
-
-      {/* Nav row — compact pill width */}
-      <div className="w-full max-w-2xl px-4">
-        <DesktopNav
-          items={NAV_ITEMS}
-          activePage={activePage}
-          onNavigate={(page) => {
-            if (page === "rhyme" && activePage === "rhyme") window.location.reload();
-            else navigateTo(page as Page);
-          }}
-        />
-        <MobileNav
-          items={NAV_ITEMS}
-          activePage={activePage}
-          onNavigate={(page: string) => {
-            if (page === "rhyme" && activePage === "rhyme") window.location.reload();
-            else navigateTo(page as Page);
-          }}
-        />
-      </div>
       </div>{/* end sticky header */}
 
-      <div className="w-full flex flex-col items-center pt-6">
+      {/* Nav bar — NOT sticky, scrolls with page */}
+      <div className="w-full flex flex-col items-center pt-4 px-4">
+        <div className="w-full max-w-2xl">
+          <DesktopNav
+            items={NAV_ITEMS}
+            activePage={activePage}
+            onNavigate={(page) => {
+              if (page === "rhyme" && activePage === "rhyme") window.location.reload();
+              else navigateTo(page as Page);
+            }}
+          />
+          <MobileNav
+            items={NAV_ITEMS}
+            activePage={activePage}
+            onNavigate={(page: string) => {
+              if (page === "rhyme" && activePage === "rhyme") window.location.reload();
+              else navigateTo(page as Page);
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="w-full flex flex-col items-center pt-2">
 
       {activePage === "rhyme"      && <RhymeFinder key={restoreKey} onLookupWord={(word) => openDictionary(word, restoreState.word || lastRhymeSearch)} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word || lastRhymeSearch} onWordChange={(w) => { liveRhymeWord.current = w; }} />}
       {activePage === "key"        && <KeyFinder key={restoreKey}
