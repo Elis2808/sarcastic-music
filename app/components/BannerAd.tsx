@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
+const fired = new Set<string>();
+
 interface AdSlotProps {
   zoneId: string;
   width: string | number;
@@ -13,11 +15,12 @@ export default function AdSlot({ zoneId, width, height, className = "" }: AdSlot
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (fired.has(zoneId)) return;
     const interval = setInterval(() => {
       if (!(window as any).aclib || !ref.current) return;
       clearInterval(interval);
-      if (ref.current.dataset.loaded) return;
-      ref.current.dataset.loaded = "true";
+      if (fired.has(zoneId)) return;
+      fired.add(zoneId);
       const s = document.createElement("script");
       s.type = "text/javascript";
       s.text = `aclib.runBanner({ zoneId: '${zoneId}' });`;
