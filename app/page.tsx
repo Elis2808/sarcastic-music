@@ -36,6 +36,13 @@ export default function Home() {
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const el = dropdownRef.current;
+    if (!el || !menuOpen) return;
+    const onTouchMove = (e: TouchEvent) => { e.preventDefault(); };
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", onTouchMove);
+  }, [menuOpen]);
 
   useEffect(() => {
     if (document.getElementById("glass-btn-style")) return;
