@@ -401,6 +401,30 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
             </span>
           </label>
 
+          {/* Find BPM / Find Key above Convert */}
+          {ytUrl.trim() && (
+            <div className="flex gap-2 justify-center">
+              <div className={analyzing === "bpm" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}>
+                <button
+                  onClick={analyzeBpm}
+                  disabled={analyzing !== null || ytDownloading !== null}
+                  className="px-4 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
+                >
+                  {analyzing === "bpm" ? <span className="text-[#C9A84C]">Finding BPM...</span> : "Find BPM"}
+                </button>
+              </div>
+              <div className={analyzing === "key" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}>
+                <button
+                  onClick={analyzeKey}
+                  disabled={analyzing !== null || ytDownloading !== null}
+                  className="px-4 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
+                >
+                  {analyzing === "key" ? <span className="text-[#C9A84C]">Finding Key...</span> : "Find Key"}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className={`w-36 ${ytLoading ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}`}>
             <button
               onClick={fetchInfo}
@@ -412,39 +436,6 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
           </div>
         </div>
       </UrlDropZone>
-
-      {/* Analyze buttons - always show when URL entered */}
-      {ytUrl.trim() && (
-        <div className="mt-4 flex gap-2 flex-wrap justify-center w-full max-w-xl">
-          <div className={analyzing === "bpm" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]" }>
-            <button
-              onClick={analyzeBpm}
-              disabled={analyzing !== null || ytDownloading !== null}
-              className="px-4 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
-            >
-              {analyzing === "bpm" ? <span className="text-[#C9A84C]">Finding BPM...</span> : "Find BPM"}
-            </button>
-          </div>
-          <div className={analyzing === "key" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}>
-            <button
-              onClick={analyzeKey}
-              disabled={analyzing !== null || ytDownloading !== null}
-              className="px-4 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
-            >
-              {analyzing === "key" ? <span className="text-[#C9A84C]">Finding Key...</span> : "Find Key"}
-            </button>
-          </div>
-          <div className={analyzing === "split" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}>
-            <button
-              onClick={splitSong}
-              disabled={analyzing !== null || ytDownloading !== null}
-              className="px-4 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
-            >
-              {analyzing === "split" ? <span className="text-[#C9A84C]">Splitting...</span> : "Split Song"}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Analysis Results */}
       {analysisResult && (
