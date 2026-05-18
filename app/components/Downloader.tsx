@@ -554,36 +554,38 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
       )}
 
       {ytInfo && (
-        <div className="mt-6 w-full max-w-xl bg-gray-900 rounded-lg p-4 flex gap-4 items-start max-sm:flex-col max-sm:items-center">
-          {ytInfo.thumbnail && (
-            <img
-              src={`/api/proxy-image?url=${encodeURIComponent(ytInfo.thumbnail)}`}
-              alt="thumbnail"
-              className="w-32 h-20 object-cover rounded max-sm:w-full max-sm:h-40"
-            />
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-semibold text-sm truncate">{ytInfo.title}</p>
-            <p className="text-gray-400 text-xs mt-1">{ytInfo.author} · {formatDuration(ytInfo.lengthSeconds)}</p>
-            <div className="flex gap-2 mt-3 flex-wrap">
-              <div className={ytDownloading === "mp3" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]" }>
-                <button
-                  onClick={() => handleDownload("mp3")}
-                  disabled={ytDownloading !== null || analyzing !== null}
-                  className="px-4 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
-                >
-                  {ytDownloading === "mp3" ? <span className="text-[#C9A84C]">Processing...</span> : "Download MP3"}
-                </button>
-              </div>
-              <div className={ytDownloading === "mp4" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}>
-                <button
-                  onClick={() => handleDownload("mp4")}
-                  disabled={ytDownloading !== null || analyzing !== null}
-                  className="px-4 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
-                >
-                  {ytDownloading === "mp4" ? <span className="text-[#C9A84C]">Processing...</span> : "Download MP4"}
-                </button>
-              </div>
+        <div className="mt-6 w-full max-w-xl bg-gray-900 rounded-lg p-4 flex flex-col gap-3">
+          <div className="flex gap-4 items-start max-sm:flex-col max-sm:items-center w-full min-w-0">
+            {ytInfo.thumbnail && (
+              <img
+                src={`/api/proxy-image?url=${encodeURIComponent(ytInfo.thumbnail)}`}
+                alt="thumbnail"
+                className="w-32 h-20 object-cover rounded flex-shrink-0 max-sm:w-full max-sm:h-44"
+              />
+            )}
+            <div className="flex-1 min-w-0 w-full">
+              <p className="text-white font-semibold text-sm break-words line-clamp-2">{ytInfo.title}</p>
+              <p className="text-gray-400 text-xs mt-1">{ytInfo.author} · {formatDuration(ytInfo.lengthSeconds)}</p>
+            </div>
+          </div>
+          <div className="flex gap-2 flex-wrap justify-center w-full">
+            <div className={ytDownloading === "mp3" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}>
+              <button
+                onClick={() => handleDownload("mp3")}
+                disabled={ytDownloading !== null || analyzing !== null}
+                className="px-4 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
+              >
+                {ytDownloading === "mp3" ? <span className="text-[#C9A84C]">Processing...</span> : "Download MP3"}
+              </button>
+            </div>
+            <div className={ytDownloading === "mp4" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}>
+              <button
+                onClick={() => handleDownload("mp4")}
+                disabled={ytDownloading !== null || analyzing !== null}
+                className="px-4 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
+              >
+                {ytDownloading === "mp4" ? <span className="text-[#C9A84C]">Processing...</span> : "Download MP4"}
+              </button>
             </div>
           </div>
         </div>
