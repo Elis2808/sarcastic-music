@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { showRateLimitModal } from "./RateLimitModal";
 
 type RhymeData = {
   results: { word: string; category: string }[];
@@ -146,7 +147,12 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
   function toggleFilter(f: string) {
     setAdvancedFilters(prev => {
       const next = new Set(prev);
-      if (next.has(f)) next.delete(f); else next.add(f);
+      if (next.has(f)) {
+        next.delete(f);
+      } else {
+        if (next.size >= 2) return prev; // max 2
+        next.add(f);
+      }
       return next;
     });
   }
@@ -287,6 +293,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ word: w }),
     });
+    if (res.status === 429) { showRateLimitModal("rhyme", 200); return { results: [], allResults: [], categories: { perfect: [], sounding: [], near: [], written: [] }, totalFound: 0 }; }
     const data = await res.json();
     return {
       results: data.results || [],
@@ -369,7 +376,17 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
       }
       
       if (rhymeMode === "advanced" && advancedFilters.size > 0) {
-        results = results.filter(r => getCachedWordTypes(r.word).some(t => advancedFilters.has(t)));
+        const filters = [...advancedFilters];
+        if (filters.length >= 2) {
+          // intersection: word must match ALL selected filters
+          results = results.filter(r => {
+            const types = getCachedWordTypes(r.word);
+            return filters.every(t => types.includes(t));
+          });
+        } else {
+          // single filter: normal match
+          results = results.filter(r => getCachedWordTypes(r.word).some(t => advancedFilters.has(t)));
+        }
       }
       
       if (rhymeFilter.trim()) {

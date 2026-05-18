@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { addHistoryItem } from "../lib/history";
 import UrlDropZone from "./UrlDropZone";
 import { showToast } from "./Toast";
+import { showRateLimitModal } from "./RateLimitModal";
 
 interface DownloaderProps {
   initialUrl?: string;
@@ -193,6 +194,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: ytUrl, format }),
       });
+      if (res.status === 429) { showRateLimitModal("youtube", 20); setYtDownloading(null); return; }
       if (!res.ok) {
         const data = await res.json();
         showToast(data.error || "Download failed.", "error");

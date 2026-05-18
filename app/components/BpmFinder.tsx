@@ -6,6 +6,7 @@ import AutoScrollPlatforms from "./AutoScrollPlatforms";
 import { addRecentFile } from "../lib/recentFiles";
 import UrlDropZone from "./UrlDropZone";
 import { showToast } from "./Toast";
+import { showRateLimitModal } from "./RateLimitModal";
 
 interface BpmFinderProps {
   initialUrl?: string;
@@ -135,6 +136,7 @@ export default function BpmFinder({ initialUrl, initialPlatform, initialBpm, ini
       const formData = new FormData();
       formData.append("file", file);
       const res = await fetch("/api/detect-bpm", { method: "POST", body: formData });
+      if (res.status === 429) { showRateLimitModal("detect-bpm", 50); setLoading(false); return; }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "BPM detection failed");
       setResult(data);
@@ -177,6 +179,7 @@ export default function BpmFinder({ initialUrl, initialPlatform, initialBpm, ini
       const formData = new FormData();
       formData.append("file", file);
       const res = await fetch("/api/detect-bpm", { method: "POST", body: formData });
+      if (res.status === 429) { showRateLimitModal("detect-bpm", 50); setLoading(false); return; }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "BPM detection failed");
       setResult(data);

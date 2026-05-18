@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { showRateLimitModal } from "./RateLimitModal";
 
 type DictResult = {
   word: string;
@@ -28,6 +29,7 @@ export default function Dictionary({ initialWord = "", onBack, onWordChange }: P
     setResult(null);
     try {
       const res = await fetch(`/api/define?word=${encodeURIComponent(w.trim())}`);
+      if (res.status === 429) { showRateLimitModal("define", 200); setLoading(false); return; }
       const data = await res.json();
       if (!res.ok) setError("Word not found.");
       else setResult(data);

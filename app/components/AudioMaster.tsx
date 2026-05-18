@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { addHistoryItem } from "../lib/history";
 import { showToast } from "./Toast";
+import { showRateLimitModal } from "./RateLimitModal";
 
 interface AudioMasterProps {
   initialUrl?: string;
@@ -68,6 +69,7 @@ export default function AudioMaster({ initialUrl: _initialUrl, initialPlatform: 
       form.append("file", file);
 
       const res = await fetch("/api/master", { method: "POST", body: form });
+      if (res.status === 429) { showRateLimitModal("master", 40); setProcessing(false); clearInterval(progInterval); return; }
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));

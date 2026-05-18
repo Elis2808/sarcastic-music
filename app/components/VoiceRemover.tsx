@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { addHistoryItem } from "../lib/history";
 import { addRecentFile } from "../lib/recentFiles";
+import { showRateLimitModal } from "./RateLimitModal";
 
 type StemType = "no_vocals" | "vocals" | "both";
 
@@ -195,6 +196,7 @@ export default function VoiceRemover(_props: VoiceRemoverProps) {
       formData.append("stem", stem);
 
       const startRes = await fetch("/api/separate", { method: "POST", body: formData });
+      if (startRes.status === 429) { showRateLimitModal("separate", 10); setProcessing(null); return; }
       const startData = await startRes.json();
       if (!startRes.ok) throw new Error(startData.error || "Failed to start processing");
       const jobId: string = startData.jobId;

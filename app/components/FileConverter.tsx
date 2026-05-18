@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { showRateLimitModal } from "./RateLimitModal";
 
 function scrollToCenter(btn: HTMLButtonElement) {
   const container = btn.parentElement;
@@ -388,6 +389,7 @@ export default function FileConverter() {
           body: formData,
         });
         
+        if (res.status === 429) { showRateLimitModal("convert-file", 70); return; }
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           // If ffmpeg is required, show helpful message

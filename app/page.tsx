@@ -17,6 +17,7 @@ import { addHistoryItem, type HistoryItem } from "./lib/history";
 import ToastContainer from "./components/Toast";
 import { showToast } from "./components/Toast";
 import BannerAd from "./components/BannerAd";
+import RateLimitModal from "./components/RateLimitModal";
 
 type Page = "rhyme" | "key" | "bpm" | "voice" | "youtube" | "dictionary" | "converter" | "master";
 
@@ -355,6 +356,7 @@ export default function Home() {
         <BannerAd zoneId="11324558" width={300} height={250} />
       </div>
       <ToastContainer />
+      <RateLimitModal />
       </div>{/* end content wrapper */}
     </main>
   );

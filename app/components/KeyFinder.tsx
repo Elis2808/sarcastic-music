@@ -6,6 +6,7 @@ import AutoScrollPlatforms from "./AutoScrollPlatforms";
 import { addRecentFile } from "../lib/recentFiles";
 import UrlDropZone from "./UrlDropZone";
 import { showToast } from "./Toast";
+import { showRateLimitModal } from "./RateLimitModal";
 
 interface KeyFinderProps {
   initialUrl?: string;
@@ -63,6 +64,7 @@ async function detectKey(file: File): Promise<KeyResult> {
     method: "POST",
     body: formData,
   });
+  if (res.status === 429) { showRateLimitModal("detect-key", 50); throw new Error("rate_limit"); }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Key detection failed");
