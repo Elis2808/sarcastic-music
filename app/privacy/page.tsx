@@ -37,7 +37,7 @@ export default function PrivacyPage() {
 
         <div>
           <h2 className="text-[#C9A84C] font-semibold text-base mb-2">3. Cookies & Tracking</h2>
-          <p>We may use anonymous analytics (e.g. page views) to understand how the tools are used. We display ads through <strong className="text-white">Adcash</strong> and <strong className="text-white">Google AdSense</strong>, which may use cookies or similar tracking technologies for ad delivery. See <a href="https://adcash.com/privacy-policy/" className="text-[#C9A84C] hover:underline" target="_blank" rel="noopener noreferrer">Adcash Privacy Policy</a> and <a href="https://policies.google.com/privacy" className="text-[#C9A84C] hover:underline" target="_blank" rel="noopener noreferrer">Google Privacy Policy</a> for details.</p>
+          <p>We may use anonymous analytics (e.g. page views) to understand how the tools are used. We display ads through <strong className="text-white">Adcash</strong>, which may use cookies or similar tracking technologies for ad delivery. See the <a href="https://adcash.com/privacy-policy/" className="text-[#C9A84C] hover:underline" target="_blank" rel="noopener noreferrer">Adcash Privacy Policy</a> for details.</p>
         </div>
 
         <div>
@@ -49,8 +49,7 @@ export default function PrivacyPage() {
           <h2 className="text-[#C9A84C] font-semibold text-base mb-2">5. Third-Party Services</h2>
           <p>We use the following third-party services that may independently collect data:</p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
-            <li><strong className="text-white">Adcash</strong> — display and pop advertising network</li>
-            <li><strong className="text-white">Google AdSense</strong> — display advertising</li>
+            <li><strong className="text-white">Adcash</strong> — display advertising network</li>
             <li><strong className="text-white">Hosting provider</strong> — standard server infrastructure logs (IP, browser type, timestamps)</li>
           </ul>
         </div>
@@ -63,7 +62,7 @@ export default function PrivacyPage() {
 
         <div>
           <h2 className="text-[#C9A84C] font-semibold text-base mb-2">7. Changes to This Policy</h2>
-          <p>We may update this policy periodically. Continued use of the Service after changes means you accept the updated policy.</p>
+          <p>We may update this policy periodically. Continued use of our service after changes means you accept the updated policy.</p>
         </div>
 
       </section>

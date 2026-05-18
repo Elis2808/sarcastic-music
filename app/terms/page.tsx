@@ -16,7 +16,7 @@ export default function TermsPage() {
 
         <div>
           <h2 className="text-[#C9A84C] font-semibold text-base mb-2">1. Acceptance of Terms</h2>
-          <p>By accessing or using Sarcastic Music ("the Service"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.</p>
+          <p>By accessing or using Sarcastic Music, you agree to be bound by these Terms of Service. If you do not agree, do not use our service.</p>
         </div>
 
         <div>
@@ -32,7 +32,7 @@ export default function TermsPage() {
 
         <div>
           <h2 className="text-[#C9A84C] font-semibold text-base mb-2">3. File Processing & Storage</h2>
-          <p>All audio files uploaded or processed through the Service (including the Song Splitter, Key Finder, BPM Finder, and Audio Master) are:</p>
+          <p>All audio files uploaded or processed through our service (including the Song Splitter, Key Finder, BPM Finder, and Audio Master) are:</p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li>Processed in temporary server memory only.</li>
             <li>Automatically deleted immediately after processing is complete.</li>
@@ -53,12 +53,12 @@ export default function TermsPage() {
 
         <div>
           <h2 className="text-[#C9A84C] font-semibold text-base mb-2">5. Intellectual Property</h2>
-          <p>You retain all rights to content you upload. Sarcastic Music claims no ownership over any audio files you process through the Service.</p>
+          <p>You retain all rights to content you upload. Sarcastic Music claims no ownership over any audio files you process through our service.</p>
         </div>
 
         <div>
           <h2 className="text-[#C9A84C] font-semibold text-base mb-2">6. Limitation of Liability</h2>
-          <p>Sarcastic Music provides all tools "as is" without warranties of any kind. We are not liable for any damages arising from your use of the Service, including any legal consequences resulting from your downloading or use of third-party content.</p>
+          <p>Sarcastic Music provides all tools as-is without warranties of any kind. We are not liable for any damages arising from your use of our service, including any legal consequences resulting from your downloading or use of third-party content.</p>
         </div>
 
         <div>
@@ -69,7 +69,7 @@ export default function TermsPage() {
 
         <div>
           <h2 className="text-[#C9A84C] font-semibold text-base mb-2">8. Changes to Terms</h2>
-          <p>We may update these Terms at any time. Continued use of the Service after changes constitutes acceptance of the new Terms.</p>
+          <p>We may update these Terms at any time. Continued use of our service after changes constitutes acceptance of the new Terms.</p>
         </div>
 
       </section>
