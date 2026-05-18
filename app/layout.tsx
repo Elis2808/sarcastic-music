@@ -60,7 +60,7 @@ export default function RootLayout({
               if(window.aclib){
                 clearInterval(t);
                 localStorage.setItem('vs_last', Date.now().toString());
-                aclib.runVideoSlider({ zoneId: '11324510' });
+                aclib.runVideoSlider({ zoneId: '11324782' });
               }
             }, 200);
           })();
