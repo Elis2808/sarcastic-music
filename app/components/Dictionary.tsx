@@ -56,12 +56,12 @@ export default function Dictionary({ initialWord = "", onBack, onWordChange }: P
             onClick={onBack}
             className="text-sm px-4 py-1.5 rounded-full font-semibold transition-all"
             style={{
-              background: "rgba(201,168,76,0.12)",
-              border: "1px solid rgba(201,168,76,0.45)",
-              color: "#C9A84C",
+              background: "rgb(0,0,0)",
+              border: "1px solid rgba(201,168,76,0.6)",
+              color: "rgba(255,255,255,0.85)",
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(201,168,76,0.22)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "rgba(201,168,76,0.12)")}
+            onMouseEnter={e => (e.currentTarget.style.background = "rgba(201,168,76,0.08)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "rgb(0,0,0)")}
           >
             ← Back to Rhyme Finder
           </button>

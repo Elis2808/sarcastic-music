@@ -175,7 +175,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
 
   return (
     <div
-      className="sm:hidden w-full mb-6 rounded-full overflow-hidden relative"
+      className="sm:hidden w-full rounded-full overflow-hidden relative"
       style={{
         backgroundColor: "rgba(20,20,24,0.48)",
         backdropFilter: "blur(14px) saturate(160%)",
