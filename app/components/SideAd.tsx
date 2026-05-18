@@ -22,6 +22,8 @@ export default function SideAd({ side, zoneId = "11324470" }: SideAdProps) {
     };
     const interval = setInterval(() => {
       if ((window as any).aclib && ref.current) {
+        const rect = ref.current.getBoundingClientRect();
+        if (rect.width === 0) return; // hidden on this screen size, keep waiting
         clearInterval(interval);
         inject();
       }
