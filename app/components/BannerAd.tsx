@@ -1,7 +1,3 @@
-"use client";
-
-import { useEffect, useRef } from "react";
-
 interface BannerAdProps {
   zoneId: string;
   width: number;
@@ -10,29 +6,12 @@ interface BannerAdProps {
 }
 
 export default function BannerAd({ zoneId, width, height, className = "" }: BannerAdProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const ran = useRef(false);
-
-  useEffect(() => {
-    if (ran.current || !ref.current) return;
-    ran.current = true;
-    const run = () => {
-      try { (window as any).aclib?.runBanner({ zoneId }); } catch {}
-    };
-    if ((window as any).aclib) {
-      run();
-    } else {
-      const t = setInterval(() => {
-        if ((window as any).aclib) { clearInterval(t); run(); }
-      }, 100);
-    }
-  }, [zoneId]);
-
+  const script = `<script type="text/javascript">var t=setInterval(function(){if(window.aclib){clearInterval(t);aclib.runBanner({zoneId:'${zoneId}'});}},100);<\/script>`;
   return (
     <div
-      ref={ref}
       style={{ width, height, overflow: "hidden", flexShrink: 0 }}
       className={className}
+      dangerouslySetInnerHTML={{ __html: script }}
     />
   );
 }

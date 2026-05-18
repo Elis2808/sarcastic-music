@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import Script from "next/script";
 import Footer from "./components/Footer";
-import SideAd from "./components/SideAd";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -57,8 +56,18 @@ export default function RootLayout({
         </Script>
       </head>
       <body className="min-h-full flex flex-col">
-        <SideAd side="left" />
-        <SideAd side="right" />
+        {/* Left skyscraper 160x600 — desktop xl+ only */}
+        <div
+          className="hidden xl:block"
+          style={{ position: "fixed", top: "50%", transform: "translateY(-50%)", left: 0, width: 160, height: 600, zIndex: 10, overflow: "hidden" }}
+          dangerouslySetInnerHTML={{ __html: `<script type="text/javascript">var t=setInterval(function(){if(window.aclib){clearInterval(t);aclib.runBanner({zoneId:'11324470'});}},100);<\/script>` }}
+        />
+        {/* Right skyscraper 160x600 — desktop xl+ only */}
+        <div
+          className="hidden xl:block"
+          style={{ position: "fixed", top: "50%", transform: "translateY(-50%)", right: 0, width: 160, height: 600, zIndex: 10, overflow: "hidden" }}
+          dangerouslySetInnerHTML={{ __html: `<script type="text/javascript">var t=setInterval(function(){if(window.aclib){clearInterval(t);aclib.runBanner({zoneId:'11324470'});}},100);<\/script>` }}
+        />
         {children}
         <Footer />
       </body>
