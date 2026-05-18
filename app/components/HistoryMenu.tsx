@@ -86,9 +86,9 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
       {/* Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-full transition-colors duration-150"
+        className="relative p-2 rounded-xl transition-colors duration-150"
         style={{
-          color: isOpen ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.55)",
+          color: isOpen ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,1)",
           backgroundColor: "rgba(20,20,24,0.48)",
           backdropFilter: "blur(14px) saturate(160%)",
           WebkitBackdropFilter: "blur(14px) saturate(160%)",

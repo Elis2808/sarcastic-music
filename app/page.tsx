@@ -149,9 +149,9 @@ export default function Home() {
     { page: "rhyme",      label: "Rhyme Finder" },
     { page: "dictionary", label: "Dictionary" },
     { page: "voice",      label: "Song Splitter" },
-    { page: "youtube",    label: "Downloader" },
     { page: "key",        label: "Key Finder" },
     { page: "bpm",        label: "BPM Finder" },
+    { page: "youtube",    label: "Downloader" },
     { page: "converter",  label: "File Converter" },
     { page: "master",     label: "Audio Master" },
   ];
@@ -163,7 +163,7 @@ export default function Home() {
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="p-2 rounded-full text-[rgba(255,255,255,0.55)] hover:text-[rgba(255,240,205,0.96)] transition-colors duration-150"
+            className="p-2 rounded-xl text-white hover:text-[rgba(255,240,205,0.96)] transition-colors duration-150"
             style={{
               backgroundColor: "rgba(20,20,24,0.48)",
               backdropFilter: "blur(14px) saturate(160%)",

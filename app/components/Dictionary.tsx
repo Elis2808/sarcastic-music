@@ -58,14 +58,19 @@ export default function Dictionary({ initialWord = "", onBack }: Props) {
         </div>
       )}
 
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") lookupWord(search); }}
-        placeholder="Search a word"
-        className="px-4 py-3 rounded-full w-full max-w-md bg-black text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C] mb-8"
-        style={{ border: "1px solid rgba(201,168,76,0.25)" }}
-      />
+      <div className="relative w-full max-w-md mb-8">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") lookupWord(search); }}
+          placeholder="Search a word"
+          className="px-4 pr-10 py-3 rounded-full w-full bg-black text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C]"
+          style={{ border: "1px solid rgba(201,168,76,0.25)" }}
+        />
+        <svg onClick={() => lookupWord(search)} className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 hover:text-[#C9A84C] cursor-pointer transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+        </svg>
+      </div>
 
       {loading && <p className="text-gray-500 animate-pulse">Looking up...</p>}
 

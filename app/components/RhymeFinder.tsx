@@ -383,14 +383,19 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
         >Advanced</button>
       </div>
 
-      <input
-        value={word}
-        onChange={(e) => setWord(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") search(word); }}
-        placeholder="Type any word to find related rhymes"
-        className="px-4 py-3 rounded-full w-full max-w-xl bg-black text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
-        style={{ border: "1px solid rgba(201,168,76,0.25)" }}
-      />
+      <div className="relative w-full max-w-xl">
+        <input
+          value={word}
+          onChange={(e) => setWord(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") search(word); }}
+          placeholder="Type any word to find related rhymes"
+          className="px-4 pr-10 py-3 rounded-full w-full bg-black text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
+          style={{ border: "1px solid rgba(201,168,76,0.25)" }}
+        />
+        <svg onClick={() => search(word)} className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 hover:text-[#C9A84C] cursor-pointer transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+        </svg>
+      </div>
       <div className={`mt-3 w-36 ${isLoading ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}`}>
         <button
           onClick={() => search(word)}
@@ -453,17 +458,17 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
           </div>
 
           {rhymeMode === "basic" && (
-            <div className="flex justify-center items-center gap-6 mb-4 text-xs text-gray-400">
-              <div className="flex items-center gap-1"><span className="w-2 h-2 bg-green-400 rounded-full" /> Perfect</div>
-              <div className="flex items-center gap-1"><span className="w-2 h-2 bg-blue-400 rounded-full" /> Sounding</div>
-              <div className="flex items-center gap-1"><span className="w-2 h-2 bg-red-400 rounded-full" /> Near</div>
-              <div className="flex items-center gap-1"><span className="w-2 h-2 bg-yellow-400 rounded-full" /> Written</div>
+            <div className="flex items-center gap-4 mb-4 text-xs text-gray-400 overflow-x-auto scrollbar-hide flex-nowrap px-1">
+              <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-green-400 rounded-full" /> Perfect</div>
+              <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-blue-400 rounded-full" /> Sounding</div>
+              <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-red-400 rounded-full" /> Near</div>
+              <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-yellow-400 rounded-full" /> Written</div>
             </div>
           )}
 
           {rhymeMode === "advanced" && (
             <>
-              <div className="flex gap-2 mb-2 justify-center flex-wrap">
+              <div className="flex gap-2 mb-2 overflow-x-auto scrollbar-hide flex-nowrap px-1">
                 {(["noun", "verb", "adjective", "slang", "name"] as const).map((filter) => (
                   <button
                     key={filter}
@@ -480,21 +485,21 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
                   </button>
                 ))}
               </div>
-              <div className="mb-4 text-xs text-gray-400 space-y-2 max-w-md mx-auto">
-                <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-1">
-                  <span className="text-gray-600 mr-1">Border:</span>
-                  <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#4ade80"}} /> Perfect</div>
-                  <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#60a5fa"}} /> Sounding</div>
-                  <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#f87171"}} /> Near</div>
-                  <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:"#facc15"}} /> Written</div>
+              <div className="mb-4 text-xs text-gray-400 overflow-x-auto scrollbar-hide">
+                <div className="flex items-center gap-4 flex-nowrap px-1 mb-1">
+                  <span className="text-gray-600 flex-shrink-0">Border:</span>
+                  <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 rounded-full" style={{background:"#4ade80"}} /> Perfect</div>
+                  <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 rounded-full" style={{background:"#60a5fa"}} /> Sounding</div>
+                  <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 rounded-full" style={{background:"#f87171"}} /> Near</div>
+                  <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 rounded-full" style={{background:"#facc15"}} /> Written</div>
                 </div>
-                <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-1">
-                  <span className="text-gray-600 mr-1">Text:</span>
-                  <div className="flex items-center gap-1"><span className="w-2 h-2 bg-orange-400 rounded-full" /> Noun</div>
-                  <div className="flex items-center gap-1"><span className="w-2 h-2 bg-cyan-400 rounded-full" /> Verb</div>
-                  <div className="flex items-center gap-1"><span className="w-2 h-2 bg-pink-400 rounded-full" /> Adjective</div>
-                  <div className="flex items-center gap-1"><span className="w-2 h-2 bg-lime-400 rounded-full" /> Slang</div>
-                  <div className="flex items-center gap-1"><span className="w-2 h-2 bg-purple-400 rounded-full" /> Name</div>
+                <div className="flex items-center gap-4 flex-nowrap px-1">
+                  <span className="text-gray-600 flex-shrink-0">Text:</span>
+                  <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-orange-400 rounded-full" /> Noun</div>
+                  <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-cyan-400 rounded-full" /> Verb</div>
+                  <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-pink-400 rounded-full" /> Adjective</div>
+                  <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-lime-400 rounded-full" /> Slang</div>
+                  <div className="flex items-center gap-1 flex-shrink-0"><span className="w-2 h-2 bg-purple-400 rounded-full" /> Name</div>
                 </div>
               </div>
             </>
