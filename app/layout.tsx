@@ -52,6 +52,9 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
         <Script id="aclib" src="//acscdn.com/script/aclib.js" strategy="afterInteractive" />
+        <Script id="adcash-video-slider" strategy="afterInteractive">
+          {`aclib.runVideoSlider({ zoneId: '11324510' });`}
+        </Script>
       </head>
       <body className="min-h-full flex flex-col">
         <SideAd side="left" />

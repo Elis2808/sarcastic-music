@@ -16,6 +16,7 @@ import DesktopNav from "./components/DesktopNav";
 import { addHistoryItem, type HistoryItem } from "./lib/history";
 import ToastContainer from "./components/Toast";
 import { showToast } from "./components/Toast";
+import BannerAd from "./components/BannerAd";
 
 type Page = "rhyme" | "key" | "bpm" | "voice" | "youtube" | "dictionary" | "converter" | "master";
 
@@ -303,6 +304,11 @@ export default function Home() {
       </div>
       </div>{/* end sticky header */}
 
+      {/* 300x100 slim banner — mobile only, below nav */}
+      <div className="flex xl:hidden justify-center w-full py-2">
+        <BannerAd zoneId="11324566" width={300} height={100} />
+      </div>
+
       <div className="w-full flex flex-col items-center pt-6">
 
       {activePage === "rhyme"      && <RhymeFinder key={restoreKey} onLookupWord={(word) => openDictionary(word, restoreState.word || lastRhymeSearch)} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word || lastRhymeSearch} />}
@@ -337,6 +343,14 @@ export default function Home() {
           } : undefined}
         />
       )}
+      {/* 728x90 leaderboard — desktop only */}
+      <div className="hidden sm:flex justify-center w-full mt-8">
+        <BannerAd zoneId="11324514" width={728} height={90} />
+      </div>
+      {/* 300x250 rectangle — mobile only */}
+      <div className="flex sm:hidden justify-center w-full mt-8">
+        <BannerAd zoneId="11324558" width={300} height={250} />
+      </div>
       <ToastContainer />
       </div>{/* end content wrapper */}
     </main>
