@@ -51,20 +51,6 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="beforeInteractive"
         />
-        <Script id="aclib" src="//acscdn.com/script/aclib.js" strategy="afterInteractive" />
-        <Script id="adcash-video-slider" strategy="afterInteractive">{`
-          (function(){
-            var last = localStorage.getItem('vs_last');
-            if(last && Date.now() - parseInt(last) < 5 * 60 * 1000) return;
-            var t = setInterval(function(){
-              if(window.aclib){
-                clearInterval(t);
-                localStorage.setItem('vs_last', Date.now().toString());
-                aclib.runVideoSlider({ zoneId: '11324782' });
-              }
-            }, 200);
-          })();
-        `}</Script>
       </head>
       <body className="min-h-full flex flex-col">
         <SideAd side="left" />
