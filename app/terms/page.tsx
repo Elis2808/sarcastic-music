@@ -10,7 +10,7 @@ export default function TermsPage() {
     <main className="min-h-screen bg-black text-white px-6 py-12 max-w-3xl mx-auto">
       <Link href="/" className="text-[#C9A84C] text-sm hover:underline mb-8 inline-block">← Back</Link>
       <h1 className="text-3xl font-bold mb-2">Terms of Service</h1>
-      <p className="text-gray-500 text-xs mb-8">Last updated: May 2025</p>
+      <p className="text-gray-500 text-xs mb-8">Last updated: May 2026</p>
 
       <section className="space-y-8 text-sm text-gray-300 leading-relaxed">
 
@@ -24,8 +24,8 @@ export default function TermsPage() {
           <p>The downloader tool is provided for <strong className="text-white">personal, non-commercial use only</strong>. By using the downloader, you confirm that:</p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li>You own or have the legal right to download the content.</li>
-            <li>You will not use downloaded content for commercial purposes, public distribution, or copyright infringement.</li>
-            <li>You understand that downloading copyrighted material without authorization may violate applicable laws and platform terms of service.</li>
+            <li>You will not use downloaded content for commercial purposes or public distribution.</li>
+            <li>You understand that downloading certain content without authorization may violate applicable laws and platform terms of service.</li>
           </ul>
           <p className="mt-2">Sarcastic Music does not endorse or encourage the downloading of copyrighted content and bears no liability for misuse.</p>
         </div>
@@ -48,7 +48,7 @@ export default function TermsPage() {
             <li>Timestamp of acceptance</li>
             <li>Tool used</li>
           </ul>
-          <p className="mt-2">This log demonstrates that users explicitly agreed to the terms before processing. No personal data, names, emails, or content URLs are stored in this log.</p>
+          <p className="mt-2">This log demonstrates that users explicitly agreed to the terms before processing. No personal data, names, emails, or content URLs are stored in this server-side log. Note: the History feature stores URLs and search queries locally in your browser (localStorage only) — this data never leaves your device.</p>
         </div>
 
         <div>
