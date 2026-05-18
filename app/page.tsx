@@ -246,7 +246,6 @@ export default function Home() {
                     <button
                       key={page}
                       onClick={() => {
-                        setMenuOpen(false);
                         if (page === "rhyme" && activePage === "rhyme") {
                           window.location.reload();
                         } else {
@@ -255,7 +254,6 @@ export default function Home() {
                       }}
                       onTouchEnd={(e) => {
                         e.preventDefault();
-                        setMenuOpen(false);
                         if (page === "rhyme" && activePage === "rhyme") {
                           window.location.reload();
                         } else {
