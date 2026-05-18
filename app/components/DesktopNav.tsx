@@ -12,8 +12,8 @@ export default function DesktopNav({ items, activePage, onNavigate }: Props) {
     <nav
       className="hidden sm:flex items-center justify-between mb-6 rounded-full w-full max-w-4xl"
       style={{
-        height: 58,
-        padding: "6px 8px",
+        height: 48,
+        padding: "4px 8px",
         backgroundColor: "rgba(20,20,24,0.48)",
         backdropFilter: "blur(14px) saturate(160%)",
         WebkitBackdropFilter: "blur(14px) saturate(160%)",
