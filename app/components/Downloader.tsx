@@ -354,12 +354,12 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
   }
 
   return (
-    <div className="flex flex-col items-center w-full pt-8 px-4 max-sm:pt-6 max-sm:px-3">
+    <div className="flex flex-col items-center w-full max-w-full overflow-x-hidden pt-8 px-4 max-sm:pt-6 max-sm:px-3">
       <h1 className="text-3xl max-sm:text-2xl font-bold mb-1">{selectedPlatform} Downloader</h1>
       <p className="text-gray-500 text-xs mb-4">Convert any social media link to MP3 &amp; MP4.</p>
 
       {/* Platform selector — scrollable pill strip */}
-      <div className="w-full max-w-xl mb-4">
+      <div className="w-full max-w-xl mb-4" style={{ overflow: "hidden", borderRadius: 9999 }}>
         <div
           ref={platformScrollRef}
           className="flex gap-1.5 overflow-x-auto scrollbar-hide"
@@ -370,6 +370,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
             border: "1px solid rgba(255,255,255,0.07)",
             borderRadius: 9999,
             padding: "4px 6px",
+            WebkitOverflowScrolling: "touch" as any,
           }}
         >
           {PLATFORMS.map((platform) => {
@@ -450,7 +451,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
 
           {/* Find BPM / Find Key above Convert */}
           {ytUrl.trim() && (
-            <div className="flex gap-2 justify-center flex-wrap">
+            <div className="flex gap-2 justify-center flex-wrap w-full max-w-xs mx-auto">
               <div className={analyzing === "bpm" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}>
                 <button
                   onClick={analyzeBpm}
@@ -564,7 +565,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
           <div className="flex-1 min-w-0">
             <p className="text-white font-semibold text-sm truncate">{ytInfo.title}</p>
             <p className="text-gray-400 text-xs mt-1">{ytInfo.author} · {formatDuration(ytInfo.lengthSeconds)}</p>
-            <div className="flex gap-2 mt-3">
+            <div className="flex gap-2 mt-3 flex-wrap">
               <div className={ytDownloading === "mp3" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]" }>
                 <button
                   onClick={() => handleDownload("mp3")}

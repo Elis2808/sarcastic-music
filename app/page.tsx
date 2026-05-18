@@ -308,8 +308,8 @@ export default function Home() {
       </div>
       </div>{/* end sticky header */}
 
-      {/* Nav bar — sticky just below the header */}
-      <div className="sticky z-30 w-full flex flex-col items-center pt-3 pb-3 px-4" style={{ top: 80, backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
+      {/* Nav bar — scrolls with page */}
+      <div className="w-full flex flex-col items-center pt-3 pb-3 px-4">
         <div className="flex justify-center w-full max-w-2xl">
           <DesktopNav
             items={NAV_ITEMS}
@@ -330,7 +330,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="w-full flex flex-col items-center pt-2">
+      <div className="w-full flex flex-col items-center pt-2 overflow-x-hidden">
 
       {activePage === "rhyme"      && <RhymeFinder key={restoreKey} onLookupWord={(word) => openDictionary(word, restoreState.word || lastRhymeSearch)} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word || lastRhymeSearch} onWordChange={(w) => { liveRhymeWord.current = w; }} />}
       {activePage === "key"        && <KeyFinder key={restoreKey}
