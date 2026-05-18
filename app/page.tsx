@@ -29,6 +29,14 @@ export default function Home() {
     return "";
   });
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (document.getElementById("glass-btn-style")) return;
+    const s = document.createElement("style");
+    s.id = "glass-btn-style";
+    s.textContent = `.glass-btn { transition: border-color 200ms ease, box-shadow 200ms ease, color 200ms ease; } .glass-btn:hover, .glass-btn:active { border-color: rgba(201,168,76,0.5) !important; box-shadow: 0 0 14px rgba(201,168,76,0.22), 0 4px 14px rgba(0,0,0,0.14) !important; color: rgba(255,240,205,0.96) !important; }`;
+    document.head.appendChild(s);
+  }, []);
   
   // History restore state
   const [restoreKey, setRestoreKey] = useState(0);
@@ -157,13 +165,23 @@ export default function Home() {
   ];
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center bg-black text-white pt-8">
-      <div className="flex items-center justify-between w-full max-w-4xl px-4 mb-6">
+    <main className="relative flex min-h-screen flex-col items-center bg-black text-white">
+      {/* Sticky header */}
+      <div
+        className="sticky top-0 z-40 w-full flex flex-col items-center pt-6 pb-3"
+        style={{
+          backgroundColor: "rgba(0,0,0,0.92)",
+          backdropFilter: "blur(16px) saturate(160%)",
+          WebkitBackdropFilter: "blur(16px) saturate(160%)",
+          borderBottom: "1px solid rgba(255,255,255,0.05)",
+        }}
+      >
+      <div className="flex items-center justify-between w-full max-w-4xl px-4 mb-4">
         {/* Hamburger Menu Button + Dropdown */}
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="p-2 rounded-xl text-white hover:text-[rgba(255,240,205,0.96)] transition-colors duration-150"
+            className="glass-btn p-2 rounded-xl text-white"
             style={{
               backgroundColor: "rgba(20,20,24,0.48)",
               backdropFilter: "blur(14px) saturate(160%)",
@@ -186,7 +204,7 @@ export default function Home() {
           {/* Dropdown */}
           {menuOpen && (
             <div
-              className="absolute left-0 top-full mt-2 w-44 rounded-2xl shadow-2xl z-50 overflow-hidden"
+              className="absolute left-0 top-full mt-2 rounded-3xl shadow-2xl z-50 overflow-hidden"
               style={{
                 backgroundColor: "rgba(20,20,24,0.72)",
                 backdropFilter: "blur(18px) saturate(180%)",
@@ -261,6 +279,9 @@ export default function Home() {
           }}
         />
       </div>
+      </div>{/* end sticky header */}
+
+      <div className="w-full flex flex-col items-center pt-6">
 
       {activePage === "rhyme"      && <RhymeFinder key={restoreKey} onLookupWord={(word) => openDictionary(word, restoreState.word || lastRhymeSearch)} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word || lastRhymeSearch} />}
       {activePage === "key"        && <KeyFinder key={restoreKey}
@@ -295,6 +316,7 @@ export default function Home() {
         />
       )}
       <ToastContainer />
+      </div>{/* end content wrapper */}
     </main>
   );
 }

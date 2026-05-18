@@ -86,7 +86,7 @@ export default function HistoryMenu({ onSelect }: HistoryMenuProps) {
       {/* Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl transition-colors duration-150"
+        className="glass-btn relative p-2 rounded-xl"
         style={{
           color: isOpen ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,1)",
           backgroundColor: "rgba(20,20,24,0.48)",
