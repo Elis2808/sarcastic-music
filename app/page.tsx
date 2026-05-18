@@ -287,8 +287,8 @@ export default function Home() {
         <HistoryMenu onSelect={handleHistorySelect} />
       </div>
 
-      {/* Desktop nav */}
-      <div className="w-full max-w-4xl px-4">
+      {/* Desktop nav — same width as the logo row, inset from edge */}
+      <div className="w-full max-w-4xl px-10">
         <DesktopNav
           items={NAV_ITEMS}
           activePage={activePage}
@@ -300,7 +300,7 @@ export default function Home() {
       </div>
 
       {/* Mobile nav — auto-scrolling + swipeable */}
-      <div className="w-full max-w-4xl px-4">
+      <div className="w-full max-w-4xl px-10">
         <MobileNav
           items={NAV_ITEMS}
           activePage={activePage}
