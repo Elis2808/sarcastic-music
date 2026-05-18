@@ -33,22 +33,9 @@ export default function Home() {
   const liveRhymeWord = useRef("");
   const liveDictWord = useRef("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [hoveredMenuItem, setHoveredMenuItem] = useState<string | null>(null);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const el = dropdownRef.current;
-    if (!el || !menuOpen) return;
-    const onTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const target = document.elementFromPoint(touch.clientX, touch.clientY);
-      const btn = target?.closest('[data-menu-page]') as HTMLElement | null;
-      setHoveredMenuItem(btn?.dataset.menuPage ?? null);
-    };
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    return () => el.removeEventListener("touchmove", onTouchMove);
-  }, [menuOpen]);
 
   useEffect(() => {
     if (document.getElementById("glass-btn-style")) return;
@@ -231,7 +218,7 @@ export default function Home() {
             <div
               ref={dropdownRef}
               className="absolute left-0 top-full mt-2 rounded-3xl shadow-2xl z-50 overflow-hidden"
-              onMouseLeave={() => setHoveredMenuItem(null)}
+
               style={{
                 backgroundColor: "rgb(10,10,12)",
                 border: "1px solid rgba(201,168,76,0.28)",
@@ -240,7 +227,6 @@ export default function Home() {
             >
               <div className="p-1.5 flex flex-col gap-0.5">
                 {NAV_ITEMS.map(({ page, label }) => {
-                  const isHovered = hoveredMenuItem === page;
                   const isActive = activePage === page;
                   return (
                     <button
@@ -260,18 +246,16 @@ export default function Home() {
                           navigateTo(page);
                         }
                       }}
-                      onMouseEnter={() => setHoveredMenuItem(page)}
-                      onTouchStart={() => setHoveredMenuItem(page)}
                       data-menu-page={page}
                       className="w-full text-left px-3 py-1.5 rounded-full outline-none whitespace-nowrap"
                       style={{
                         fontSize: 12,
                         fontWeight: 500,
                         letterSpacing: "-0.01em",
-                        color: isActive ? "rgba(255,255,255,0.45)" : isHovered ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.85)",
-                        backgroundColor: isHovered && !isActive ? "rgba(201,168,76,0.1)" : "transparent",
-                        border: isActive ? "1px solid rgba(201,168,76,0.6)" : isHovered ? "1px solid rgba(201,168,76,0.35)" : "1px solid transparent",
-                        transition: "color 120ms ease-out, background-color 120ms ease-out, border-color 120ms ease-out",
+                        color: isActive ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.85)",
+                        backgroundColor: "transparent",
+                        border: isActive ? "1px solid rgba(201,168,76,0.6)" : "1px solid transparent",
+                        transition: "color 120ms ease-out, border-color 120ms ease-out",
                       }}
                     >
                       {label}

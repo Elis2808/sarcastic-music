@@ -11,6 +11,7 @@ interface MobileNavProps {
 }
 
 const AUTO_SPEED = 0.5;
+const FRICTION   = 0.92; // momentum decay
 
 export default function MobileNav({ items, activePage, onNavigate }: MobileNavProps) {
   const trackRef   = useRef<HTMLDivElement>(null);
@@ -21,11 +22,14 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
   navigateFn.current = onNavigate;
 
   // touch state
-  const touchStartX  = useRef(0);
-  const touchStartY  = useRef(0);
+  const touchStartX   = useRef(0);
+  const touchStartY   = useRef(0);
   const touchStartPos = useRef(0);
-  const isDragging   = useRef(false);
-  const isHoriz      = useRef<boolean | null>(null); // null = undecided
+  const isDragging    = useRef(false);
+  const isHoriz       = useRef<boolean | null>(null);
+  const lastTouchX    = useRef(0);
+  const lastTouchT    = useRef(0);
+  const throwVel      = useRef(0); // px/frame momentum
 
   const doubled = [...items, ...items];
 
@@ -49,7 +53,15 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
 
     function loop() {
       if (!isDragging.current) {
-        posRef.current = wrap(posRef.current - AUTO_SPEED);
+        if (Math.abs(throwVel.current) > 0.1) {
+          // apply throw momentum, decaying toward auto-scroll speed
+          posRef.current = wrap(posRef.current + throwVel.current);
+          throwVel.current *= FRICTION;
+          // once momentum dies down, blend into auto-scroll direction
+          if (Math.abs(throwVel.current) <= 0.1) throwVel.current = 0;
+        } else {
+          posRef.current = wrap(posRef.current - AUTO_SPEED);
+        }
         if (track) track.style.transform = `translateX(${posRef.current}px)`;
       }
       rafRef.current = requestAnimationFrame(loop);
@@ -61,20 +73,29 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
       touchStartPos.current = posRef.current;
       isDragging.current    = false;
       isHoriz.current       = null;
+      lastTouchX.current    = e.touches[0].clientX;
+      lastTouchT.current    = performance.now();
+      throwVel.current      = 0;
     }
 
     function onTouchMove(e: TouchEvent) {
-      const dx = e.touches[0].clientX - touchStartX.current;
+      const x  = e.touches[0].clientX;
+      const dx = x - touchStartX.current;
       const dy = e.touches[0].clientY - touchStartY.current;
 
-      // decide direction once we have enough movement
       if (isHoriz.current === null && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
         isHoriz.current = Math.abs(dx) > Math.abs(dy);
       }
 
       if (isHoriz.current) {
-        e.preventDefault(); // block page vertical scroll only when swiping horiz
+        e.preventDefault();
         isDragging.current = true;
+        // track velocity for throw
+        const now = performance.now();
+        const dt  = now - lastTouchT.current;
+        if (dt > 0) throwVel.current = ((x - lastTouchX.current) / dt) * 16;
+        lastTouchX.current = x;
+        lastTouchT.current = now;
         posRef.current = wrap(touchStartPos.current + dx);
         if (track) track.style.transform = `translateX(${posRef.current}px)`;
       }
