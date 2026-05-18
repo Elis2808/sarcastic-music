@@ -72,7 +72,6 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
 
     const measure = () => { halfW.current = el.scrollWidth / 2; };
     measure();
-    const tid = requestAnimationFrame(() => { measure(); movePillToPage(activeRef.current, false); });
 
     function wrap(p: number) {
       if (halfW.current <= 0) return p;
@@ -95,7 +94,12 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
       }
       rafRef.current = requestAnimationFrame(loop);
     }
-    rafRef.current = requestAnimationFrame(loop);
+
+    const tid = setTimeout(() => {
+      measure();
+      movePillToPage(activeRef.current, false);
+      rafRef.current = requestAnimationFrame(loop);
+    }, 4000);
 
     function onStart(e: TouchEvent) {
       touchActive.current = true;
@@ -164,7 +168,7 @@ export default function MobileNav({ items, activePage, onNavigate }: MobileNavPr
 
     return () => {
       cancelAnimationFrame(rafRef.current);
-      cancelAnimationFrame(tid);
+      clearTimeout(tid);
       el.removeEventListener("touchstart", onStart);
       el.removeEventListener("touchmove",  onMove);
       el.removeEventListener("touchend",   onEnd);
