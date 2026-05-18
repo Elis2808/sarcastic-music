@@ -10,6 +10,32 @@ interface DownloaderProps {
   initialPlatform?: string;
 }
 
+const DOMAIN_MAP: Record<string, string> = {
+  "youtube.com": "YouTube", "youtu.be": "YouTube",
+  "tiktok.com": "TikTok",
+  "instagram.com": "Instagram",
+  "facebook.com": "Facebook", "fb.watch": "Facebook", "fb.com": "Facebook",
+  "twitter.com": "Twitter", "x.com": "Twitter",
+  "reddit.com": "Reddit",
+  "soundcloud.com": "SoundCloud",
+  "bandcamp.com": "Bandcamp",
+  "mixcloud.com": "Mixcloud",
+  "dailymotion.com": "Dailymotion",
+  "imgur.com": "Imgur",
+  "vimeo.com": "Vimeo",
+  "twitch.tv": "Twitch",
+};
+
+function detectPlatform(url: string): string | null {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    for (const [domain, name] of Object.entries(DOMAIN_MAP)) {
+      if (host === domain || host.endsWith("." + domain)) return name;
+    }
+  } catch {}
+  return null;
+}
+
 const PLATFORMS = [
   { name: "YouTube",     placeholder: "Paste YouTube URL here" },
   { name: "TikTok",      placeholder: "Paste TikTok URL here" },
@@ -348,7 +374,12 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
         <div className="flex flex-col items-center gap-3 w-full">
           <input
             value={ytUrl}
-            onChange={(e) => setYtUrl(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setYtUrl(val);
+              const detected = detectPlatform(val);
+              if (detected) setSelectedPlatform(detected);
+            }}
             onKeyDown={(e) => { if (e.key === "Enter") fetchInfo(); }}
             placeholder={PLATFORMS.find(p => p.name === selectedPlatform)?.placeholder}
             className="w-full px-4 py-3 rounded-full bg-black text-white outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"
