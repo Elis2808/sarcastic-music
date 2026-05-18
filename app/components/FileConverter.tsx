@@ -454,8 +454,9 @@ export default function FileConverter() {
               setError("");
               scrollToCenter(e.currentTarget);
             }}
-            className="flex-1 px-4 py-1.5 rounded-full text-xs font-medium outline-none whitespace-nowrap"
+            className="flex-1 px-2.5 py-1.5 rounded-full font-medium outline-none whitespace-nowrap"
             style={{
+              fontSize: 11,
               backgroundColor: "transparent",
               color: activeCategory === cat ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
               border: "1px solid " + (activeCategory === cat ? "rgba(201,168,76,0.6)" : "transparent"),
@@ -489,8 +490,9 @@ export default function FileConverter() {
               setPdfTotalPages(null);
               scrollToCenter(e.currentTarget);
             }}
-            className="flex-1 px-4 py-1.5 rounded-full text-xs font-medium outline-none whitespace-nowrap"
+            className="flex-1 px-2.5 py-1.5 rounded-full font-medium outline-none whitespace-nowrap"
             style={{
+              fontSize: 11,
               backgroundColor: "transparent",
               color: activeConversion === out.id ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
               border: "1px solid " + (activeConversion === out.id ? "rgba(201,168,76,0.6)" : "transparent"),
