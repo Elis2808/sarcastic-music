@@ -12,26 +12,19 @@ export default function SideAd({ side, zoneId = "11324470" }: SideAdProps) {
 
   useEffect(() => {
     let injected = false;
-    const inject = () => {
-      if (injected || !ref.current) return;
+    const poll = setInterval(() => {
+      if (!(window as any).aclib || !ref.current) return;
       const rect = ref.current.getBoundingClientRect();
-      if (rect.width === 0) return;
+      if (rect.width === 0) return; // still hidden, keep polling
+      clearInterval(poll);
+      if (injected) return;
       injected = true;
       const s = document.createElement("script");
       s.type = "text/javascript";
       s.text = `aclib.runBanner({ zoneId: '${zoneId}' });`;
       ref.current.appendChild(s);
-    };
-    const poll = setInterval(() => {
-      if (!(window as any).aclib) return;
-      clearInterval(poll);
-      inject();
-      window.addEventListener("resize", inject);
-    }, 200);
-    return () => {
-      clearInterval(poll);
-      window.removeEventListener("resize", inject);
-    };
+    }, 300);
+    return () => clearInterval(poll);
   }, [zoneId]);
 
   return (
