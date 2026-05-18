@@ -77,8 +77,8 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
   const [ytInfo, setYtInfo] = useState<{ title: string; author: string; lengthSeconds: string; thumbnail: string } | null>(null);
   const [ytLoading, setYtLoading] = useState(false);
   const [ytDownloading, setYtDownloading] = useState<"mp3" | "mp4" | null>(null);
-  const [analyzing, setAnalyzing] = useState<"bpm" | "key" | "split" | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<{type: "bpm" | "key"; data: any} | null>(null);
+  const [analyzing, setAnalyzing] = useState<"bpm" | "key" | "both" | "split" | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<{type: "bpm" | "key" | "both"; data: any} | null>(null);
   const [rightsAccepted, setRightsAccepted] = useState(false);
 
   useEffect(() => {
@@ -278,6 +278,37 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
     }
   }
 
+  async function analyzeBoth() {
+    if (!ytUrl.trim()) return;
+    setAnalyzing("both");
+    setAnalysisResult(null);
+    try {
+      const res = await fetch("/api/youtube", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: ytUrl, format: "mp3" }),
+      });
+      if (res.status === 429) { showRateLimitModal("youtube", 20); setAnalyzing(null); return; }
+      if (!res.ok) throw new Error("Failed to fetch audio");
+      const blob = await res.blob();
+      const [keySettled, bpmSettled] = await Promise.allSettled([
+        (async () => { const fd = new FormData(); fd.append("file", blob, "audio.mp3"); const r = await fetch("/api/detect-key", { method: "POST", body: fd }); if (!r.ok) throw new Error("Key failed"); return r.json(); })(),
+        (async () => { const fd = new FormData(); fd.append("file", blob, "audio.mp3"); const r = await fetch("/api/detect-bpm", { method: "POST", body: fd }); if (!r.ok) throw new Error("BPM failed"); return r.json(); })(),
+      ]);
+      setAnalysisResult({
+        type: "both",
+        data: {
+          key: keySettled.status === "fulfilled" ? keySettled.value : null,
+          bpm: bpmSettled.status === "fulfilled" ? bpmSettled.value : null,
+        },
+      });
+    } catch (e: any) {
+      showToast(e.message || "Analysis failed", "error");
+    } finally {
+      setAnalyzing(null);
+    }
+  }
+
   async function splitSong() {
     if (!ytUrl.trim()) return;
     setAnalyzing("split");
@@ -421,7 +452,7 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
 
           {/* Find BPM / Find Key above Convert */}
           {ytUrl.trim() && (
-            <div className="flex gap-2 justify-center">
+            <div className="flex gap-2 justify-center flex-wrap">
               <div className={analyzing === "bpm" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}>
                 <button
                   onClick={analyzeBpm}
@@ -429,6 +460,16 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
                   className="px-4 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all duration-200 outline-none"
                 >
                   {analyzing === "bpm" ? <span className="text-[#C9A84C]">Finding BPM...</span> : "Find BPM"}
+                </button>
+              </div>
+              <div className={analyzing === "both" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]/60"}>
+                <button
+                  onClick={analyzeBoth}
+                  disabled={analyzing !== null || ytDownloading !== null}
+                  className="px-3 py-2 rounded-full bg-black active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-[#C9A84C] text-xs font-bold transition-all duration-200 outline-none"
+                  title="Find Key + BPM together"
+                >
+                  {analyzing === "both" ? <span className="text-[#C9A84C]">Analyzing...</span> : "Key+BPM"}
                 </button>
               </div>
               <div className={analyzing === "key" ? "btn-sweep-wrapper" : "rounded-full border border-[#C9A84C]"}>
@@ -480,6 +521,34 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
                 </div>
               </div>
               <p className="text-gray-400 text-xs">Relative: {analysisResult.data.relativeKey} {analysisResult.data.relativeScale}</p>
+            </div>
+          )}
+          {analysisResult.type === "both" && (
+            <div className="grid grid-cols-2 gap-3 w-full">
+              {analysisResult.data.key && (
+                <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-gray-900 border border-gray-800">
+                  <p className="text-gray-500 text-xs uppercase tracking-widest">Key</p>
+                  <div className="circle-sweep-wrapper">
+                    <div className="w-20 h-20 rounded-full flex flex-col items-center justify-center bg-black">
+                      <span className="text-2xl font-bold text-[#C9A84C]">{analysisResult.data.key.key}</span>
+                      <span className="text-xs text-gray-300 capitalize">{analysisResult.data.key.scale}</span>
+                    </div>
+                  </div>
+                  <p className="text-gray-400 text-xs text-center">Rel: {analysisResult.data.key.relativeKey} {analysisResult.data.key.relativeScale}</p>
+                </div>
+              )}
+              {analysisResult.data.bpm && (
+                <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-gray-900 border border-gray-800">
+                  <p className="text-gray-500 text-xs uppercase tracking-widest">BPM</p>
+                  <div className="circle-sweep-wrapper">
+                    <div className="w-20 h-20 rounded-full flex flex-col items-center justify-center bg-black">
+                      <span className="text-2xl font-bold text-[#C9A84C]">{Math.round(analysisResult.data.bpm.bpm)}</span>
+                      <span className="text-xs text-gray-300">BPM</span>
+                    </div>
+                  </div>
+                  <p className="text-gray-400 text-xs text-center">{analysisResult.data.bpm.timeSignature} · {analysisResult.data.bpm.beatCount} beats</p>
+                </div>
+              )}
             </div>
           )}
         </div>
