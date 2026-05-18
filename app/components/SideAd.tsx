@@ -11,15 +11,21 @@ export default function SideAd({ side, zoneId = "11324470" }: SideAdProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const fire = () => {
+      if (!ref.current) return;
+      if (ref.current.dataset.loaded) return;
+      ref.current.dataset.loaded = "true";
+      (window as any).aclib.runBanner({ zoneId });
+    };
     const interval = setInterval(() => {
-      if (typeof window === "undefined") return;
       if ((window as any).aclib && ref.current) {
         clearInterval(interval);
-        if (ref.current.dataset.loaded) return;
-        ref.current.dataset.loaded = "true";
-        (window as any).aclib.runBanner({ zoneId });
+        fire();
       }
     }, 200);
+    window.addEventListener("load", () => {
+      if ((window as any).aclib && ref.current && !ref.current.dataset.loaded) fire();
+    });
     return () => clearInterval(interval);
   }, [zoneId]);
 
