@@ -304,11 +304,6 @@ export default function Home() {
       </div>
       </div>{/* end sticky header */}
 
-      {/* 300x100 slim banner — mobile only, below nav */}
-      <div className="flex xl:hidden justify-center w-full py-2">
-        <BannerAd zoneId="11324566" width={300} height={100} />
-      </div>
-
       <div className="w-full flex flex-col items-center pt-6">
 
       {activePage === "rhyme"      && <RhymeFinder key={restoreKey} onLookupWord={(word) => openDictionary(word, restoreState.word || lastRhymeSearch)} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word || lastRhymeSearch} />}

@@ -12,26 +12,37 @@ export default function SideAd({ side, zoneId = "11324470" }: SideAdProps) {
 
   useEffect(() => {
     let injected = false;
-    const poll = setInterval(() => {
-      if (!(window as any).aclib || !ref.current) return;
-      const rect = ref.current.getBoundingClientRect();
-      if (rect.width === 0) return; // still hidden, keep polling
-      clearInterval(poll);
-      if (injected) return;
+
+    const tryInject = () => {
+      if (injected || !ref.current || !(window as any).aclib) return;
+      if (window.innerWidth < 1280) return;
       injected = true;
+      ref.current.style.display = "block";
       const s = document.createElement("script");
       s.type = "text/javascript";
       s.text = `aclib.runBanner({ zoneId: '${zoneId}' });`;
       ref.current.appendChild(s);
-    }, 300);
-    return () => clearInterval(poll);
+    };
+
+    // poll until aclib ready + wide enough
+    const poll = setInterval(() => {
+      if (!(window as any).aclib) return;
+      clearInterval(poll);
+      tryInject();
+    }, 200);
+
+    window.addEventListener("resize", tryInject);
+    return () => {
+      clearInterval(poll);
+      window.removeEventListener("resize", tryInject);
+    };
   }, [zoneId]);
 
   return (
     <div
       ref={ref}
-      className="hidden xl:block"
       style={{
+        display: "none", // JS will show via injected ad
         position: "fixed",
         top: "50%",
         transform: "translateY(-50%)",
