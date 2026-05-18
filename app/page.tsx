@@ -300,7 +300,7 @@ export default function Home() {
 
       {/* Nav bar — sticky just below the header */}
       <div className="sticky z-30 w-full flex flex-col items-center pt-3 pb-3 px-4" style={{ top: 80, backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
-        <div className="w-full max-w-2xl">
+        <div className="flex justify-center w-full max-w-2xl">
           <DesktopNav
             items={NAV_ITEMS}
             activePage={activePage}
