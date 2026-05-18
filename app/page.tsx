@@ -29,6 +29,7 @@ export default function Home() {
     return "";
   });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hoveredMenuItem, setHoveredMenuItem] = useState<string | null>(null);
 
   useEffect(() => {
     if (document.getElementById("glass-btn-style")) return;
@@ -205,6 +206,8 @@ export default function Home() {
           {menuOpen && (
             <div
               className="absolute left-0 top-full mt-2 rounded-3xl shadow-2xl z-50 overflow-hidden"
+              onMouseLeave={() => setHoveredMenuItem(null)}
+              onTouchEnd={() => setHoveredMenuItem(null)}
               style={{
                 backgroundColor: "rgba(20,20,24,0.72)",
                 backdropFilter: "blur(18px) saturate(180%)",
@@ -214,31 +217,43 @@ export default function Home() {
               }}
             >
               <div className="p-1.5 flex flex-col gap-0.5">
-                {NAV_ITEMS.map(({ page, label }) => (
-                  <button
-                    key={page}
-                    onClick={() => {
-                      if (page === "rhyme" && activePage === "rhyme") {
-                        window.location.reload();
-                      } else {
-                        navigateTo(page);
-                        setMenuOpen(false);
-                      }
-                    }}
-                    className="w-full text-left px-3 py-1.5 rounded-full outline-none whitespace-nowrap transition-colors"
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 500,
-                      letterSpacing: "-0.01em",
-                      color: activePage === page ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
-                      backgroundColor: "transparent",
-                      border: activePage === page ? "1px solid rgba(201,168,76,0.6)" : "1px solid transparent",
-                      transition: "color 160ms ease-out, border-color 160ms ease-out",
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
+                {NAV_ITEMS.map(({ page, label }) => {
+                  const isHovered = hoveredMenuItem === page;
+                  const isActive = activePage === page;
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => {
+                        if (page === "rhyme" && activePage === "rhyme") {
+                          window.location.reload();
+                        } else {
+                          navigateTo(page);
+                        }
+                      }}
+                      onMouseEnter={() => setHoveredMenuItem(page)}
+                      onTouchStart={() => setHoveredMenuItem(page)}
+                      onTouchMove={(e) => {
+                        const touch = e.touches[0];
+                        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                        const btn = el?.closest('[data-menu-page]') as HTMLElement | null;
+                        if (btn) setHoveredMenuItem(btn.dataset.menuPage || null);
+                      }}
+                      data-menu-page={page}
+                      className="w-full text-left px-3 py-1.5 rounded-full outline-none whitespace-nowrap"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 500,
+                        letterSpacing: "-0.01em",
+                        color: isActive ? "rgba(255,255,255,0.45)" : isHovered ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.85)",
+                        backgroundColor: isHovered && !isActive ? "rgba(201,168,76,0.1)" : "transparent",
+                        border: isActive ? "1px solid rgba(201,168,76,0.6)" : isHovered ? "1px solid rgba(201,168,76,0.35)" : "1px solid transparent",
+                        transition: "color 120ms ease-out, background-color 120ms ease-out, border-color 120ms ease-out",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
