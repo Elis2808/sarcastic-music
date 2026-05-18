@@ -18,8 +18,9 @@ import ToastContainer from "./components/Toast";
 import { showToast } from "./components/Toast";
 import BannerAd from "./components/BannerAd";
 import RateLimitModal from "./components/RateLimitModal";
+import KeyBpmFinder from "./components/KeyBpmFinder";
 
-type Page = "rhyme" | "key" | "bpm" | "voice" | "youtube" | "dictionary" | "converter" | "master";
+type Page = "rhyme" | "key" | "keybpm" | "bpm" | "voice" | "youtube" | "dictionary" | "converter" | "master";
 
 export default function Home() {
   const [activePage, setActivePage] = useState<Page>("rhyme");
@@ -183,6 +184,7 @@ export default function Home() {
     { page: "dictionary", label: "Dictionary" },
     { page: "voice",      label: "Song Splitter" },
     { page: "key",        label: "Key Finder" },
+    { page: "keybpm",     label: "Key+BPM" },
     { page: "bpm",        label: "BPM Finder" },
     { page: "youtube",    label: "Downloader" },
     { page: "converter",  label: "File Converter" },
@@ -324,6 +326,7 @@ export default function Home() {
         initialRelativeKey={restoreState.relativeKey}
         initialRelativeScale={restoreState.relativeScale}
       />}
+      {activePage === "keybpm"     && <KeyBpmFinder key={restoreKey} />}
       {activePage === "bpm"        && <BpmFinder key={restoreKey}
         initialUrl={restoreState.url} 
         initialPlatform={restoreState.platform}
