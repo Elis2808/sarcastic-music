@@ -10,10 +10,9 @@ interface Props {
 export default function DesktopNav({ items, activePage, onNavigate }: Props) {
   return (
     <nav
-      className="hidden sm:flex items-center justify-between mb-6 rounded-full w-full max-w-2xl"
+      className="hidden sm:flex items-center justify-between mb-6 rounded-full w-full max-w-4xl"
       style={{
         height: 58,
-        gap: 2,
         padding: "6px 8px",
         backgroundColor: "rgba(20,20,24,0.48)",
         backdropFilter: "blur(14px) saturate(160%)",

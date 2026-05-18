@@ -225,14 +225,16 @@ export default function Home() {
       </div>
 
       {/* Desktop nav */}
-      <DesktopNav
-        items={NAV_ITEMS}
-        activePage={activePage}
-        onNavigate={(page) => {
-          if (page === "rhyme" && activePage === "rhyme") window.location.reload();
-          else navigateTo(page as Page);
-        }}
-      />
+      <div className="w-full max-w-4xl px-4">
+        <DesktopNav
+          items={NAV_ITEMS}
+          activePage={activePage}
+          onNavigate={(page) => {
+            if (page === "rhyme" && activePage === "rhyme") window.location.reload();
+            else navigateTo(page as Page);
+          }}
+        />
+      </div>
 
       {/* Mobile nav — auto-scrolling + swipeable */}
       <MobileNav
