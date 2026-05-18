@@ -247,6 +247,7 @@ export default function Home() {
                       }}
                       onTouchEnd={(e) => {
                         e.preventDefault();
+                        (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
                         if (page === "rhyme" && activePage === "rhyme") {
                           window.location.reload();
                         } else {
@@ -254,7 +255,10 @@ export default function Home() {
                         }
                       }}
                       data-menu-page={page}
-                      className="w-full text-left px-3 py-1.5 rounded-full outline-none whitespace-nowrap"
+                      className="w-full text-left px-3 py-1.5 rounded-full outline-none whitespace-nowrap transition-colors"
+                      onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(201,168,76,0.12)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}
+                      onTouchStart={e => { if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(201,168,76,0.12)"; }}
                       style={{
                         fontSize: 12,
                         fontWeight: 500,
@@ -262,7 +266,7 @@ export default function Home() {
                         color: isActive ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.85)",
                         backgroundColor: "transparent",
                         border: isActive ? "1px solid rgba(201,168,76,0.6)" : "1px solid transparent",
-                        transition: "color 120ms ease-out, border-color 120ms ease-out",
+                        transition: "background-color 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out",
                       }}
                     >
                       {label}
