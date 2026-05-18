@@ -1,6 +1,7 @@
 import { dictionary } from 'cmu-pronouncing-dictionary';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 
 export const runtime = "nodejs";
 
@@ -318,6 +319,10 @@ function approximatePhones(word: string): string | null {
 }
 
 export async function POST(req: Request) {
+  const ip = getClientIp(req);
+  const { allowed } = checkRateLimit(ip, "rhyme", 200);
+  if (!allowed) return Response.json({ error: "Daily limit reached. Try again tomorrow." }, { status: 429 });
+
   const { word } = await req.json();
 
   const input = word?.toLowerCase().trim();

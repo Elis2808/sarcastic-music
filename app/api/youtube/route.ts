@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
 import { spawn } from "child_process";
 import { tmpdir } from "os";
 import { join } from "path";
@@ -226,6 +227,9 @@ export async function GET(request: NextRequest) {
 
 // ─── POST /api/youtube — download as mp3/mp4 ─────────────────────────────────
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  const { allowed } = checkRateLimit(ip, "youtube", 20);
+  if (!allowed) return Response.json({ error: "Daily limit reached. Try again tomorrow." }, { status: 429 });
   let body: { url?: string; format?: string };
   try { body = await request.json(); }
   catch { return new Response("Invalid JSON body", { status: 400 }); }

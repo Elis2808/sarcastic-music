@@ -1,9 +1,14 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
+  const ip = getClientIp(request);
+  const { allowed } = checkRateLimit(ip, "define", 200);
+  if (!allowed) return Response.json({ error: "Daily limit reached. Try again tomorrow." }, { status: 429 });
+
   const { searchParams } = new URL(request.url);
   const word = searchParams.get("word")?.toLowerCase().trim();
 

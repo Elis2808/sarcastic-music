@@ -1,10 +1,15 @@
 import { NextRequest } from "next/server";
+import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
 
 export const runtime = "nodejs";
 
 const AUDIO_SERVER = process.env.AUDIO_SERVER_URL || "http://localhost:5001";
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  const { allowed } = checkRateLimit(ip, "detect-key", 50);
+  if (!allowed) return Response.json({ error: "Daily limit reached. Try again tomorrow." }, { status: 429 });
+
   let formData: FormData;
   try {
     formData = await request.formData();

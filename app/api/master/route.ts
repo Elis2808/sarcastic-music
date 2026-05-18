@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
 import { writeFile, unlink, readFile } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -11,6 +12,10 @@ const execFileAsync = promisify(execFile);
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const { allowed } = checkRateLimit(ip, "master", 40);
+  if (!allowed) return Response.json({ error: "Daily limit reached. Try again tomorrow." }, { status: 429 });
+
   let inputPath = "";
   let outputPath = "";
 

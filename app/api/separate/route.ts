@@ -276,6 +276,11 @@ const MAX_CONCURRENT = 3;
 
 // POST /api/separate — start a job, return jobId immediately
 export async function POST(request: NextRequest) {
+  const { checkRateLimit, getClientIp } = await import("@/app/lib/rateLimit");
+  const ip = getClientIp(request);
+  const { allowed } = checkRateLimit(ip, "separate", 10);
+  if (!allowed) return Response.json({ error: "Daily limit reached. Try again tomorrow." }, { status: 429 });
+
   const active = await countActiveJobs();
   if (active >= MAX_CONCURRENT) {
     return Response.json({ error: "Server is busy, please try again in a moment" }, { status: 429 });

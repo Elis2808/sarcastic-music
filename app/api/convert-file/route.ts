@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const { allowed } = checkRateLimit(ip, "convert-file", 70);
+  if (!allowed) return NextResponse.json({ error: "Daily limit reached. Try again tomorrow." }, { status: 429 });
+
   try {
     const formData = await req.formData();
     const files = formData.getAll("files") as File[];
