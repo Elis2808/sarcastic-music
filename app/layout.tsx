@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import Script from "next/script";
 import Footer from "./components/Footer";
+import SideAd from "./components/SideAd";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -50,15 +51,11 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="beforeInteractive"
         />
-        <Script
-          src="https://acscdn.com/script/aclib.js"
-          strategy="afterInteractive"
-        />
-        <Script id="adcash-autotag" strategy="afterInteractive">
-          {`aclib.runAutoTag({ zoneId: 'vdvqbhdy3u' });`}
-        </Script>
+        <Script id="aclib" src="//acscdn.com/script/aclib.js" strategy="afterInteractive" />
       </head>
       <body className="min-h-full flex flex-col">
+        <SideAd side="left" />
+        <SideAd side="right" />
         {children}
         <Footer />
       </body>
