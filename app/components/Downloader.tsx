@@ -281,14 +281,14 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
 
       {/* Platform selector */}
       <div className="w-full max-w-xl mb-4 flex items-center gap-2">
-        {/* Left arrow */}
+        {/* Left arrow - desktop only */}
         <button
           onClick={() => {
             const el = platformScrollRef.current;
             if (el) el.scrollBy({ left: -120, behavior: "smooth" });
           }}
           style={{ border: "1px solid rgba(201,168,76,0.5)", background: "black" }}
-          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-white text-sm outline-none transition-colors hover:border-[#C9A84C]"
+          className="hidden sm:flex flex-shrink-0 w-7 h-7 items-center justify-center rounded-full text-white text-sm outline-none transition-colors hover:border-[#C9A84C]"
         >‹</button>
 
         {/* Scrollable pills */}
@@ -324,14 +324,14 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
           })}
         </div>
 
-        {/* Right arrow */}
+        {/* Right arrow - desktop only */}
         <button
           onClick={() => {
             const el = platformScrollRef.current;
             if (el) el.scrollBy({ left: 120, behavior: "smooth" });
           }}
           style={{ border: "1px solid rgba(201,168,76,0.5)", background: "black" }}
-          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-white text-sm outline-none transition-colors hover:border-[#C9A84C]"
+          className="hidden sm:flex flex-shrink-0 w-7 h-7 items-center justify-center rounded-full text-white text-sm outline-none transition-colors hover:border-[#C9A84C]"
         >›</button>
       </div>
 
