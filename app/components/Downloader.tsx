@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { addHistoryItem } from "../lib/history";
 import UrlDropZone from "./UrlDropZone";
 import { showToast } from "./Toast";
@@ -358,12 +358,11 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
       <h1 className="text-3xl max-sm:text-2xl font-bold mb-1">{selectedPlatform} Downloader</h1>
       <p className="text-gray-500 text-xs mb-4">Convert any social media link to MP3 &amp; MP4.</p>
 
-      {/* Platform selector — desktop: scrollable pill strip, mobile: arrow buttons */}
+      {/* Platform selector — scrollable pill strip */}
       <div className="w-full max-w-xl mb-4">
-        {/* Desktop scrollable strip */}
         <div
           ref={platformScrollRef}
-          className="hidden sm:flex gap-1.5 overflow-x-auto scrollbar-hide"
+          className="flex gap-1.5 overflow-x-auto scrollbar-hide"
           style={{
             backgroundColor: "rgba(20,20,24,0.48)",
             backdropFilter: "blur(14px) saturate(160%)",
@@ -391,38 +390,6 @@ export default function Downloader({ initialUrl, initialPlatform }: DownloaderPr
               </button>
             );
           })}
-        </div>
-
-        {/* Mobile arrow buttons */}
-        <div className="flex sm:hidden items-center gap-2">
-          <button
-            onClick={() => {
-              const idx = PLATFORMS.findIndex(p => p.name === selectedPlatform);
-              const prev = (idx - 1 + PLATFORMS.length) % PLATFORMS.length;
-              setSelectedPlatform(PLATFORMS[prev].name);
-            }}
-            className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-gray-900 border border-gray-700 text-white active:scale-95 transition-transform"
-            aria-label="Previous platform"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-          </button>
-          <div
-            className="flex-1 flex items-center justify-center rounded-full py-2 text-xs font-medium"
-            style={{ backgroundColor: "rgba(20,20,24,0.48)", border: "1px solid rgba(201,168,76,0.4)", color: "rgba(255,240,205,0.96)" }}
-          >
-            {selectedPlatform}
-          </div>
-          <button
-            onClick={() => {
-              const idx = PLATFORMS.findIndex(p => p.name === selectedPlatform);
-              const next = (idx + 1) % PLATFORMS.length;
-              setSelectedPlatform(PLATFORMS[next].name);
-            }}
-            className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-gray-900 border border-gray-700 text-white active:scale-95 transition-transform"
-            aria-label="Next platform"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-          </button>
         </div>
       </div>
 
