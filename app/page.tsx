@@ -29,6 +29,8 @@ export default function Home() {
     if (typeof sessionStorage !== "undefined") return sessionStorage.getItem("lastRhymeWord") || "";
     return "";
   });
+  const liveRhymeWord = useRef("");
+  const liveDictWord = useRef("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [hoveredMenuItem, setHoveredMenuItem] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -124,9 +126,14 @@ export default function Home() {
 
   function navigateTo(page: Page, state?: { word?: string; url?: string; platform?: string }) {
     setPreviousPage(activePage);
+    // Persist current live search value before switching
+    if (activePage === "rhyme") setLastRhymeSearch(liveRhymeWord.current);
     setActivePage(page);
     if (state) {
       setRestoreState(state);
+    } else {
+      // Clear word restore so stale search doesn't repopulate
+      setRestoreState({});
     }
   }
 
@@ -306,7 +313,7 @@ export default function Home() {
 
       <div className="w-full flex flex-col items-center pt-6">
 
-      {activePage === "rhyme"      && <RhymeFinder key={restoreKey} onLookupWord={(word) => openDictionary(word, restoreState.word || lastRhymeSearch)} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word || lastRhymeSearch} />}
+      {activePage === "rhyme"      && <RhymeFinder key={restoreKey} onLookupWord={(word) => openDictionary(word, restoreState.word || lastRhymeSearch)} highlightWord={lastClickedRhymeWord} initialWord={restoreState.word || lastRhymeSearch} onWordChange={(w) => { liveRhymeWord.current = w; }} />}
       {activePage === "key"        && <KeyFinder key={restoreKey}
         initialUrl={restoreState.url} 
         initialPlatform={restoreState.platform}
@@ -330,6 +337,7 @@ export default function Home() {
       {activePage === "dictionary" && (
         <Dictionary
           initialWord={dictWord}
+          onWordChange={(w) => { liveDictWord.current = w; }}
           onBack={previousPage === "rhyme" ? () => {
             setLastClickedRhymeWord(dictWord.toLowerCase());
             setRestoreKey(k => k + 1);

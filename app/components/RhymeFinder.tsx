@@ -15,6 +15,7 @@ interface Props {
   onLookupWord: (word: string) => void;
   highlightWord?: string;
   initialWord?: string;
+  onWordChange?: (word: string) => void;
 }
 
 const CATEGORY_TEXT_CLASS: Record<string, string> = {
@@ -80,7 +81,7 @@ const PillList = React.memo(function PillList({ results, lastClicked, onClickWor
   );
 });
 
-export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }: Props) {
+export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, onWordChange }: Props) {
   const [word, setWord] = useState("");
   const [lastClickedWord, setLastClickedWord] = useState(highlightWord || "");
   const [wordList, setWordList] = useState<string[]>([]);
@@ -386,7 +387,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord }
       <div className="relative w-full max-w-xl">
         <input
           value={word}
-          onChange={(e) => setWord(e.target.value)}
+          onChange={(e) => { setWord(e.target.value); onWordChange?.(e.target.value); }}
           onKeyDown={(e) => { if (e.key === "Enter") search(word); }}
           placeholder="Type any word to find related rhymes"
           className="px-4 pr-12 py-3 rounded-full w-full bg-black text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C] placeholder-gray-500"

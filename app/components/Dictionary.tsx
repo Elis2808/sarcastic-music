@@ -12,9 +12,10 @@ type DictResult = {
 interface Props {
   initialWord?: string;
   onBack?: () => void;
+  onWordChange?: (word: string) => void;
 }
 
-export default function Dictionary({ initialWord = "", onBack }: Props) {
+export default function Dictionary({ initialWord = "", onBack, onWordChange }: Props) {
   const [search, setSearch] = useState(initialWord);
   const [result, setResult] = useState<DictResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -51,7 +52,14 @@ export default function Dictionary({ initialWord = "", onBack }: Props) {
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={onBack}
-            className="text-white text-sm border border-white/20 px-3 py-1 rounded-full hover:bg-white/5 transition-colors"
+            className="text-sm px-4 py-1.5 rounded-full font-semibold transition-all"
+            style={{
+              background: "rgba(201,168,76,0.12)",
+              border: "1px solid rgba(201,168,76,0.45)",
+              color: "#C9A84C",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = "rgba(201,168,76,0.22)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "rgba(201,168,76,0.12)")}
           >
             ← Back to Rhyme Finder
           </button>
@@ -61,7 +69,7 @@ export default function Dictionary({ initialWord = "", onBack }: Props) {
       <div className="relative w-full max-w-md mb-8">
         <input
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); onWordChange?.(e.target.value); }}
           onKeyDown={(e) => { if (e.key === "Enter") lookupWord(search); }}
           placeholder="Search a word"
           className="px-4 pr-12 py-3 rounded-full w-full bg-black text-white text-center outline-none focus:ring-2 focus:ring-[#C9A84C]"

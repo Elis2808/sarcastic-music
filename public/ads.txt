@@ -1,1 +1,2 @@
 google.com, pub-2153521717921171, DIRECT, f08c47fec0942fa0
+adcash.com, 1179086, DIRECT
