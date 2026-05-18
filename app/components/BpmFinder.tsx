@@ -240,11 +240,36 @@ export default function BpmFinder({ initialUrl, initialPlatform, initialBpm, ini
       {/* Platform selector - only in link mode */}
       {!result && !loading && linkMode && (
         <div className="w-full max-w-xl">
-          <AutoScrollPlatforms
-            platforms={PLATFORMS}
-            selected={selectedPlatform}
-            onSelect={(id) => setSelectedPlatform(id)}
-          />
+          <div
+            className="flex gap-1.5 overflow-x-auto scrollbar-hide"
+            style={{
+              backgroundColor: "rgba(20,20,24,0.48)",
+              backdropFilter: "blur(14px) saturate(160%)",
+              WebkitBackdropFilter: "blur(14px) saturate(160%)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 9999,
+              padding: "4px 6px",
+            }}
+          >
+            {PLATFORMS.map((p) => {
+              const isActive = selectedPlatform === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setSelectedPlatform(p.id)}
+                  style={{
+                    backgroundColor: "transparent",
+                    color: isActive ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
+                    border: "1px solid " + (isActive ? "rgba(201,168,76,0.6)" : "transparent"),
+                    transition: "color 160ms ease-out, border-color 160ms ease-out",
+                  }}
+                  className="px-4 py-1.5 rounded-full text-xs font-medium outline-none whitespace-nowrap flex-shrink-0"
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
