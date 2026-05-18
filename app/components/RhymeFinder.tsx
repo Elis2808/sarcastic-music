@@ -438,7 +438,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
             </div>
           </div>
 
-          <div className="flex gap-2 mb-2 justify-center flex-wrap">
+          <div className="flex gap-2 mb-2 overflow-x-auto scrollbar-hide justify-center w-full">
             {(["top", "perfect", "sounding", "near", "written", "all"] as const).map((tab) => {
               const isActive = activeTab === tab;
               return (
@@ -448,7 +448,7 @@ export default function RhymeFinder({ onLookupWord, highlightWord, initialWord, 
                     if (tab === "top") { setActiveTab("top"); return; }
                     setActiveTab(isActive ? "top" : tab);
                   }}
-                  className="px-3 py-2 rounded-full text-sm outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]/50"
+                  className="px-3 py-2 rounded-full text-sm outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]/50 shrink-0"
                   style={{
                     backgroundColor: isActive ? "rgba(201,168,76,0.13)" : "transparent",
                     color: isActive ? "rgba(255,240,205,0.96)" : "rgba(255,255,255,0.48)",
