@@ -57,17 +57,20 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         {/* Left skyscraper 160x600 — desktop xl+ only */}
-        <div
-          className="hidden xl:block"
-          style={{ position: "fixed", top: "50%", transform: "translateY(-50%)", left: 0, width: 160, height: 600, zIndex: 10, overflow: "hidden" }}
-          dangerouslySetInnerHTML={{ __html: `<script type="text/javascript">var t=setInterval(function(){if(window.aclib){clearInterval(t);aclib.runBanner({zoneId:'11324470'});}},100);<\/script>` }}
-        />
+        <div id="ac-left" className="hidden xl:block" style={{ position: "fixed", top: "50%", transform: "translateY(-50%)", left: 0, width: 160, height: 600, zIndex: 10, overflow: "hidden" }} />
         {/* Right skyscraper 160x600 — desktop xl+ only */}
-        <div
-          className="hidden xl:block"
-          style={{ position: "fixed", top: "50%", transform: "translateY(-50%)", right: 0, width: 160, height: 600, zIndex: 10, overflow: "hidden" }}
-          dangerouslySetInnerHTML={{ __html: `<script type="text/javascript">var t=setInterval(function(){if(window.aclib){clearInterval(t);aclib.runBanner({zoneId:'11324470'});}},100);<\/script>` }}
-        />
+        <div id="ac-right" className="hidden xl:block" style={{ position: "fixed", top: "50%", transform: "translateY(-50%)", right: 0, width: 160, height: 600, zIndex: 10, overflow: "hidden" }} />
+        <Script id="ac-side-init" strategy="afterInteractive">{`
+          (function(){
+            function init(){
+              var l=document.getElementById('ac-left');
+              var r=document.getElementById('ac-right');
+              if(l){ var s=document.createElement('script'); s.type='text/javascript'; s.text="aclib.runBanner({zoneId:'11324470'});"; l.appendChild(s); }
+              if(r){ var s2=document.createElement('script'); s2.type='text/javascript'; s2.text="aclib.runBanner({zoneId:'11324470'});"; r.appendChild(s2); }
+            }
+            if(window.aclib){ init(); } else { var t=setInterval(function(){ if(window.aclib){ clearInterval(t); init(); } },100); }
+          })();
+        `}</Script>
         {children}
         <Footer />
       </body>
